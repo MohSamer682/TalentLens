@@ -1,0 +1,35 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/resume_screener}
+    username: ${SPRING_DATASOURCE_USERNAME:rs_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:rs_password}
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 210MB
+
+jwt:
+  secret: ${JWT_SECRET:ZGV2LXNlY3JldC1iYXNlNjQtZW5jb2RlZC1rZXktZm9yLWp3dC1oczI1Ni1zaWduaW5nLXVzZS1zdHJvbmdlci1pbi1wcm9k}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minio_admin}
+  secret-key: ${MINIO_SECRET_KEY:minio_password_123}
+  bucket: ${MINIO_BUCKET:resumes}
+
+batch-worker:
+  url: ${BATCH_WORKER_URL:http://localhost:8081}
+  shared-secret: ${BATCH_WORKER_SHARED_SECRET:change-me-shared-secret}

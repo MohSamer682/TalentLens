@@ -1,0 +1,25 @@
+# Local secrets and environment configuration
+.env
+.env.*
+!.env.example
+
+# Java/Maven build output
+**/target/
+*.class
+*.jar
+*.war
+hs_err_pid*
+
+# Node/Vite build output and dependencies
+node_modules/
+**/node_modules/
+ui/dist/
+
+# IDE and local tooling files
+.idea/
+*.iml
+*.log
+
+# Isolated development worktrees
+.worktrees/
+worktrees/

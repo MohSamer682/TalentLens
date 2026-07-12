@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error-dim": "#a70138",
+                        "primary-container": "#9396ff",
+                        "surface-container": "#e5e9eb",
+                        "on-tertiary-fixed-variant": "#6e1354",
+                        "on-tertiary-container": "#63054a",
+                        "on-surface": "#2c2f31",
+                        "on-secondary-fixed": "#4f0089",
+                        "primary-dim": "#3939c7",
+                        "surface": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-surface": "#0b0f10",
+                        "secondary-container": "#e5c6ff",
+                        "surface-tint": "#4647d3",
+                        "surface-dim": "#d0d5d8",
+                        "error-container": "#f74b6d",
+                        "on-tertiary-fixed": "#3b002b",
+                        "tertiary-fixed": "#ff8ed2",
+                        "tertiary": "#963776",
+                        "on-tertiary": "#ffeef4",
+                        "background": "#ffffff",
+                        "tertiary-container": "#ff8ed2",
+                        "surface-bright": "#ffffff",
+                        "primary-fixed-dim": "#8387ff",
+                        "on-primary-container": "#0a0081",
+                        "inverse-primary": "#8083ff",
+                        "tertiary-fixed-dim": "#ef81c4",
+                        "on-primary-fixed": "#000000",
+                        "on-surface-variant": "#595c5e",
+                        "primary-fixed": "#9396ff",
+                        "on-secondary-fixed-variant": "#7511c3",
+                        "on-error-container": "#510017",
+                        "tertiary-dim": "#882a69",
+                        "surface-container-low": "#eef1f3",
+                        "surface-container-highest": "#d9dde0",
+                        "secondary-dim": "#740ec2",
+                        "on-primary-fixed-variant": "#0e009d",
+                        "secondary": "#8126cf",
+                        "secondary-fixed": "#e5c6ff",
+                        "outline": "#747779",
+                        "inverse-on-surface": "#9a9d9f",
+                        "secondary-fixed-dim": "#dbb4ff",
+                        "on-error": "#ffefef",
+                        "error": "#b41340",
+                        "outline-variant": "#abadaf",
+                        "on-secondary-container": "#6900b4",
+                        "on-primary": "#f4f1ff",
+                        "primary": "#4647d3",
+                        "on-secondary": "#fbefff",
+                        "surface-container-high": "#dfe3e6",
+                        "on-background": "#2c2f31",
+                        "surface-variant": "#d9dde0"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+    </style>
+</head>
+<body class="bg-white text-on-surface font-body selection:bg-primary-container/30 min-h-screen flex flex-col">
+<!-- Top Navigation Shell -->
+<header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4 bg-white/60 backdrop-blur-2xl rounded-3xl mt-4 mx-4 shadow-2xl shadow-indigo-500/5">
+<div class="text-xl font-bold tracking-tighter text-slate-900">Etheric Glass</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-slate-500 font-medium hover:text-indigo-500 transition-all duration-300" href="#">Dashboard</a>
+<a class="text-slate-500 font-medium hover:text-indigo-500 transition-all duration-300" href="#">Workspaces</a>
+<a class="text-indigo-600 border-b-2 border-indigo-600 font-semibold transition-all duration-300" href="#">Sessions</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="text-slate-500 hover:text-indigo-500 transition-all active:scale-95">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-slate-500 hover:text-indigo-500 transition-all active:scale-95">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm">
+<img alt="User profile" data-alt="professional headshot of a creative professional with soft studio lighting and a clean neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCg9Z8nvCx3ZzFhiZYxSabtmri0U8ZB_yT-HvrRIQ12p-n_Ap8hzJjQyTquKDw7s586KRM4amn6uZqup05vFkx-U9tx_B1H7VTXyQSxcpzLg3JMpeaJc_lDpBxs8cpnO7jsy8STDsGnPeV_RS-ee_khcUTWCdDftMm39-zoPk6qACx9IjsWdp_2Dy6QX4ONNRvElAIYpYWyVnJHH8QuKSqH6StCuLK3_VIeVCwHfhQWvkU4ZHUtisbxliflHnzo6vQfQN6y-vLSp-no"/>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-grow flex items-center justify-center p-6 pt-32 pb-12 bg-white">
+<!-- Wizard Container -->
+<div class="w-full max-w-4xl bg-white/70 backdrop-blur-3xl rounded-xl shadow-2xl shadow-indigo-900/5 p-8 md:p-12 border border-white/40">
+<!-- Stepper Header -->
+<div class="flex items-center justify-between mb-12 relative">
+<!-- Line Background -->
+<div class="absolute top-1/2 left-0 w-full h-[2px] bg-surface-container -translate-y-1/2 z-0"></div>
+<!-- Step 1: Completed -->
+<div class="relative z-10 flex flex-col items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+<span class="text-[10px] uppercase tracking-widest font-bold text-primary">Session Details</span>
+</div>
+<!-- Step 2: Active -->
+<div class="relative z-10 flex flex-col items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-white border-2 border-primary text-primary flex items-center justify-center shadow-inner">
+<span class="font-bold text-sm">02</span>
+</div>
+<span class="text-[10px] uppercase tracking-widest font-bold text-primary">Upload Files</span>
+</div>
+<!-- Step 3: Upcoming -->
+<div class="relative z-10 flex flex-col items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-container text-outline flex items-center justify-center">
+<span class="font-bold text-sm">03</span>
+</div>
+<span class="text-[10px] uppercase tracking-widest font-bold text-outline">Review &amp; Launch</span>
+</div>
+</div>
+<div class="mb-10 text-center">
+<h1 class="text-3xl font-semibold tracking-tight text-on-surface mb-2">Populate your workspace</h1>
+<p class="text-on-surface-variant max-w-md mx-auto">Upload the core documents to start the session. We support PDF, DOCX, and high-resolution images.</p>
+</div>
+<!-- Upload Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+<!-- JD Dropzone -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between px-1">
+<span class="text-sm font-semibold tracking-tight">Job Description</span>
+<span class="text-[10px] font-bold text-primary bg-primary-container/20 px-2 py-0.5 rounded-full">REQUIRED</span>
+</div>
+<div class="group relative flex flex-col items-center justify-center h-48 border-2 border-dashed border-outline-variant hover:border-primary rounded-3xl transition-all bg-surface-container-low/30 hover:bg-white cursor-pointer">
+<span class="material-symbols-outlined text-4xl text-outline group-hover:text-primary mb-3 transition-colors">description</span>
+<p class="text-xs font-medium text-on-surface-variant group-hover:text-primary">Drop Job Description PDF here</p>
+</div>
+<!-- Uploaded JD Example -->
+<div class="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm border border-outline-variant/10">
+<div class="w-10 h-10 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+</div>
+<div class="flex-grow">
+<p class="text-sm font-semibold text-on-surface truncate">Senior_Product_Designer_JD.pdf</p>
+<p class="text-[11px] text-outline">1.2 MB • Uploaded</p>
+</div>
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</div>
+<!-- Resume Dropzone -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between px-1">
+<span class="text-sm font-semibold tracking-tight">Candidate Resumes</span>
+<span class="text-[10px] font-medium text-on-surface-variant">Max 200 files</span>
+</div>
+<div class="group relative flex flex-col items-center justify-center h-48 border-2 border-dashed border-outline-variant hover:border-secondary rounded-3xl transition-all bg-surface-container-low/30 hover:bg-white cursor-pointer">
+<span class="material-symbols-outlined text-4xl text-outline group-hover:text-secondary mb-3 transition-colors">upload_file</span>
+<p class="text-xs font-medium text-on-surface-variant group-hover:text-secondary text-center px-4">Drop Resume PDFs (max 200)</p>
+</div>
+<!-- Scrollable List of Uploaded Resumes -->
+<div class="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+<!-- Uploading State -->
+<div class="p-4 bg-white/50 rounded-2xl border border-secondary/20">
+<div class="flex items-center gap-4 mb-2">
+<div class="w-10 h-10 rounded-xl bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">refresh</span>
+</div>
+<div class="flex-grow">
+<p class="text-sm font-semibold text-on-surface">Elena_Rodriguez_CV.pdf</p>
+<p class="text-[11px] text-secondary font-medium italic">Uploading... 65%</p>
+</div>
+<button class="text-outline hover:text-error transition-colors">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+</div>
+<div class="w-full bg-surface-container-high rounded-full h-1 overflow-hidden">
+<div class="bg-secondary h-full w-[65%] rounded-full"></div>
+</div>
+</div>
+<!-- Uploaded Item -->
+<div class="flex items-center gap-4 p-3 bg-white rounded-2xl shadow-sm border border-outline-variant/10">
+<div class="w-9 h-9 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-lg">article</span>
+</div>
+<div class="flex-grow min-w-0">
+<p class="text-sm font-medium text-on-surface truncate">Marcus_Chen_Res.pdf</p>
+<p class="text-[10px] text-outline">890 KB</p>
+</div>
+<button class="text-outline hover:text-error transition-colors p-1">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+<div class="flex items-center gap-4 p-3 bg-white rounded-2xl shadow-sm border border-outline-variant/10">
+<div class="w-9 h-9 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-lg">article</span>
+</div>
+<div class="flex-grow min-w-0">
+<p class="text-sm font-medium text-on-surface truncate">Sarah_Jane_Portfolio.pdf</p>
+<p class="text-[10px] text-outline">4.5 MB</p>
+</div>
+<button class="text-outline hover:text-error transition-colors p-1">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Navigation Actions -->
+<div class="flex items-center justify-between pt-8 border-t border-surface-container">
+<button class="px-8 py-3 rounded-full text-sm font-semibold text-outline hover:text-on-surface hover:bg-surface-container-low transition-all active:scale-95">
+                    Back
+                </button>
+<button class="px-10 py-3 rounded-full text-sm font-bold text-on-primary bg-gradient-to-br from-primary to-secondary shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-[1.02] active:scale-95 transition-all">
+                    Next Step
+                </button>
+</div>
+</div>
+</main>
+<!-- Side Navigation Shell (Hidden on wizard focus, but here for structural integrity) -->
+<aside class="hidden md:flex fixed left-0 top-0 bottom-0 w-72 flex-col p-6 z-40 bg-white/50 backdrop-blur-xl rounded-r-3xl my-4 shadow-xl shadow-slate-200/40 transform -translate-x-full opacity-0 transition-all">
+<div class="flex items-center gap-3 mb-10 px-4">
+<div class="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">dashboard_customize</span>
+</div>
+<div>
+<h2 class="text-lg font-bold text-slate-900 leading-none">Curator Hub</h2>
+<p class="text-[10px] font-bold text-primary tracking-widest mt-1">PREMIUM TIER</p>
+</div>
+</div>
+<nav class="flex-grow flex flex-col gap-2">
+<a class="flex items-center gap-3 text-slate-500 dark:text-slate-400 px-4 py-3 hover:translate-x-1 transition-all hover:bg-slate-100 rounded-2xl" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 bg-white text-indigo-600 rounded-2xl px-4 py-3 shadow-sm font-semibold" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">layers</span>
+<span>Session Library</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 px-4 py-3 hover:translate-x-1 transition-all hover:bg-slate-100 rounded-2xl" href="#">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="font-medium">File Manager</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 px-4 py-3 hover:translate-x-1 transition-all hover:bg-slate-100 rounded-2xl" href="#">
+<span class="material-symbols-outlined">tune</span>
+<span class="font-medium">Configuration</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 flex flex-col gap-4">
+<button class="w-full py-3 bg-primary text-on-primary rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm">add</span>
+                New Session
+            </button>
+<div class="h-[1px] bg-surface-container"></div>
+<a class="flex items-center gap-3 text-slate-500 px-4 py-3 hover:bg-slate-100 rounded-2xl transition-all" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="font-medium">Help</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 px-4 py-3 hover:bg-slate-100 rounded-2xl transition-all" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-medium">Sign Out</span>
+</a>
+</div>
+</aside>
+</body></html>

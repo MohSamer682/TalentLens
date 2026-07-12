@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "primary-dim": "#3939c7",
+                  "on-secondary-fixed": "#4f0089",
+                  "surface": "#f5f7f9",
+                  "surface-container-lowest": "#ffffff",
+                  "inverse-surface": "#0b0f10",
+                  "error-dim": "#a70138",
+                  "surface-container": "#e5e9eb",
+                  "primary-container": "#9396ff",
+                  "on-tertiary-container": "#63054a",
+                  "on-surface": "#2c2f31",
+                  "on-tertiary-fixed-variant": "#6e1354",
+                  "tertiary-fixed": "#ff8ed2",
+                  "tertiary": "#963776",
+                  "on-tertiary": "#ffeef4",
+                  "background": "#f5f7f9",
+                  "tertiary-container": "#ff8ed2",
+                  "secondary-container": "#e5c6ff",
+                  "surface-dim": "#d0d5d8",
+                  "error-container": "#f74b6d",
+                  "surface-tint": "#4647d3",
+                  "on-tertiary-fixed": "#3b002b",
+                  "surface-container-highest": "#d9dde0",
+                  "tertiary-dim": "#882a69",
+                  "surface-container-low": "#eef1f3",
+                  "on-primary-fixed-variant": "#0e009d",
+                  "secondary-dim": "#740ec2",
+                  "secondary-fixed": "#e5c6ff",
+                  "secondary": "#8126cf",
+                  "on-primary-container": "#0a0081",
+                  "inverse-primary": "#8083ff",
+                  "primary-fixed-dim": "#8387ff",
+                  "surface-bright": "#f5f7f9",
+                  "tertiary-fixed-dim": "#ef81c4",
+                  "on-primary-fixed": "#000000",
+                  "primary-fixed": "#9396ff",
+                  "on-surface-variant": "#595c5e",
+                  "on-secondary-fixed-variant": "#7511c3",
+                  "on-error-container": "#510017",
+                  "outline-variant": "#abadaf",
+                  "surface-container-high": "#dfe3e6",
+                  "primary": "#4647d3",
+                  "on-secondary": "#fbefff",
+                  "on-secondary-container": "#6900b4",
+                  "on-primary": "#f4f1ff",
+                  "surface-variant": "#d9dde0",
+                  "on-background": "#2c2f31",
+                  "inverse-on-surface": "#9a9d9f",
+                  "outline": "#747779",
+                  "secondary-fixed-dim": "#dbb4ff",
+                  "on-error": "#ffefef",
+                  "error": "#b41340"
+          },
+          "borderRadius": {
+                  "DEFAULT": "1rem",
+                  "lg": "2rem",
+                  "xl": "3rem",
+                  "full": "9999px"
+          },
+          "fontFamily": {
+                  "headline": ["Inter"],
+                  "body": ["Inter"],
+                  "label": ["Inter"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+    }
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .animate-spin-custom {
+      animation: spin-slow 3s linear infinite;
+    }
+  </style>
+</head>
+<body class="bg-[#FFFFFF] font-body text-on-surface selection:bg-primary-container selection:text-on-primary-container min-h-screen">
+<!-- TopNavBar (Fixed) -->
+<header class="fixed top-0 w-full z-50 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-sm shadow-indigo-500/5 flex justify-between items-center px-8 py-4 w-full">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent font-inter tracking-tight">TalentPulse AI</span>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-inter tracking-tight transition-all duration-300" href="#">Dashboard</a>
+<a class="text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600 pb-1 font-inter tracking-tight transition-all duration-300" href="#">Candidates</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-inter tracking-tight transition-all duration-300" href="#">Interviews</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-inter tracking-tight transition-all duration-300" href="#">Analytics</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-slate-50 transition-all duration-300">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-slate-50 transition-all duration-300">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="settings">settings</span>
+</button>
+<div class="h-10 w-10 rounded-full bg-surface-container overflow-hidden">
+<img alt="Recruiter profile avatar" data-alt="professional portrait of a high-end recruitment executive in a modern office environment with soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjdyEQEDwKhH84iOs8c2RoPPcEmT-hQzp1uDLHlFQt4tSalEBcDijIBFD0zXfSN1nHTBaxr_6FQmDWvh0RAPDqMHlS2GXHg3rwpAMw2LfzYjdi8gxL4OQeQhkBPqJzkQxE6c0FjGC1j6cgLRr4Y-35YCO6__tC78abajVUA2sWuqAv33kOsDWx52_P_S3_wCYGJmSKwua76r01e366xsg0rJp4Bg7zht5B_XoeAXQu5xa62iQ5ZdKsXC0QRTIIFv-kmDcgZLOhMI7w"/>
+</div>
+</div>
+</header>
+<main class="pt-28 pb-12 px-8 max-w-7xl mx-auto flex flex-col md:flex-row gap-8">
+<div class="flex-1 space-y-8">
+<!-- Breadcrumb & Header Section -->
+<section class="space-y-4">
+<nav class="flex items-center gap-2 text-on-surface-variant/70">
+<span class="text-[0.6875rem] font-medium tracking-[0.05em] uppercase">Dashboard</span>
+<span class="material-symbols-outlined text-xs" data-icon="chevron_right">chevron_right</span>
+<span class="text-[0.6875rem] font-medium tracking-[0.05em] uppercase text-on-surface">Senior Frontend Engineer</span>
+</nav>
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div class="flex items-center gap-4">
+<h1 class="text-[1.75rem] font-medium tracking-tight text-on-surface leading-tight">Senior Frontend Engineer</h1>
+<div class="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+<span class="text-[0.6875rem] font-bold tracking-widest uppercase text-primary">RUNNING</span>
+</div>
+</div>
+<button class="flex items-center gap-2 px-6 py-2.5 rounded-full border border-error/30 text-error hover:bg-error/5 transition-all duration-300 font-medium">
+<span class="material-symbols-outlined text-sm" data-icon="cancel">cancel</span>
+            Cancel Session
+          </button>
+</div>
+</section>
+<!-- Main Progress View Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Center Progress Card -->
+<div class="lg:col-span-8 flex flex-col gap-6">
+<div class="glass-card border border-surface-container rounded-xl p-12 flex flex-col items-center justify-center shadow-2xl shadow-indigo-500/5 relative overflow-hidden">
+<!-- Animated Progress Ring -->
+<div class="relative flex items-center justify-center w-64 h-64 mb-10">
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-surface-container" cx="128" cy="128" fill="transparent" r="110" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary" cx="128" cy="128" fill="transparent" r="110" stroke="currentColor" stroke-dasharray="691" stroke-dashoffset="242" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute flex flex-col items-center">
+<span class="text-5xl font-semibold tracking-tighter text-on-surface">65%</span>
+<span class="text-[0.6875rem] font-medium tracking-widest uppercase text-on-surface-variant/60 mt-1">Completion</span>
+</div>
+</div>
+<!-- Stats Row -->
+<div class="grid grid-cols-3 gap-12 w-full max-w-xl">
+<div class="flex flex-col items-center gap-1">
+<span class="text-xl font-semibold text-on-surface">65 / 100</span>
+<span class="text-[0.6875rem] font-medium tracking-widest uppercase text-on-surface-variant/70">Processed</span>
+</div>
+<div class="flex flex-col items-center gap-1">
+<span class="text-xl font-semibold text-error">0</span>
+<span class="text-[0.6875rem] font-medium tracking-widest uppercase text-on-surface-variant/70">Failed</span>
+</div>
+<div class="flex flex-col items-center gap-1">
+<span class="text-xl font-semibold text-on-surface">~2 min</span>
+<span class="text-[0.6875rem] font-medium tracking-widest uppercase text-on-surface-variant/70">Remaining</span>
+</div>
+</div>
+</div>
+<!-- Bottom Visual Insights (Bento Extra) -->
+<div class="grid grid-cols-2 gap-6">
+<div class="bg-surface-container-lowest border border-surface-container rounded-xl p-6 shadow-sm flex items-center gap-4">
+<div class="p-3 rounded-2xl bg-primary/10 text-primary">
+<span class="material-symbols-outlined" data-icon="query_stats">query_stats</span>
+</div>
+<div>
+<p class="text-sm font-semibold text-on-surface">Active Matching</p>
+<p class="text-xs text-on-surface-variant">Scanning skills &amp; culture fit</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-surface-container rounded-xl p-6 shadow-sm flex items-center gap-4">
+<div class="p-3 rounded-2xl bg-secondary/10 text-secondary">
+<span class="material-symbols-outlined" data-icon="verified_user">verified_user</span>
+</div>
+<div>
+<p class="text-sm font-semibold text-on-surface">Data Verified</p>
+<p class="text-xs text-on-surface-variant">LinkedIn + GitHub profiles</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Sidebar Steps Card -->
+<div class="lg:col-span-4 flex flex-col gap-8">
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-sm h-full border border-surface-container">
+<h3 class="text-sm font-semibold text-on-surface mb-8 tracking-tight">Pipeline Status</h3>
+<div class="relative space-y-10">
+<!-- Connector Line -->
+<div class="absolute left-[15px] top-4 bottom-4 w-0.5 bg-surface-container"></div>
+<!-- Step 1: Success -->
+<div class="relative flex items-start gap-4">
+<div class="relative z-10 flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm" data-icon="check">check</span>
+</div>
+<div class="pt-1">
+<h4 class="text-sm font-semibold text-on-surface">Extract Text</h4>
+<p class="text-xs text-on-surface-variant mt-1">Resume parsing complete</p>
+</div>
+</div>
+<!-- Step 2: Active -->
+<div class="relative flex items-start gap-4">
+<div class="relative z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white border-2 border-primary text-primary animate-pulse shadow-xl shadow-primary/10">
+<span class="material-symbols-outlined text-sm animate-spin-custom" data-icon="sync">sync</span>
+</div>
+<div class="pt-1">
+<h4 class="text-sm font-semibold text-primary">Score with LLM</h4>
+<p class="text-xs text-on-surface-variant mt-1">Analyzing candidate potential...</p>
+</div>
+</div>
+<!-- Step 3: Pending -->
+<div class="relative flex items-start gap-4">
+<div class="relative z-10 flex items-center justify-center w-8 h-8 rounded-full bg-surface-container text-on-surface-variant/40">
+<span class="material-symbols-outlined text-sm" data-icon="radio_button_unchecked">radio_button_unchecked</span>
+</div>
+<div class="pt-1">
+<h4 class="text-sm font-semibold text-on-surface-variant/50">Rank &amp; Finalize</h4>
+<p class="text-xs text-on-surface-variant/40 mt-1">Waiting to finalize results</p>
+</div>
+</div>
+</div>
+<!-- Action Insight -->
+<div class="mt-12 p-6 rounded-2xl bg-surface-container-low border border-outline-variant/10">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="lightbulb">lightbulb</span>
+<span class="text-[0.6875rem] font-bold tracking-widest uppercase text-on-surface-variant">Live Insight</span>
+</div>
+<p class="text-xs leading-relaxed text-on-surface-variant">Current LLM model is identifying strong matches in the <span class="text-on-surface font-semibold">React/TypeScript</span> ecosystem with high confidence scores.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Side Navigation Overlay -->
+<aside class="hidden xl:fixed left-0 top-0 h-screen w-20 flex flex-col items-center py-8 gap-10 bg-white z-40 border-r border-surface-container">
+<div class="h-10 w-10 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-white" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<nav class="flex flex-col gap-8 text-on-surface-variant/60">
+<span class="material-symbols-outlined hover:text-primary cursor-pointer transition-colors" data-icon="dashboard">dashboard</span>
+<span class="material-symbols-outlined hover:text-primary cursor-pointer transition-colors" data-icon="group">group</span>
+<span class="material-symbols-outlined hover:text-primary cursor-pointer transition-colors" data-icon="fact_check">fact_check</span>
+<span class="material-symbols-outlined hover:text-primary cursor-pointer transition-colors" data-icon="analytics">analytics</span>
+</nav>
+</aside>
+</body></html>

@@ -1,0 +1,57 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/resume_screener}
+    username: ${SPRING_DATASOURCE_USERNAME:rs_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:rs_password}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minio_admin}
+  secret-key: ${MINIO_SECRET_KEY:minio_password_123}
+  bucket: ${MINIO_BUCKET:resumes}
+
+# LLM provider configuration — swap base-url + model for any OpenAI-compatible provider:
+#
+#  Provider       | base-url                                                        | example model
+#  ---------------|-----------------------------------------------------------------|---------------------
+#  OpenAI         | https://api.openai.com/v1                                       | gpt-4o
+#  Kimi (Moonshot)| https://api.moonshot.cn/v1                                      | moonshot-v1-8k
+#  Qwen (Alibaba) | https://dashscope.aliyuncs.com/compatible-mode/v1               | qwen-plus
+#  Gemini (compat)| https://generativelanguage.googleapis.com/v1beta/openai         | gemini-3.5-flash
+#  DeepSeek       | https://api.deepseek.com/v1                                     | deepseek-chat
+#  Grok (xAI)     | https://api.x.ai/v1                                             | grok-3-mini
+llm:
+  api-key: ${LLM_API_KEY:}
+  model: ${LLM_MODEL:gpt-4o}
+  base-url: ${LLM_BASE_URL:https://api.openai.com/v1}
+  rate-limit-rpm: ${LLM_RATE_LIMIT_RPM:60}
+
+internal:
+  shared-secret: ${BATCH_WORKER_SHARED_SECRET:change-me-shared-secret}
+
+resilience4j:
+  retry:
+    instances:
+      llm:
+        max-attempts: 3
+        wait-duration: 2s
+        retry-exceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException
+  ratelimiter:
+    instances:
+      llm:
+        limit-for-period: ${llm.rate-limit-rpm:60}
+        limit-refresh-period: 1m
+        timeout-duration: 30s

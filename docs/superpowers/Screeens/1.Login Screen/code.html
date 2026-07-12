@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Ethereal AI - Elite Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#0a0081",
+                        "on-secondary": "#fbefff",
+                        "surface": "#ffffff",
+                        "primary-fixed-dim": "#8387ff",
+                        "error": "#b41340",
+                        "tertiary-container": "#ff8ed2",
+                        "on-tertiary": "#ffeef4",
+                        "primary-container": "#9396ff",
+                        "surface-bright": "#ffffff",
+                        "tertiary-dim": "#882a69",
+                        "on-surface": "#2c2f31",
+                        "tertiary-fixed-dim": "#ef81c4",
+                        "background": "#ffffff",
+                        "surface-container": "#e5e9eb",
+                        "on-primary-fixed": "#000000",
+                        "surface-container-high": "#dfe3e6",
+                        "inverse-primary": "#8083ff",
+                        "surface-container-low": "#eef1f3",
+                        "inverse-surface": "#0b0f10",
+                        "on-surface-variant": "#595c5e",
+                        "surface-dim": "#d0d5d8",
+                        "surface-container-highest": "#d9dde0",
+                        "on-tertiary-fixed": "#3b002b",
+                        "surface-tint": "#4647d3",
+                        "on-secondary-fixed": "#4f0089",
+                        "outline-variant": "#abadaf",
+                        "primary-fixed": "#9396ff",
+                        "on-primary-fixed-variant": "#0e009d",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#63054a",
+                        "secondary-container": "#e5c6ff",
+                        "on-tertiary-fixed-variant": "#6e1354",
+                        "surface-variant": "#d9dde0",
+                        "primary-dim": "#3939c7",
+                        "error-dim": "#a70138",
+                        "on-secondary-fixed-variant": "#7511c3",
+                        "on-error-container": "#510017",
+                        "outline": "#747779",
+                        "error-container": "#f74b6d",
+                        "inverse-on-surface": "#9a9d9f",
+                        "primary": "#4647d3",
+                        "secondary-fixed-dim": "#dbb4ff",
+                        "tertiary-fixed": "#ff8ed2",
+                        "secondary-dim": "#740ec2",
+                        "tertiary": "#963776",
+                        "on-background": "#2c2f31",
+                        "secondary": "#8126cf",
+                        "on-error": "#ffefef",
+                        "on-secondary-container": "#6900b4",
+                        "secondary-fixed": "#e5c6ff",
+                        "on-primary": "#f4f1ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            overflow-x: hidden;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+        }
+        .ghost-border {
+            border: 1px solid rgba(171, 173, 175, 0.2);
+        }
+        .primary-gradient {
+            background: linear-gradient(135deg, #4647d3 0%, #8126cf 100%);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased">
+<!-- TopNavBar Suppression: Logic - Transactional Screen (Login) -->
+<main class="min-h-screen relative flex items-center justify-center p-6 bg-white">
+<div class="w-full max-w-md z-10">
+<!-- Glassmorphism Container -->
+<div class="glass-card rounded-xl p-10 md:p-14 shadow-2xl ghost-border">
+<!-- Brand Identity -->
+<div class="flex flex-col items-center mb-10">
+<div class="w-14 h-14 rounded-2xl bg-surface-container-lowest shadow-sm flex items-center justify-center mb-6 ghost-border">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'wght' 300;">work</span>
+</div>
+<h1 class="text-2xl font-bold tracking-tight text-on-surface text-center">Resume Screener</h1>
+<p class="text-on-surface-variant text-sm mt-2 font-medium opacity-70">Elevating Talent Acquisition</p>
+</div>
+<!-- Login Form -->
+<form class="space-y-6">
+<div class="space-y-2">
+<label class="block text-[0.6875rem] uppercase tracking-wider font-semibold text-on-surface-variant px-1" for="email">Corporate Email</label>
+<div class="relative group">
+<input class="w-full bg-surface-container-low border-none rounded-2xl px-5 py-4 text-sm text-on-surface transition-all duration-300 focus:ring-1 focus:ring-primary focus:bg-surface-container-lowest placeholder:text-outline/50" id="email" name="email" placeholder="name@company.com" type="email"/>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center px-1">
+<label class="text-[0.6875rem] uppercase tracking-wider font-semibold text-on-surface-variant" for="password">Security Key</label>
+<a class="text-[0.6875rem] font-semibold text-primary hover:text-secondary transition-colors duration-300 uppercase tracking-wider" href="#">Forgot?</a>
+</div>
+<div class="relative group">
+<input class="w-full bg-surface-container-low border-none rounded-2xl px-5 py-4 text-sm text-on-surface transition-all duration-300 focus:ring-1 focus:ring-primary focus:bg-surface-container-lowest placeholder:text-outline/50" id="password" name="password" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<div class="pt-4">
+<button class="w-full primary-gradient text-on-primary font-semibold py-4 rounded-full shadow-lg shadow-primary/20 transition-all duration-300 transform hover:scale-[1.02] active:scale-95 hover:shadow-xl hover:shadow-primary/30 flex items-center justify-center gap-2" type="submit">
+<span>Access Platform</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'wght' 400;">arrow_forward</span>
+</button>
+</div>
+</form>
+<!-- Alternative Entry -->
+<div class="mt-10 pt-8 border-t border-on-surface-variant/5">
+<p class="text-center text-sm text-on-surface-variant mb-6">Or continue with</p>
+<div class="grid grid-cols-2 gap-4">
+<button class="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-surface-container-low hover:bg-surface-container-high transition-colors ghost-border group">
+<img alt="google" class="w-5 h-5 grayscale group-hover:grayscale-0 transition-all" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBaDoAM8jqBG5_-Xb857lecNb5p7RZLkPeLD0YZK2A7H-p9fyRqeZjOhB0t50NQlPmIzwLAArqeklYbRIIfp7raI_QF-qyA-iZ5YDG3QDHVZgGkC8YyWOsce4TR0_OrU-EuECqOATnsEt7X1GK-PkI7gbFX9v2mo1cD_AdPN2sBlUQL-UHf9TT6LC3WUQYmAeezk1aJxWvj-5J70ytvKl1Y5fzHeJTPs7399E2tW_SqbA0bBHr4EPfkZIuSWJRVwCrhPnlUN0838dPk"/>
+<span class="text-xs font-semibold text-on-surface-variant">SSO</span>
+</button>
+<button class="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-surface-container-low hover:bg-surface-container-high transition-colors ghost-border group">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors text-xl">passkey</span>
+<span class="text-xs font-semibold text-on-surface-variant">Passkey</span>
+</button>
+</div>
+</div>
+<!-- Registration Trigger -->
+<div class="mt-10 text-center">
+<p class="text-sm text-on-surface-variant">
+                        New to Ethereal? 
+                        <a class="text-primary font-bold hover:underline underline-offset-4 decoration-primary/30 transition-all" href="#">Request Access</a>
+</p>
+</div>
+</div>
+<!-- Footer / Legal Info -->
+<div class="mt-12 text-center">
+<div class="flex justify-center gap-6 mb-4">
+<a class="text-[0.6875rem] font-medium text-on-surface-variant hover:text-on-surface transition-colors uppercase tracking-widest" href="#">Privacy</a>
+<a class="text-[0.6875rem] font-medium text-on-surface-variant hover:text-on-surface transition-colors uppercase tracking-widest" href="#">Security</a>
+<a class="text-[0.6875rem] font-medium text-on-surface-variant hover:text-on-surface transition-colors uppercase tracking-widest" href="#">Contact</a>
+</div>
+<p class="text-[0.625rem] text-on-surface-variant/40 tracking-widest uppercase">© 2024 Ethereal AI. Intelligence Driven Recruitment.</p>
+</div>
+</div>
+</main>
+</body></html>

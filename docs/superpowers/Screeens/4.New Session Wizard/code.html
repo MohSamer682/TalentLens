@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Etheric Glass - New Session Wizard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "error-dim": "#a70138",
+                      "primary-container": "#9396ff",
+                      "surface-container": "#e5e9eb",
+                      "on-tertiary-fixed-variant": "#6e1354",
+                      "on-tertiary-container": "#63054a",
+                      "on-surface": "#2c2f31",
+                      "on-secondary-fixed": "#4f0089",
+                      "primary-dim": "#3939c7",
+                      "surface": "#f5f7f9",
+                      "surface-container-lowest": "#ffffff",
+                      "inverse-surface": "#0b0f10",
+                      "secondary-container": "#e5c6ff",
+                      "surface-tint": "#4647d3",
+                      "surface-dim": "#d0d5d8",
+                      "error-container": "#f74b6d",
+                      "on-tertiary-fixed": "#3b002b",
+                      "tertiary-fixed": "#ff8ed2",
+                      "tertiary": "#963776",
+                      "on-tertiary": "#ffeef4",
+                      "background": "#f5f7f9",
+                      "tertiary-container": "#ff8ed2",
+                      "surface-bright": "#f5f7f9",
+                      "primary-fixed-dim": "#8387ff",
+                      "on-primary-container": "#0a0081",
+                      "inverse-primary": "#8083ff",
+                      "tertiary-fixed-dim": "#ef81c4",
+                      "on-primary-fixed": "#000000",
+                      "on-surface-variant": "#595c5e",
+                      "primary-fixed": "#9396ff",
+                      "on-secondary-fixed-variant": "#7511c3",
+                      "on-error-container": "#510017",
+                      "tertiary-dim": "#882a69",
+                      "surface-container-low": "#eef1f3",
+                      "surface-container-highest": "#d9dde0",
+                      "secondary-dim": "#740ec2",
+                      "on-primary-fixed-variant": "#0e009d",
+                      "secondary": "#8126cf",
+                      "secondary-fixed": "#e5c6ff",
+                      "outline": "#747779",
+                      "inverse-on-surface": "#9a9d9f",
+                      "secondary-fixed-dim": "#dbb4ff",
+                      "on-error": "#ffefef",
+                      "error": "#b41340",
+                      "outline-variant": "#abadaf",
+                      "on-secondary-container": "#6900b4",
+                      "on-primary": "#f4f1ff",
+                      "primary": "#4647d3",
+                      "on-secondary": "#fbefff",
+                      "surface-container-high": "#dfe3e6",
+                      "on-background": "#2c2f31",
+                      "surface-variant": "#d9dde0"
+              },
+              "borderRadius": {
+                      "DEFAULT": "1rem",
+                      "lg": "2rem",
+                      "xl": "3rem",
+                      "full": "9999px"
+              }
+            }
+          }
+        }
+      </script>
+</head>
+<body class="bg-white min-h-screen relative overflow-x-hidden text-on-surface">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4 backdrop-blur-2xl mt-4 mx-4 rounded-3xl shadow-2xl shadow-indigo-500/5 glass">
+<div class="flex items-center gap-2">
+<span class="text-xl font-bold tracking-tighter text-slate-900">Etheric Glass</span>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-slate-500 font-medium hover:text-indigo-500 transition-all duration-300" href="#">Dashboard</a>
+<a class="text-slate-500 font-medium hover:text-indigo-500 transition-all duration-300" href="#">Workspaces</a>
+<a class="text-indigo-600 border-b-2 border-indigo-600 font-semibold transition-all duration-300" href="#">Sessions</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="text-slate-500 hover:text-indigo-500 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden">
+<img alt="User profile" data-alt="Close up portrait of a professional male designer in a bright studio with soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_7jx4G89w-xag6CHGD4BZnfhFjIfDBbPQKcKVTgqBKi40rVx0HDXdz_6TVU-uLHXuMP59jYTC14cWX6gYBOim-Y7Q1etwYaic0dZRgdkl8pz3q7khVkpUk-XAcMrMTkcDT1yyzcYIZYpWeTxHyuMmWjgGkRGfaHYqQfszk6GYY9yd2MHZsFTQ-egQou_ap38wXMLRMhAQOcMxT1tYbBc8q_2KbKUF3mQ0N6glRz9kJ3B_ANzzsPqPpvEGV01I3_ShgT7MspV3Epq1"/>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="pt-32 pb-12 px-6 flex items-center justify-center min-h-screen">
+<div class="w-full max-w-2xl relative">
+<!-- Decorative Elements Removed as per request for solid white background -->
+<!-- Wizard Card -->
+<div class="relative glass-panel border border-white/40 rounded-3xl shadow-2xl shadow-indigo-500/10 p-8 md:p-12 glass">
+<!-- Stepper -->
+<div class="flex items-center justify-between mb-12">
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold shadow-lg shadow-primary/30">1</div>
+<span class="text-xs font-semibold tracking-wider text-primary uppercase">Session Info</span>
+</div>
+<div class="h-px bg-surface-container-highest flex-1 -mt-6"></div>
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-10 h-10 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center font-medium">2</div>
+<span class="text-xs font-medium tracking-wider text-on-surface-variant uppercase">Participants</span>
+</div>
+<div class="h-px bg-surface-container-highest flex-1 -mt-6"></div>
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-10 h-10 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center font-medium">3</div>
+<span class="text-xs font-medium tracking-wider text-on-surface-variant uppercase">Review</span>
+</div>
+</div>
+<!-- Form Section -->
+<div class="space-y-8">
+<header class="space-y-2 glass">
+<h1 class="text-3xl font-bold tracking-tight text-on-surface">Start a New Session</h1>
+<p class="text-on-surface-variant leading-relaxed">Begin your digital curation journey. Define the core attributes of your upcoming session.</p>
+</header>
+<form class="space-y-6">
+<!-- Title Input -->
+<div class="space-y-2">
+<label class="block text-sm font-semibold text-on-surface ml-1" for="session-title">
+                                Session Title <span class="text-primary">*</span>
+</label>
+<div class="relative group">
+<input class="w-full bg-surface-container-low border-0 rounded-2xl px-6 py-4 text-on-surface placeholder-on-surface-variant/50 focus:ring-2 focus:ring-primary-container focus:bg-white transition-all duration-300" id="session-title" placeholder="Backend Engineer Q2 2026" required="" type="text"/>
+</div>
+</div>
+<!-- Description Textarea -->
+<div class="space-y-2">
+<label class="block text-sm font-semibold text-on-surface ml-1" for="session-desc">
+                                Description <span class="text-on-surface-variant font-normal">(Optional)</span>
+</label>
+<div class="relative group">
+<textarea class="w-full bg-surface-container-low border-0 rounded-2xl px-6 py-4 text-on-surface placeholder-on-surface-variant/50 focus:ring-2 focus:ring-primary-container focus:bg-white transition-all duration-300 resize-none" id="session-desc" placeholder="Provide context or objectives for this session..." rows="4"></textarea>
+</div>
+</div>
+</form>
+<!-- Footer Navigation -->
+<div class="pt-8 flex items-center justify-between border-t border-surface-container/50">
+<button class="flex items-center gap-2 px-6 py-3 text-on-surface-variant font-medium hover:text-primary transition-colors active:scale-95">
+<span class="material-symbols-outlined text-lg" data-icon="close">close</span>
+                            Cancel
+                        </button>
+<button class="group relative flex items-center gap-2 bg-gradient-to-br from-primary to-secondary px-10 py-4 rounded-full text-white font-bold shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] active:scale-98 transition-all">
+                            Next Step
+                            <span class="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Helper Tip -->
+<div class="mt-8 flex items-start gap-4 p-6 bg-primary/5 rounded-3xl border border-primary/10">
+<span class="material-symbols-outlined text-primary" data-icon="lightbulb">lightbulb</span>
+<p class="text-sm text-on-surface-variant leading-relaxed">
+<strong class="text-primary font-semibold">Tip:</strong> Descriptive titles help your team members find sessions faster in the Session Library.
+                </p>
+</div>
+</div>
+</main>
+<!-- Side Decoration Removed as per request for solid white background -->
+</body></html>
