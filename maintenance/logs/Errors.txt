@@ -1,3 +1,0 @@
-"error 1. : whe clicnking on next step during session creation :  " message": "could not execute statement [ERROR: null value in column \"created_at\" of relation \"screening_sessions\" violates not-null constraint\n  Detail: Failing row contains (c59e0a3b-16c2-4594-bbc4-5f35a8a659bc, null, null, , null, null, PENDING, AA, 7eee58e5-35dc-4a7d-af73-58e37a8c9129).] [insert into screening_sessions (completed_at,created_at,description,jd_file_key,report_file_key,status,title,user_id,id) values (?,?,?,?,?,?,?,?,?)]; SQL [insert into screening_sessions (completed_at,created_at,description,jd_file_key,report_file_key,status,title,user_id,id) values (?,?,?,?,?,?,?,?,?)]; constraint [created_at\" of relation \"screening_sessions]"
-}
-revise on screens , routings 

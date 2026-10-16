@@ -27,3 +27,12 @@ worktrees/
 # Local agent/tooling state
 .claude/settings.local.json
 .agents/
+.ai/
+.cursor/
+.windsurf/
+.codex/
+.claude/
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+.cursorrules
