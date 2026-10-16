@@ -42,4 +42,4 @@ cd ui && npm install && npm run dev
 
 ## Docs
 
-[ADRs](docs/adr) · [UI mockups](docs/design/screens)
+[Architecture and readiness](docs/ARCHITECTURE.md) · [ADRs](docs/adr) · [UI mockups](docs/design/screens)
