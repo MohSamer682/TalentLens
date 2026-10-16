@@ -46,6 +46,7 @@ class BatchControllerTest {
                 new AuthorizingSessionService(),
                 candidateRepositoryThatMustNotServeScores(),
                 candidateScoreRepositoryReturning(score),
+                null,
                 null
         );
 
