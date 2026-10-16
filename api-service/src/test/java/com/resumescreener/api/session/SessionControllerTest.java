@@ -36,7 +36,10 @@ class SessionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"\",\"description\":\"x\"}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").exists());
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").exists())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.error.details").exists());
     }
 
     @Test
@@ -54,9 +57,11 @@ class SessionControllerTest {
                                  "softSkills":20,"cultureFit":10}}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.weights.technicalSkills").value(30.0))
-                .andExpect(jsonPath("$.weights.cultureFit").value(10.0))
-                .andExpect(jsonPath("$.jdFileKey").hasJsonPath());
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Session created"))
+                .andExpect(jsonPath("$.data.weights.technicalSkills").value(30.0))
+                .andExpect(jsonPath("$.data.weights.cultureFit").value(10.0))
+                .andExpect(jsonPath("$.data.jdFileKey").hasJsonPath());
     }
 
     @Test

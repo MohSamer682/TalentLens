@@ -1,366 +1,378 @@
-import { useState, useEffect } from 'react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { sessionsApi } from '@/api/client';
-import type { Weights, ScreeningSession } from '@/types';
-import { Navbar } from '@/components/Navbar';
+import { ArrowLeft, ArrowRight, Check, FileUp, X } from 'lucide-react';
+import { apiErrorMessage, sessionsApi } from '@/api/client';
+import type { ScreeningSession, Weights } from '@/types';
 import { WeightSliders } from '@/components/WeightSliders';
-import { Input, Textarea } from '@/components/ui/Input';
+import { Field, Input, Textarea } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { Check, X, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Panel } from '@/components/ui/Card';
+import { Alert, Loader } from '@/components/ui/Feedback';
+import { MainLayout } from '@/layouts/MainLayout';
+import { DEFAULT_WEIGHTS, cn } from '@/lib/utils';
 
 const sessionSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
+  title: z.string().trim().min(1, 'Give the session a title, usually the opening it is for'),
   description: z.string().optional(),
 });
 
 type SessionForm = z.infer<typeof sessionSchema>;
-
 type Step = 1 | 2 | 3;
 
-const DEFAULT_WEIGHTS: Weights = {
-  technicalSkills: 30,
-  experience: 25,
-  education: 15,
-  softSkills: 20,
-  cultureFit: 10,
-};
+const MAX_RESUMES = 200;
+const STEPS = ['Opening', 'Files', 'Weights'] as const;
+
+const fileSize = (bytes: number) =>
+  bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
 export default function NewSession() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const forcedStep = searchParams.get('step');
-  
-  const [step, setStep] = useState<Step>(forcedStep ? Number(forcedStep) as Step : 1);
-  const [loading, setLoading] = useState(false);
+  const forcedStep = Number(searchParams.get('step')) as Step | 0;
+  const navigate = useNavigate();
+
+  const [step, setStep] = useState<Step>(forcedStep || 1);
+  const [saving, setSaving] = useState(false);
   const [initialLoading, setInitialLoading] = useState(!!id);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [weights, setWeights] = useState<Weights>(DEFAULT_WEIGHTS);
   const [jdFile, setJdFile] = useState<File | null>(null);
   const [resumeFiles, setResumeFiles] = useState<File[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(id || null);
   const [session, setSession] = useState<ScreeningSession | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const navigate = useNavigate();
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   const {
     register,
     handleSubmit,
     setValue,
     formState: { errors },
-  } = useForm<SessionForm>({
-    resolver: zodResolver(sessionSchema),
-  });
+  } = useForm<SessionForm>({ resolver: zodResolver(sessionSchema) });
 
   useEffect(() => {
-    if (id) {
-      loadSession(id);
-    }
-  }, [id]);
+    if (!id) return;
+    sessionsApi
+      .get(id)
+      .then(({ data }) => {
+        if (data.status !== 'PENDING' && data.status !== 'FAILED') {
+          navigate(`/sessions/${id}`, { replace: true });
+          return;
+        }
+        setSession(data);
+        setValue('title', data.title);
+        setValue('description', data.description || '');
+        if (data.weights) setWeights(data.weights);
+        if (!forcedStep && data.jdFileKey) setStep(2);
+      })
+      .catch((err) => setError(apiErrorMessage(err, 'Could not load this session')))
+      .finally(() => setInitialLoading(false));
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadSession = async (sessionId: string) => {
-    try {
-      const res = await sessionsApi.get(sessionId);
-      const data = res.data;
-      setSession(data);
-      setValue('title', data.title);
-      setValue('description', data.description || '');
-      
-      if (data.status !== 'PENDING' && data.status !== 'FAILED') {
-        navigate(`/sessions/${sessionId}`);
-        return;
-      }
-
-      if (!forcedStep && data.jdFileKey) {
-        setStep(2);
-      }
-    } catch (err) {
-      console.error('Failed to load session:', err);
-      setError('Failed to load existing session.');
-    } finally {
-      setInitialLoading(false);
-    }
-  };
+  // Move focus to the new step's heading so keyboard and screen-reader users land in the right place.
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, [step]);
 
   const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
-  const canProceedStep2 = (jdFile && resumeFiles.length > 0) || (session?.jdFileKey);
-  const canLaunch = totalWeight === 100;
+  const hasJd = !!jdFile || !!session?.jdFileKey;
+  const hasResumes = resumeFiles.length > 0 || (session?.candidateCount ?? 0) > 0;
 
-  const handleCreateSession = async (data: SessionForm) => {
-    setLoading(true);
+  const handleSaveInfo = async (data: SessionForm) => {
+    setSaving(true);
     setError(null);
     try {
       if (sessionId) {
-        await sessionsApi.update(sessionId, {
-          title: data.title,
-          description: data.description,
-        });
-        setStep(2);
+        await sessionsApi.update(sessionId, { title: data.title, description: data.description });
       } else {
-        const res = await sessionsApi.create({
-          title: data.title,
-          description: data.description,
-          weights: DEFAULT_WEIGHTS,
-        });
+        const res = await sessionsApi.create({ title: data.title, description: data.description, weights: DEFAULT_WEIGHTS });
         setSessionId(res.data.id);
+        setSession(res.data);
         navigate(`/sessions/new/${res.data.id}`, { replace: true });
-        setStep(2);
       }
+      setStep(2);
     } catch (err) {
-      console.error('Failed to save session:', err);
-      setError('Failed to save session. Please try again.');
+      setError(apiErrorMessage(err, 'Could not save the session'));
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleUploadFiles = async () => {
+  const handleUpload = async () => {
     if (!sessionId) return;
-    setUploading(true);
+    setSaving(true);
     setError(null);
     try {
-      if (jdFile) {
-        await sessionsApi.uploadJd(sessionId, jdFile);
-      }
-      if (resumeFiles.length > 0) {
-        await sessionsApi.uploadResumes(sessionId, resumeFiles);
-      }
+      if (jdFile) await sessionsApi.uploadJd(sessionId, jdFile);
+      if (resumeFiles.length) await sessionsApi.uploadResumes(sessionId, resumeFiles);
       setStep(3);
-    } catch (err: any) {
-      console.error('Failed to upload files:', err);
-      const msg = err.response?.data?.message || 'Failed to upload files. Please check file sizes and formats.';
-      setError(typeof msg === 'string' ? msg : 'Upload failed');
+    } catch (err) {
+      setError(apiErrorMessage(err, 'Upload failed. Check that every file is a PDF under the size limit.'));
     } finally {
-      setUploading(false);
+      setSaving(false);
     }
   };
 
   const handleLaunch = async () => {
     if (!sessionId) return;
-    setLoading(true);
+    setSaving(true);
     setError(null);
     try {
       await sessionsApi.update(sessionId, { weights });
       await sessionsApi.start(sessionId);
       navigate(`/sessions/${sessionId}`);
     } catch (err) {
-      console.error('Failed to start session:', err);
-      setError('Failed to start processing. Please try again.');
-    } finally {
-      setLoading(false);
+      setError(apiErrorMessage(err, 'Could not start scoring'));
+      setSaving(false);
     }
   };
 
-  const steps = [
-    { num: 1, label: 'Session Info' },
-    { num: 2, label: 'Upload Files' },
-    { num: 3, label: 'Configure' },
-  ];
+  const addResumes = (files: File[]) => {
+    const pdfs = files.filter((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+    const merged = [...resumeFiles, ...pdfs.filter((f) => !resumeFiles.some((r) => r.name === f.name && r.size === f.size))];
+    const skipped = files.length - pdfs.length;
+    const over = Math.max(0, merged.length - MAX_RESUMES);
+    setResumeFiles(merged.slice(0, MAX_RESUMES));
+    setNotice(
+      [skipped && `${skipped} non-PDF file${skipped > 1 ? 's were' : ' was'} skipped.`, over && `Only the first ${MAX_RESUMES} resumes were kept.`]
+        .filter(Boolean)
+        .join(' ') || null
+    );
+  };
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen bg-surface flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <MainLayout width="narrow">
+        <Loader label="Loading session…" />
+      </MainLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-surface">
-      <Navbar />
-      <main className="pt-32 pb-12 px-6 flex items-center justify-center min-h-screen">
-        <div className="w-full max-w-2xl relative">
-          <div className="glass-panel border border-white/40 rounded-3xl shadow-2xl shadow-indigo-500/10 p-8 md:p-12 glass">
-            {error && (
-              <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                <p className="text-sm">{error}</p>
-              </div>
-            )}
-            <div className="flex items-center justify-between mb-12">
-              {steps.map((s, i) => (
-                <div key={s.num} className="flex items-center gap-2 flex-1">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                      step >= s.num
-                        ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                        : 'bg-surface-container text-on-surface-variant'
-                    }`}
-                  >
-                    {step > s.num ? (
-                      <Check className="w-5 h-5" />
-                    ) : (
-                      s.num
-                    )}
-                  </div>
-                  <span
-                    className={`text-xs font-medium tracking-wider uppercase hidden md:inline ${
-                      step >= s.num ? 'text-primary' : 'text-on-surface-variant'
-                    }`}
-                  >
-                    {s.label}
-                  </span>
-                  {i < steps.length - 1 && (
-                    <div className="h-px bg-surface-container-highest flex-1 -mt-6" />
-                  )}
-                </div>
-              ))}
-            </div>
+    <MainLayout width="narrow">
+      <button
+        type="button"
+        onClick={() => navigate(sessionId ? `/sessions/${sessionId}` : '/dashboard')}
+        className="mb-3 inline-block text-sm font-semibold text-ink-muted hover:text-ink"
+      >
+        ← {sessionId ? 'Back to session' : 'All sessions'}
+      </button>
 
-            {step === 1 && (
-              <form onSubmit={handleSubmit(handleCreateSession)} className="space-y-8">
-                <div className="space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tight text-on-surface">
-                    {sessionId ? 'Edit Session' : 'Start a New Session'}
-                  </h1>
-                  <p className="text-on-surface-variant leading-relaxed">
-                    Define the core attributes of your screening session.
-                  </p>
-                </div>
+      <ol className="mb-5 grid grid-cols-3 gap-2" aria-label="Setup steps">
+        {STEPS.map((label, i) => {
+          const n = (i + 1) as Step;
+          const done = step > n;
+          return (
+            <li
+              key={label}
+              aria-current={step === n ? 'step' : undefined}
+              className={cn(
+                'condensed flex items-center gap-2 border-t-[3px] pt-2 text-[15px] font-semibold uppercase tracking-wide transition-colors duration-300',
+                step === n ? 'border-accent text-ink' : done ? 'border-accent/40 text-ink-muted' : 'border-line text-ink-muted'
+              )}
+            >
+              <span className="num">{done ? <Check className="size-4 text-accent-text" aria-label="Done" /> : n}</span>
+              {label}
+            </li>
+          );
+        })}
+      </ol>
 
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-on-surface ml-1">
-                      Session Title <span className="text-primary">*</span>
-                    </label>
-                    <Input
-                      placeholder="Backend Engineer Q2 2026"
-                      {...register('title')}
-                    />
-                    {errors.title && (
-                      <p className="text-red-500 text-xs">
-                        {errors.title.message}
-                      </p>
-                    )}
-                  </div>
+      <Panel className="p-5 sm:p-7">
+        <div key={step} className="animate-fade-up">
+        {error && <Alert className="mb-5">{error}</Alert>}
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-on-surface ml-1">
-                      Description{' '}
-                      <span className="text-on-surface-variant font-normal">
-                        (Optional)
-                      </span>
-                    </label>
-                    <Textarea
-                      placeholder="Provide context or objectives for this session..."
-                      {...register('description')}
-                    />
-                  </div>
-                </div>
+        {step === 1 && (
+          <form onSubmit={handleSubmit(handleSaveInfo)} className="space-y-5" noValidate>
+            <StepHeading ref={headingRef} title={sessionId ? 'Edit the opening' : 'Which opening is this for?'}>
+              The title is how you will find this ranking later.
+            </StepHeading>
+            <Field id="title" label="Session title" error={errors.title?.message}>
+              <Input
+                id="title"
+                placeholder="e.g. Backend Engineer, Cairo office"
+                aria-invalid={!!errors.title}
+                aria-describedby={errors.title ? 'title-error' : undefined}
+                {...register('title')}
+              />
+            </Field>
+            <Field id="description" label="Notes (optional)" hint="Only you and your team see this.">
+              <Textarea id="description" placeholder="Hiring manager, headcount, anything worth remembering" {...register('description')} />
+            </Field>
+            <Footer>
+              <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? 'Saving…' : 'Continue'}
+                <ArrowRight />
+              </Button>
+            </Footer>
+          </form>
+        )}
 
-                <div className="pt-8 flex items-center justify-between border-t border-surface-container/50">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => navigate('/dashboard')}
-                  >
-                    <X className="w-5 h-5" />
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={loading}>
-                    Next Step
-                    <ArrowRight className="w-5 h-5" />
-                  </Button>
-                </div>
-              </form>
+        {step === 2 && (
+          <div className="space-y-5">
+            <StepHeading ref={headingRef} title="Add the job description and resumes">
+              PDF files only. Resumes that cannot be read are flagged later and do not stop the batch.
+            </StepHeading>
+
+            <DropZone
+              id="jd"
+              label="Job description"
+              hint={session?.jdFileKey && !jdFile ? 'Already uploaded. Choose a file only to replace it.' : 'One PDF'}
+              onFiles={(files) => setJdFile(files[0] ?? null)}
+            />
+            {jdFile && <FileList files={[jdFile]} onRemove={() => setJdFile(null)} />}
+
+            <DropZone
+              id="resumes"
+              label="Resumes"
+              hint={`Up to ${MAX_RESUMES} PDFs. Drop more to add to the list.${
+                session?.candidateCount ? ` ${session.candidateCount} already uploaded.` : ''
+              }`}
+              multiple
+              onFiles={addResumes}
+            />
+            {notice && <p className="text-[13px] text-warn">{notice}</p>}
+            {resumeFiles.length > 0 && (
+              <FileList files={resumeFiles} onRemove={(f) => setResumeFiles((list) => list.filter((x) => x !== f))} />
             )}
 
-            {step === 2 && (
-              <div className="space-y-8">
-                <div className="space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tight text-on-surface">
-                    Upload Files
-                  </h1>
-                  <p className="text-on-surface-variant leading-relaxed">
-                    Add your job description and candidate resumes.
-                  </p>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-on-surface ml-1">
-                      Job Description (PDF) {session?.jdFileKey && '✅'}
-                    </label>
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      onChange={(e) => setJdFile(e.target.files?.[0] || null)}
-                      className="w-full h-32 border-2 border-dashed border-surface-container rounded-2xl flex items-center justify-center cursor-pointer hover:bg-surface-container-low transition-colors"
-                    />
-                    {jdFile && (
-                      <p className="text-sm text-green-600">
-                        Selected: {jdFile.name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-on-surface ml-1">
-                      Resumes (PDF, max 200)
-                    </label>
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      multiple
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files || []);
-                        setResumeFiles(files.slice(0, 200));
-                      }}
-                      className="w-full h-32 border-2 border-dashed border-surface-container rounded-2xl flex items-center justify-center cursor-pointer hover:bg-surface-container-low transition-colors"
-                    />
-                    {resumeFiles.length > 0 && (
-                      <p className="text-sm text-green-600">
-                        {resumeFiles.length} files selected
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="pt-8 flex items-center justify-between border-t border-surface-container/50">
-                  <Button variant="ghost" onClick={() => setStep(1)}>
-                    <X className="w-5 h-5" />
-                    Back
-                  </Button>
-                  <Button
-                    onClick={handleUploadFiles}
-                    disabled={!canProceedStep2 || uploading}
-                  >
-                    {uploading ? 'Uploading...' : 'Next Step'}
-                    <ArrowRight className="w-5 h-5" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {step === 3 && (
-              <div className="space-y-8">
-                <div className="space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tight text-on-surface">
-                    Configure Weights
-                  </h1>
-                  <p className="text-on-surface-variant leading-relaxed">
-                    Define scoring weights. Total must equal 100.
-                  </p>
-                </div>
-
-                <WeightSliders weights={weights} onChange={setWeights} />
-
-                <div className="pt-8 flex items-center justify-between border-t border-surface-container/50">
-                  <Button variant="ghost" onClick={() => setStep(2)}>
-                    <X className="w-5 h-5" />
-                    Back
-                  </Button>
-                  <Button onClick={handleLaunch} disabled={!canLaunch || loading}>
-                    {loading ? 'Launching...' : 'Launch Session'}
-                  </Button>
-                </div>
-              </div>
-            )}
+            <Footer>
+              <Button variant="ghost" onClick={() => setStep(1)}>
+                <ArrowLeft />
+                Back
+              </Button>
+              <Button onClick={handleUpload} disabled={!hasJd || !hasResumes || saving}>
+                {saving ? 'Uploading…' : jdFile || resumeFiles.length ? 'Upload and continue' : 'Continue'}
+                <ArrowRight />
+              </Button>
+            </Footer>
           </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-5">
+            <StepHeading ref={headingRef} title="What matters most for this role?">
+              Each resume gets a 0–100 score per dimension. The ranking uses these weights, which must add up to 100.
+            </StepHeading>
+            <WeightSliders weights={weights} onChange={setWeights} />
+            <Footer>
+              <Button variant="ghost" onClick={() => setStep(2)}>
+                <ArrowLeft />
+                Back
+              </Button>
+              <Button onClick={handleLaunch} disabled={totalWeight !== 100 || saving}>
+                {saving ? 'Starting…' : 'Start scoring'}
+              </Button>
+            </Footer>
+          </div>
+        )}
         </div>
-      </main>
+      </Panel>
+    </MainLayout>
+  );
+}
+
+
+const StepHeading = forwardRef<HTMLHeadingElement, { title: string; children: React.ReactNode }>(({ title, children }, ref) => (
+  <div className="space-y-1">
+    <h1 ref={ref} tabIndex={-1} className="text-xl font-bold tracking-tight focus:outline-none">
+      {title}
+    </h1>
+    <p className="text-sm text-ink-muted">{children}</p>
+  </div>
+));
+StepHeading.displayName = 'StepHeading';
+
+function Footer({ children }: { children: React.ReactNode }) {
+  return <div className="flex items-center justify-between border-t border-line pt-5">{children}</div>;
+}
+
+function DropZone({
+  id,
+  label,
+  hint,
+  multiple,
+  onFiles,
+}: {
+  id: string;
+  label: string;
+  hint: string;
+  multiple?: boolean;
+  onFiles: (files: File[]) => void;
+}) {
+  const [over, setOver] = useState(false);
+  return (
+    <div className="space-y-1.5">
+      <p className="text-sm font-semibold" id={`${id}-label`}>
+        {label}
+      </p>
+      <label
+        htmlFor={id}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setOver(false);
+          onFiles(Array.from(e.dataTransfer.files));
+        }}
+        className={cn(
+          'flex cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed px-4 py-6 text-center text-sm transition-colors focus-within:border-accent-text',
+          over ? 'border-accent-text bg-accent-soft' : 'border-line-strong hover:border-ink-muted hover:bg-ground'
+        )}
+      >
+        <FileUp className="size-5 text-ink-muted" aria-hidden="true" />
+        <span>
+          <span className="font-semibold text-accent-text">Choose {multiple ? 'files' : 'a file'}</span> or drop {multiple ? 'them' : 'it'} here
+        </span>
+        <span className="text-[13px] text-ink-muted">{hint}</span>
+        <input
+          id={id}
+          type="file"
+          accept="application/pdf,.pdf"
+          multiple={multiple}
+          aria-labelledby={`${id}-label`}
+          className="sr-only"
+          onChange={(e) => {
+            onFiles(Array.from(e.target.files || []));
+            e.target.value = '';
+          }}
+        />
+      </label>
+    </div>
+  );
+}
+
+function FileList({ files, onRemove }: { files: File[]; onRemove: (f: File) => void }) {
+  return (
+    <div className="rounded-lg border border-line">
+      <p className="num border-b border-line bg-sunken px-3 py-1.5 text-[13px] font-semibold text-ink-muted">
+        {files.length} file{files.length === 1 ? '' : 's'} ready to upload
+      </p>
+      <ul className="max-h-56 divide-y divide-line overflow-y-auto">
+        {files.map((f) => (
+          <li key={`${f.name}-${f.size}`} className="flex items-center gap-3 px-3 py-1.5 text-sm">
+            <span className="min-w-0 flex-1 truncate">{f.name}</span>
+            <span className="num shrink-0 text-[13px] text-ink-muted">{fileSize(f.size)}</span>
+            <button
+              type="button"
+              onClick={() => onRemove(f)}
+              aria-label={`Remove ${f.name}`}
+              className="flex size-7 shrink-0 items-center justify-center rounded text-ink-muted hover:bg-sunken hover:text-ink"
+            >
+              <X className="size-4" />
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

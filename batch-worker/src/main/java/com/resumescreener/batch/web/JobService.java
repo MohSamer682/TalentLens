@@ -9,6 +9,7 @@ import com.resumescreener.common.enums.SessionStatus;
 import com.resumescreener.common.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,10 +32,14 @@ public class JobService {
 
     @Async
     public void processCandidates(String sessionId) {
-        log.info("Starting background processing for session: {}", sessionId);
+        MDC.put("sessionId", sessionId);
+        log.info("Starting batch processing for session with candidates");
         
         ScreeningSession session = sessionRepository.findById(sessionId).orElse(null);
-        if (session == null) return;
+        if (session == null) {
+            log.warn("Session not found, aborting");
+            return;
+        }
 
         List<Candidate> candidates = candidateRepository.findBySessionId(sessionId);
         ScoringWeights weights = weightsRepository.findBySessionId(sessionId);
@@ -48,8 +53,10 @@ public class JobService {
                 .build();
         job = batchJobRepository.save(job);
         
+        log.info("Batch job created, total={}", candidates.size());
+
         if (weights == null) {
-            log.warn("No weights found for session {}, using defaults", sessionId);
+            log.warn("No weights found, using defaults");
             weights = ScoringWeights.builder()
                     .technicalSkills(30.0)
                     .experience(25.0)
@@ -59,20 +66,17 @@ public class JobService {
                     .build();
         }
         
-        // Extract JD once
         String jdText = "";
         try {
             if (session.getJdFileKey() != null) {
-                // We'll use the candidateProcessingService's extractor for now or just move this logic to a utility
-                // For a quick fix, I will add PdfTextExtractor back to JobService or just call it from candidateProcessingService
                 byte[] jdBytes = minioStorageService.downloadBytes(session.getJdFileKey());
                 jdText = candidateProcessingService.getPdfTextExtractor().extract(jdBytes);
             } else {
-                log.warn("No JD file key for session {}", sessionId);
+                log.warn("No JD file key, using generic description");
                 jdText = "General job description for recruitment";
             }
         } catch (Exception e) {
-            log.error("Failed to extract JD for session {}: {}", sessionId, e.getMessage());
+            log.error("Failed to extract JD", e);
             updateSessionStatus(sessionId, SessionStatus.FAILED, "Failed to extract JD: " + e.getMessage());
             return;
         }
@@ -81,7 +85,7 @@ public class JobService {
             try {
                 candidateProcessingService.processSingleCandidate(candidate, jdText, weights, job);
             } catch (Exception e) {
-                log.error("Failed to process candidate {}: {}", candidate.getId(), e.getMessage());
+                log.error("Failed to process candidate {}", candidate.getId(), e);
                 candidateProcessingService.handleCandidateFailure(candidate, job);
                 updateSessionErrorMessage(sessionId, e.getMessage());
             }
@@ -91,12 +95,13 @@ public class JobService {
             rankCandidates(sessionId);
             generateExcelReport(sessionId);
             finalizeSession(sessionId, job);
+            log.info("Batch completed, processed={}, failed={}", 
+                    batchJobRepository.findById(job.getId()).map(BatchJob::getProcessed).orElse(0),
+                    batchJobRepository.findById(job.getId()).map(BatchJob::getFailed).orElse(0));
         } catch (Exception e) {
-            log.error("Error finalizing session {}: {}", sessionId, e.getMessage());
+            log.error("Error finalizing session", e);
             updateSessionStatus(sessionId, SessionStatus.FAILED, "Finalization failed: " + e.getMessage());
         }
-        
-        log.info("Completed processing for session: {}", sessionId);
     }
 
     @Transactional

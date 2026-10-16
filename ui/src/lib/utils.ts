@@ -1,12 +1,13 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import type { Weights } from '@/types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('en-US', {
+  return new Date(date).toLocaleDateString('en-GB', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -14,45 +15,62 @@ export function formatDate(date: string) {
 }
 
 export function formatRelativeDate(date: string) {
-  const d = new Date(date);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-  if (days === 0) return 'Today';
+  const days = Math.floor((Date.now() - new Date(date).getTime()) / 86_400_000);
+  if (days <= 0) return 'Today';
   if (days === 1) return 'Yesterday';
   if (days < 7) return `${days} days ago`;
-  if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
-  if (days < 365) return `${Math.floor(days / 30)} months ago`;
-  return `${Math.floor(days / 365)} years ago`;
+  if (days < 30) return `${Math.floor(days / 7)} wk ago`;
+  if (days < 365) return `${Math.floor(days / 30)} mo ago`;
+  return `${Math.floor(days / 365)} yr ago`;
 }
 
 export function getInitials(name: string) {
   return name
     .split(' ')
+    .filter(Boolean)
     .map((part) => part[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
 }
 
-export function getScoreColor(score: number) {
-  if (score >= 80) return 'bg-green-100 text-green-700';
-  if (score >= 60) return 'bg-yellow-100 text-yellow-700';
-  return 'bg-red-100 text-red-700';
+/** Scores arrive as 0–100 floats; one decimal, trailing .0 dropped. */
+export function formatScore(value: number | null | undefined) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '–';
+  return value.toFixed(1).replace(/\.0$/, '');
 }
 
-export function getStatusColor(status: string) {
-  switch (status) {
-    case 'PENDING':
-      return 'bg-gray-100 text-gray-700';
-    case 'RUNNING':
-      return 'bg-blue-100 text-blue-700';
-    case 'DONE':
-      return 'bg-green-100 text-green-700';
-    case 'FAILED':
-      return 'bg-red-100 text-red-700';
-    default:
-      return 'bg-gray-100 text-gray-700';
+export const DIMENSIONS: { key: keyof Weights; label: string; short: string }[] = [
+  { key: 'technicalSkills', label: 'Technical skills', short: 'Tech' },
+  { key: 'experience', label: 'Experience', short: 'Exp' },
+  { key: 'education', label: 'Education', short: 'Edu' },
+  { key: 'softSkills', label: 'Soft skills', short: 'Soft' },
+  { key: 'cultureFit', label: 'Culture fit', short: 'Culture' },
+];
+
+export const DEFAULT_WEIGHTS: Weights = {
+  technicalSkills: 30,
+  experience: 25,
+  education: 15,
+  softSkills: 20,
+  cultureFit: 10,
+};
+
+/** The shortlist line is a per-session, per-browser reading aid; it never changes the ranking. */
+export function readShortlistSize(sessionId: string, fallback: number) {
+  try {
+    const raw = localStorage.getItem(`shortlist:${sessionId}`);
+    const n = raw === null ? NaN : Number(raw);
+    return Number.isInteger(n) && n >= 0 ? n : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function writeShortlistSize(sessionId: string, n: number) {
+  try {
+    localStorage.setItem(`shortlist:${sessionId}`, String(n));
+  } catch {
+    // storage unavailable (private mode); the line just resets next visit
   }
 }

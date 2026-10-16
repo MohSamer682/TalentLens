@@ -1,5 +1,7 @@
 package com.resumescreener.api.upload;
 
+import com.resumescreener.api.common.ApiErrorCode;
+import com.resumescreener.api.common.ApiException;
 import com.resumescreener.common.entity.ScreeningSession;
 import com.resumescreener.common.entity.Candidate;
 import com.resumescreener.common.enums.CandidateStatus;
@@ -12,10 +14,13 @@ import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.http.Method;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -32,7 +37,8 @@ public class MinioUploadService {
 
     public void checkOwnership(String sessionId, String userEmail) {
         ScreeningSession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Session not found"));
+                .orElseThrow(() -> ApiException.notFound("Session not found",
+                        "No session exists for id " + sessionId));
         if (!session.getUser().getEmail().equals(userEmail)) {
             throw new org.springframework.security.access.AccessDeniedException("Not authorized");
         }
@@ -57,21 +63,21 @@ public class MinioUploadService {
             sessionRepository.save(session);
             return key;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to upload JD: " + e.getMessage());
+            throw storageFailure("Failed to upload JD", e);
         }
     }
 
     @Transactional
-    public int uploadResumes(String sessionId, MultipartFile[] files, String userEmail) {
+    public List<String> uploadResumes(String sessionId, MultipartFile[] files, String userEmail) {
         checkOwnership(sessionId, userEmail);
         ScreeningSession session = sessionRepository.findById(sessionId).get();
 
         candidateRepository.deleteBySessionId(sessionId);
 
-        int count = 0;
+        List<String> candidateIds = new ArrayList<>();
         for (MultipartFile file : files) {
-            if (count >= 200) break;
-            
+            if (candidateIds.size() >= 200) break;
+
             String key = "resumes/" + sessionId + "/" + UUID.randomUUID() + ".pdf";
 
             try {
@@ -94,12 +100,12 @@ public class MinioUploadService {
                         .status(CandidateStatus.PENDING)
                         .build();
                 candidateRepository.save(candidate);
-                count++;
+                candidateIds.add(candidate.getId());
             } catch (Exception e) {
-                throw new RuntimeException("Failed to upload resume: " + e.getMessage());
+                throw storageFailure("Failed to upload resume " + file.getOriginalFilename(), e);
             }
         }
-        return count;
+        return candidateIds;
     }
 
     public void deleteSessionFiles(String sessionId) {
@@ -140,7 +146,7 @@ public class MinioUploadService {
                     .expiry(15, TimeUnit.MINUTES)
                     .build());
         } catch (Exception e) {
-            throw new RuntimeException("Failed to get presigned URL: " + e.getMessage());
+            throw storageFailure("Failed to generate a download link", e);
         }
     }
 
@@ -151,7 +157,18 @@ public class MinioUploadService {
                 .build())) {
             return stream.readAllBytes();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to download: " + e.getMessage());
+            throw storageFailure("Failed to download file from object storage", e);
         }
+    }
+
+    /**
+     * Object-storage failures reach the client as MINIO_UNAVAILABLE rather than a validation error.
+     * The cause is preserved so name-resolution failures stay diagnosable.
+     */
+    private static ApiException storageFailure(String message, Exception cause) {
+        ApiException failure = new ApiException(HttpStatus.BAD_GATEWAY, ApiErrorCode.MINIO_UNAVAILABLE,
+                message, cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage());
+        failure.initCause(cause);
+        return failure;
     }
 }

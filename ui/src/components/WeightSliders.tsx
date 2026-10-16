@@ -1,102 +1,74 @@
 import type { Weights } from '@/types';
-import { Activity, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { DEFAULT_WEIGHTS, DIMENSIONS, cn } from '@/lib/utils';
 
-interface WeightSlidersProps {
-  weights: Weights;
-  onChange: (weights: Weights) => void;
-}
+// Segment shades for the composition bar: one hue, five steps, so the bar reads as one total.
+const SEGMENT = ['bg-accent-text', 'bg-accent-bar', 'bg-accent', 'bg-accent/60', 'bg-accent/35'];
 
-const WEIGHT_LABELS: (keyof Weights)[] = [
-  'technicalSkills',
-  'experience',
-  'education',
-  'softSkills',
-  'cultureFit',
-];
-
-const WEIGHT_LABELS_DISPLAY: Record<keyof Weights, string> = {
-  technicalSkills: 'Technical Skills',
-  experience: 'Experience',
-  education: 'Education',
-  softSkills: 'Soft Skills',
-  cultureFit: 'Culture Fit',
-};
-
-export function WeightSliders({ weights, onChange }: WeightSlidersProps) {
-  const total = Object.values(weights).reduce((a, b) => a + b, 0);
-  const isValid = total === 100;
-
-  const handleChange = (key: keyof Weights, value: number) => {
-    onChange({ ...weights, [key]: value });
-  };
+export function WeightSliders({ weights, onChange }: { weights: Weights; onChange: (w: Weights) => void }) {
+  const total = DIMENSIONS.reduce((sum, d) => sum + weights[d.key], 0);
+  const valid = total === 100;
+  const set = (key: keyof Weights, value: number) =>
+    onChange({ ...weights, [key]: Math.max(0, Math.min(100, Math.round(value) || 0)) });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold">Scoring Weights</h3>
-        <p className="text-sm text-on-surface-variant">
-          Weights must sum to 100
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {WEIGHT_LABELS.map((key) => (
-          <div
-            key={key}
-            className="bg-white/40 rounded-2xl p-6 border border-white/20 hover:bg-white/60 transition-colors"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-sm font-bold tracking-widest uppercase text-slate-500">
-                {WEIGHT_LABELS_DISPLAY[key]}
-              </span>
-              <span className="px-3 py-1 bg-primary/10 text-primary rounded-full font-bold text-sm">
-                {weights[key]}
-              </span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={weights[key]}
-              onChange={(e) => handleChange(key, Number(e.target.value))}
-              className="w-full h-1.5 accent-primary cursor-pointer"
+        <div className="flex h-3 overflow-hidden rounded-full bg-line" aria-hidden="true">
+          {DIMENSIONS.map((d, i) => (
+            <span
+              key={d.key}
+              className={cn('h-full border-r border-surface last:border-r-0 transition-[width]', SEGMENT[i])}
+              style={{ width: `${(weights[d.key] / Math.max(100, total)) * 100}%` }}
             />
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between p-6 bg-slate-900 rounded-3xl shadow-xl text-white">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
-            <Activity className="w-6 h-6 text-indigo-400" />
-          </div>
-          <div>
-            <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">
-              Configuration Health
-            </p>
-            <div className="flex items-center gap-2">
-              <p className="text-lg font-semibold">
-                Total: <span className={isValid ? 'text-green-400' : 'text-red-400'}>{total}</span> / 100
-              </p>
-              {isValid ? (
-                <ShieldCheck className="w-5 h-5 text-green-400" />
-              ) : (
-                <ShieldAlert className="w-5 h-5 text-red-400" />
-              )}
-            </div>
-          </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm" aria-live="polite">
+          <p className={cn('num font-semibold', valid ? 'text-accent-text' : 'text-danger')}>
+            Total {total} / 100
+            {!valid && <span className="font-normal"> · {total > 100 ? `remove ${total - 100}` : `add ${100 - total}`} to launch</span>}
+          </p>
+          <button
+            type="button"
+            className="text-sm font-semibold text-ink-muted underline underline-offset-2 hover:text-ink"
+            onClick={() => onChange(DEFAULT_WEIGHTS)}
+          >
+            Reset to defaults
+          </button>
         </div>
       </div>
 
-      <p className="text-center text-sm font-medium">
-        {isValid ? (
-          <span className="text-green-600">Weights are valid</span>
-        ) : (
-          <span className="text-red-600">
-            Weights must equal 100 (currently {total})
-          </span>
-        )}
-      </p>
+      <ul className="divide-y divide-line rounded-lg border border-line">
+        {DIMENSIONS.map((d, i) => (
+          <li key={d.key} className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 px-4 py-3 sm:grid-cols-[160px_1fr_auto]">
+            <label htmlFor={`w-${d.key}`} className="flex items-center gap-2 text-sm font-semibold">
+              <span aria-hidden="true" className={cn('size-2.5 rounded-sm', SEGMENT[i])} />
+              {d.label}
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={weights[d.key]}
+              onChange={(e) => set(d.key, Number(e.target.value))}
+              aria-label={`${d.label} weight`}
+              className="col-span-2 row-start-2 w-full sm:col-span-1 sm:row-start-auto"
+            />
+            <div className="flex items-center gap-1">
+              <input
+                id={`w-${d.key}`}
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={100}
+                value={weights[d.key]}
+                onChange={(e) => set(d.key, Number(e.target.value))}
+                className="num h-9 w-16 rounded-md border border-line-strong px-2 text-right text-sm font-semibold focus:border-accent-text focus:outline-none focus:ring-4 focus:ring-accent/25"
+              />
+              <span className="text-sm text-ink-muted">%</span>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

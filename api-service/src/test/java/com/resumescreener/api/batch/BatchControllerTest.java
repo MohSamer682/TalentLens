@@ -1,5 +1,6 @@
 package com.resumescreener.api.batch;
 
+import com.resumescreener.api.common.ApiResponse;
 import com.resumescreener.api.session.SessionService;
 import com.resumescreener.common.dto.CandidateResultDto;
 import com.resumescreener.common.entity.Candidate;
@@ -18,6 +19,7 @@ import java.lang.reflect.Proxy;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BatchControllerTest {
 
@@ -47,13 +49,17 @@ class BatchControllerTest {
                 null
         );
 
-        ResponseEntity<Page<CandidateResultDto>> response = controller.getCandidates(
+        ResponseEntity<ApiResponse<Page<CandidateResultDto>>> response = controller.getCandidates(
                 "session-1",
                 PageRequest.of(0, 20),
                 new TestingAuthenticationToken("recruiter@example.com", null)
         );
 
-        CandidateResultDto dto = response.getBody().getContent().get(0);
+        ApiResponse<Page<CandidateResultDto>> envelope = response.getBody();
+        assertTrue(envelope.isSuccess());
+        assertEquals("Candidates loaded", envelope.getMessage());
+
+        CandidateResultDto dto = envelope.getData().getContent().get(0);
         assertEquals("candidate-1", dto.getId());
         assertEquals(2, dto.getRank());
         assertEquals("Jane Candidate", dto.getName());

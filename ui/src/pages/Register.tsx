@@ -1,24 +1,24 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { authApi } from '@/api/client';
+import { apiErrorMessage, authApi } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
-import { Input } from '@/components/ui/Input';
+import { Field, Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { Briefcase } from 'lucide-react';
+import { Alert } from '@/components/ui/Feedback';
+import { AuthLayout } from '@/layouts/AuthLayout';
 
 const registerSchema = z
   .object({
-    fullName: z.string().min(1, 'Full name is required'),
-    email: z.string().email('Invalid email address'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
-    confirmPassword: z.string().min(1, 'Please confirm your password'),
+    fullName: z.string().trim().min(1, 'Enter your full name'),
+    email: z.string().email('Enter a valid email address'),
+    password: z.string().min(8, 'Use at least 8 characters'),
+    confirmPassword: z.string().min(1, 'Repeat the password'),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: 'The two passwords do not match',
     path: ['confirmPassword'],
   });
 
@@ -34,148 +34,58 @@ export default function Register() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
-  });
+  } = useForm<RegisterForm>({ resolver: zodResolver(registerSchema) });
 
   const onSubmit = async (data: RegisterForm) => {
     setLoading(true);
     setError('');
     try {
-      const res = await authApi.register({
-        email: data.email,
-        password: data.password,
-        fullName: data.fullName,
-      });
+      const res = await authApi.register({ email: data.email, password: data.password, fullName: data.fullName });
       login(res.data.token, res.data.user);
       navigate('/dashboard');
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || 'Email already registered');
-      } else {
-        setError('An error occurred');
-      }
+      setError(apiErrorMessage(err, 'Could not create the account'));
     } finally {
       setLoading(false);
     }
   };
 
+  const invalid = (name: keyof RegisterForm) => ({
+    'aria-invalid': !!errors[name],
+    'aria-describedby': errors[name] ? `${name}-error` : undefined,
+  });
+
   return (
-    <main className="min-h-screen relative flex items-center justify-center p-6 bg-surface">
-      <div className="w-full max-w-md z-10">
-        <div className="glass-card rounded-xl p-10 md:p-14 shadow-2xl ghost-border">
-          <div className="flex flex-col items-center mb-10">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center mb-6 shadow-lg">
-              <Briefcase className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Create Account
-            </h1>
-            <p className="text-on-surface-variant text-sm mt-2">
-              Join the elite curation platform
-            </p>
-          </div>
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-2">
-              <label
-                className="block text-sm font-semibold text-on-surface ml-1"
-                htmlFor="fullName"
-              >
-                Full Name
-              </label>
-              <Input
-                id="fullName"
-                type="text"
-                placeholder="Jane Smith"
-                {...register('fullName')}
-              />
-              {errors.fullName && (
-                <p className="text-red-500 text-xs">{errors.fullName.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label
-                className="block text-sm font-semibold text-on-surface ml-1"
-                htmlFor="email"
-              >
-                Email Address
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="name@company.com"
-                {...register('email')}
-              />
-              {errors.email && (
-                <p className="text-red-500 text-xs">{errors.email.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label
-                className="block text-sm font-semibold text-on-surface ml-1"
-                htmlFor="password"
-              >
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                {...register('password')}
-              />
-              {errors.password && (
-                <p className="text-red-500 text-xs">{errors.password.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label
-                className="block text-sm font-semibold text-on-surface ml-1"
-                htmlFor="confirmPassword"
-              >
-                Confirm Password
-              </label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                {...register('confirmPassword')}
-              />
-              {errors.confirmPassword && (
-                <p className="text-red-500 text-xs">
-                  {errors.confirmPassword.message}
-                </p>
-              )}
-            </div>
-
-            <div className="pt-4">
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={loading}
-              >
-                {loading ? 'Creating account...' : 'Access Platform'}
-              </Button>
-            </div>
-          </form>
-
-          <div className="mt-8 text-center">
-            <p className="text-sm text-on-surface-variant">
-              Already have an account?{' '}
-              <Link to="/login" className="text-primary font-semibold">
-                Login
-              </Link>
-            </p>
-          </div>
-        </div>
-      </div>
-    </main>
+    <AuthLayout
+      title="Create an account"
+      subtitle="New accounts start as recruiters. An admin can change your role."
+      footer={
+        <>
+          Already have an account?{' '}
+          <Link to="/login" className="font-semibold text-accent-text underline-offset-2 hover:underline">
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      {error && <Alert className="mb-4">{error}</Alert>}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <Field id="fullName" label="Full name" error={errors.fullName?.message}>
+          <Input id="fullName" autoComplete="name" {...invalid('fullName')} {...register('fullName')} />
+        </Field>
+        <Field id="email" label="Work email" error={errors.email?.message}>
+          <Input id="email" type="email" autoComplete="email" placeholder="name@company.com" {...invalid('email')} {...register('email')} />
+        </Field>
+        <Field id="password" label="Password" hint="At least 8 characters." error={errors.password?.message}>
+          <Input id="password" type="password" autoComplete="new-password" {...invalid('password')} {...register('password')} />
+        </Field>
+        <Field id="confirmPassword" label="Repeat password" error={errors.confirmPassword?.message}>
+          <Input id="confirmPassword" type="password" autoComplete="new-password" {...invalid('confirmPassword')} {...register('confirmPassword')} />
+        </Field>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? 'Creating account…' : 'Create account'}
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

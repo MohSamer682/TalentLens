@@ -1,60 +1,28 @@
 import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, ...props }, ref) => {
-    return (
-      <div
-        ref={ref}
-        className={cn(
-          'rounded-3xl border border-surface-container bg-surface-container-lowest p-8 shadow-sm',
-          'hover:shadow-xl hover:border-primary/20 transition-all',
-          className
-        )}
-        {...props}
-      />
-    );
-  }
+/** A bordered panel with a soft shadow. Panels group content; they never lift on hover. */
+export const Panel = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn('rounded-lg border border-line bg-surface shadow-panel', className)} {...props} />
+  )
 );
 
-Card.displayName = 'Card';
+Panel.displayName = 'Panel';
 
-export const CardHeader = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, ...props }, ref) => {
-    return (
-      <div
-        ref={ref}
-        className={cn('flex flex-col space-y-2', className)}
-        {...props}
-      />
-    );
-  }
-);
-
-CardHeader.displayName = 'CardHeader';
-
-export const CardTitle = forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => {
-    return (
-      <h3
-        ref={ref}
-        className={cn('text-2xl font-bold tracking-tight text-on-surface', className)}
-        {...props}
-      />
-    );
-  }
-);
-
-CardTitle.displayName = 'CardTitle';
-
-export const CardContent = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, ...props }, ref) => {
-    return (
-      <div ref={ref} className={cn('', className)} {...props} />
-    );
-  }
-);
-
-CardContent.displayName = 'CardContent';
+export function PanelHeader({
+  title,
+  children,
+  className,
+}: {
+  title: React.ReactNode;
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn('flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5', className)}>
+      <h2 className="text-[15px] font-semibold">{title}</h2>
+      {children}
+    </div>
+  );
+}

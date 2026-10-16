@@ -55,3 +55,8 @@ resilience4j:
         limit-for-period: ${llm.rate-limit-rpm:60}
         limit-refresh-period: 1m
         timeout-duration: 30s
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,loggers

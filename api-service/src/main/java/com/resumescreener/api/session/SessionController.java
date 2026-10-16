@@ -1,15 +1,18 @@
 package com.resumescreener.api.session;
 
+import com.resumescreener.api.batch.dto.SessionActionResponse;
+import com.resumescreener.api.common.ApiResponse;
+import com.resumescreener.api.session.dto.*;
 import com.resumescreener.common.dto.WeightsDto;
 import com.resumescreener.common.entity.*;
 import com.resumescreener.common.enums.SessionStatus;
 import com.resumescreener.common.repository.*;
-import com.resumescreener.api.session.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -21,38 +24,52 @@ public class SessionController {
     private final CandidateRepository candidateRepository;
 
     @PostMapping
-    public ResponseEntity<SessionResponse> createSession(@jakarta.validation.Valid @RequestBody CreateSessionRequest request, Authentication auth) {
+    public ResponseEntity<ApiResponse<SessionResponse>> createSession(
+            @jakarta.validation.Valid @RequestBody CreateSessionRequest request, Authentication auth) {
         ScreeningSession session = sessionService.createSession(request, auth.getName());
-        return ResponseEntity.ok(mapToResponse(session));
+        return ResponseEntity.ok(ApiResponse.success("Session created", mapToResponse(session)));
     }
 
     @GetMapping
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public ResponseEntity<Page<SessionResponse>> listSessions(Pageable pageable, Authentication auth) {
-        return ResponseEntity.ok(sessionService.getSessions(auth.getName(), pageable).map(this::mapToResponse));
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<Page<SessionResponse>>> listSessions(
+            Pageable pageable, Authentication auth) {
+        Page<SessionResponse> data = sessionService.getSessions(auth.getName(), pageable)
+                .map(this::mapToResponse);
+        return ResponseEntity.ok(ApiResponse.success("Sessions loaded", data));
     }
 
     @GetMapping("/{id}")
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public ResponseEntity<SessionResponse> getSession(@PathVariable String id, Authentication auth) {
-        return ResponseEntity.ok(mapToResponse(sessionService.getSession(id, auth.getName())));
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<SessionResponse>> getSession(
+            @PathVariable String id, Authentication auth) {
+        SessionResponse data = mapToResponse(sessionService.getSession(id, auth.getName()));
+        return ResponseEntity.ok(ApiResponse.success("Session loaded", data));
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<SessionResponse> updateSession(@PathVariable String id, @RequestBody CreateSessionRequest request, Authentication auth) {
-        return ResponseEntity.ok(mapToResponse(sessionService.updateSession(id, request, auth.getName())));
+    public ResponseEntity<ApiResponse<SessionResponse>> updateSession(
+            @PathVariable String id, @RequestBody CreateSessionRequest request, Authentication auth) {
+        SessionResponse data = mapToResponse(sessionService.updateSession(id, request, auth.getName()));
+        return ResponseEntity.ok(ApiResponse.success("Session updated", data));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSession(@PathVariable String id, Authentication auth) {
+    public ResponseEntity<ApiResponse<SessionActionResponse>> deleteSession(
+            @PathVariable String id, Authentication auth) {
         sessionService.deleteSession(id, auth.getName());
-        return ResponseEntity.noContent().build();
+        // The row is gone, so there is no status left to report — only the id and the outcome
+        SessionActionResponse data = new SessionActionResponse(id, null, "Session deleted");
+        return ResponseEntity.ok(ApiResponse.success("Session deleted", data));
     }
 
     @PostMapping("/{id}/cancel")
-    public ResponseEntity<Void> cancelSession(@PathVariable String id, Authentication auth) {
+    public ResponseEntity<ApiResponse<SessionActionResponse>> cancelSession(
+            @PathVariable String id, Authentication auth) {
         sessionService.cancelSession(id, auth.getName());
-        return ResponseEntity.noContent().build();
+        SessionActionResponse data =
+                new SessionActionResponse(id, SessionStatus.FAILED, "Cancelled by user");
+        return ResponseEntity.ok(ApiResponse.success("Screening cancelled", data));
     }
 
     private SessionResponse mapToResponse(ScreeningSession session) {

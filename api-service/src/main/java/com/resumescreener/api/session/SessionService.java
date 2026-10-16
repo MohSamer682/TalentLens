@@ -1,6 +1,6 @@
 package com.resumescreener.api.session;
 
-import com.resumescreener.common.dto.WeightsDto;
+import com.resumescreener.api.common.ApiException;
 import com.resumescreener.common.entity.*;
 import com.resumescreener.common.enums.SessionStatus;
 import com.resumescreener.common.repository.*;
@@ -27,7 +27,8 @@ public class SessionService {
     @Transactional
     public ScreeningSession createSession(CreateSessionRequest request, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> ApiException.notFound("User not found",
+                        "No user exists for email " + userEmail));
 
         ScreeningSession session = ScreeningSession.builder()
                 .user(user)
@@ -79,13 +80,15 @@ public class SessionService {
 
     public Page<ScreeningSession> getSessions(String userEmail, Pageable pageable) {
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> ApiException.notFound("User not found",
+                        "No user exists for email " + userEmail));
         return sessionRepository.findByUserId(user.getId(), pageable);
     }
 
     public ScreeningSession getSession(String id, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> ApiException.notFound("User not found",
+                        "No user exists for email " + userEmail));
         
         return sessionRepository.findWithWeightsById(id)
                 .filter(s -> user.getRole().name().equals("ADMIN") || s.getUser().getId().equals(user.getId()))
@@ -96,7 +99,8 @@ public class SessionService {
     public void deleteSession(String id, String userEmail) {
         ScreeningSession session = getSession(id, userEmail);
         if (session.getStatus() == SessionStatus.RUNNING) {
-            throw new RuntimeException("Session is currently running. Cancel it first, then delete.");
+            throw ApiException.validation("Session is currently running. Cancel it first, then delete.",
+                    "Session " + id + " is in status RUNNING");
         }
         minioUploadService.deleteSessionFiles(id);
         sessionRepository.delete(session);
@@ -106,7 +110,8 @@ public class SessionService {
     public void cancelSession(String id, String userEmail) {
         ScreeningSession session = getSession(id, userEmail);
         if (session.getStatus() != SessionStatus.RUNNING) {
-            throw new RuntimeException("Session is not running");
+            throw ApiException.validation("Session is not running",
+                    "Session " + id + " is in status " + session.getStatus());
         }
         session.setStatus(SessionStatus.FAILED);
         session.setLastErrorMessage("Cancelled by user");

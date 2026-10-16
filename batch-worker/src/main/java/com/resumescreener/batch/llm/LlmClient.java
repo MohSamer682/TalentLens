@@ -4,6 +4,7 @@ import com.resumescreener.common.dto.LlmScoreDto;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -18,6 +19,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LlmClient {
 
     @Value("${llm.api-key}")
@@ -56,12 +58,17 @@ public class LlmClient {
                     .body(body)
                     .retrieve()
                     .body(LlmChatCompletionResponse.class);
-        } catch (HttpServerErrorException | ResourceAccessException e) {
-            // rethrow untouched so resilience4j retry-exceptions match; wrapping kills retries
+        } catch (HttpServerErrorException e) {
+            log.warn("LLM server error: HTTP {}", e.getStatusCode().value());
+            throw e;
+        } catch (ResourceAccessException e) {
+            log.warn("LLM connection failed: {}", e.getMessage());
             throw e;
         } catch (RestClientResponseException e) {
+            log.error("LLM provider error: HTTP {}", e.getStatusCode().value(), e);
             throw new LlmException("LLM provider error: HTTP " + e.getStatusCode().value(), e);
         } catch (Exception e) {
+            log.error("LLM request failed", e);
             throw new LlmException("LLM provider request failed: " + e.getMessage(), e);
         }
 

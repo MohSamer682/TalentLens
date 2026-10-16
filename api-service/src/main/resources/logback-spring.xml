@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProfile name="docker,prod">
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <includeMdcKeyName>requestId</includeMdcKeyName>
+                <includeMdcKeyName>userId</includeMdcKeyName>
+            </encoder>
+        </appender>
+    </springProfile>
+
+    <springProfile name="!docker &amp; !prod">
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{36}) [%mdc] - %msg%n</pattern>
+            </encoder>
+        </appender>
+    </springProfile>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+    <logger name="com.resumescreener" level="DEBUG"/>
+</configuration>

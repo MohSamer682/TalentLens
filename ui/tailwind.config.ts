@@ -1,64 +1,67 @@
 import type { Config } from 'tailwindcss';
 
+// Tokens live as CSS variables in src/index.css; see DESIGN.md at the repo root.
+const token = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+const out = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
 export default {
-  darkMode: 'class',
-  content: [
-    './index.html',
-    './src/**/*.{js,ts,jsx,tsx}',
-  ],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
-        primary: {
-          DEFAULT: '#4647d3',
-          dim: '#3939c7',
-          container: '#9396ff',
-          'container-low': '#eef1f3',
-          'container-lowest': '#ffffff',
-          'container-high': '#dfe3e6',
+        pitch: { DEFAULT: token('pitch'), raised: token('pitch-raised'), ink: token('pitch-ink') },
+        ground: token('ground'),
+        surface: { DEFAULT: token('surface'), sunken: token('sunken') },
+        line: { DEFAULT: token('line'), strong: token('line-strong') },
+        ink: { DEFAULT: token('ink'), muted: token('ink-muted') },
+        accent: {
+          DEFAULT: token('accent'), // mint fill: buttons, shortlist zone
+          strong: token('accent-strong'), // hover fill
+          ink: token('accent-ink'), // text on accent fills
+          text: token('accent-text'), // green text, focus, borders on light
+          bar: token('accent-bar'), // data bars (3.5:1 on white)
+          soft: token('accent-soft'),
         },
-        secondary: {
-          DEFAULT: '#8126cf',
-          dim: '#740ec2',
-          container: '#e5c6ff',
-        },
-        tertiary: {
-          DEFAULT: '#963776',
-          dim: '#882a69',
-          container: '#ff8ed2',
-        },
-        surface: {
-          DEFAULT: '#f5f7f9',
-          'container-low': '#eef1f3',
-          'container-lowest': '#ffffff',
-          'container-high': '#dfe3e6',
-          'container-highest': '#d9dde0',
-        },
-        'on-surface': '#2c2f31',
-        'on-surface-variant': '#595c5e',
-        error: {
-          DEFAULT: '#b41340',
-          dim: '#a70138',
-          container: '#f74b6d',
-        },
-        outline: '#747779',
-        'outline-variant': '#abadaf',
-      },
-      borderRadius: {
-        DEFAULT: '1rem',
-        lg: '2rem',
-        xl: '3rem',
-        full: '9999px',
+        info: { DEFAULT: token('info'), soft: token('info-soft') },
+        warn: { DEFAULT: token('warn'), soft: token('warn-soft') },
+        danger: { DEFAULT: token('danger'), soft: token('danger-soft') },
       },
       fontFamily: {
-        headline: ['Inter', 'sans-serif'],
-        body: ['Inter', 'sans-serif'],
-        label: ['Inter', 'sans-serif'],
+        sans: ['"Archivo Variable"', 'Archivo', 'system-ui', 'sans-serif'],
+      },
+      borderRadius: {
+        DEFAULT: '6px',
+        md: '8px',
+        lg: '12px',
       },
       boxShadow: {
-        'primary/20': '0 4px 14px rgba(70, 71, 211, 0.2)',
-        'primary/30': '0 4px 14px rgba(70, 71, 211, 0.3)',
-        'primary/40': '0 4px 14px rgba(70, 71, 211, 0.4)',
+        panel: '0 1px 2px rgb(17 25 22 / 0.05), 0 2px 8px -2px rgb(17 25 22 / 0.06)',
+        menu: '0 8px 24px -6px rgb(17 25 22 / 0.2), 0 2px 6px rgb(17 25 22 / 0.08)',
+        button: '0 1px 2px rgb(17 25 22 / 0.12), inset 0 1px 0 rgb(255 255 255 / 0.25)',
+      },
+      transitionDuration: {
+        DEFAULT: '160ms',
+      },
+      transitionTimingFunction: {
+        out,
+      },
+      keyframes: {
+        'fade-up': { from: { opacity: '0', transform: 'translateY(6px)' }, to: { opacity: '1', transform: 'none' } },
+        'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },
+        'grow-x': { from: { transform: 'scaleX(0)' }, to: { transform: 'scaleX(1)' } },
+        shimmer: { from: { backgroundPosition: '200% 0' }, to: { backgroundPosition: '-200% 0' } },
+        rank: { '0%, 100%': { transform: 'scaleX(0.35)' }, '50%': { transform: 'scaleX(1)' } },
+        stripes: { from: { backgroundPosition: '0 0' }, to: { backgroundPosition: '24px 0' } },
+        ping: { '75%, 100%': { transform: 'scale(2.2)', opacity: '0' } },
+      },
+      animation: {
+        'fade-up': `fade-up 420ms ${out} both`,
+        'fade-in': 'fade-in 200ms ease-out both',
+        'grow-x': `grow-x 700ms ${out} both`,
+        shimmer: 'shimmer 1.6s linear infinite',
+        rank: `rank 1.1s ${out} infinite`,
+        stripes: 'stripes 0.8s linear infinite',
+        ping: 'ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite',
       },
     },
   },

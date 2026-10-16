@@ -10,6 +10,7 @@ import com.resumescreener.common.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.Getter;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,7 +29,8 @@ public class CandidateProcessingService {
 
     @Transactional
     public void processSingleCandidate(Candidate candidate, String jdText, ScoringWeights weights, BatchJob job) throws Exception {
-        log.info("Processing candidate: {}", candidate.getEmail());
+        MDC.put("candidateId", candidate.getId());
+        log.info("Processing candidate");
         byte[] pdfBytes = minioStorageService.downloadBytes(candidate.getResumeFileKey());
         String text = pdfTextExtractor.extract(pdfBytes);
         candidate.setRawText(text);
@@ -62,6 +64,8 @@ public class CandidateProcessingService {
         BatchJob currentJob = batchJobRepository.findById(job.getId()).orElse(job);
         currentJob.setProcessed(currentJob.getProcessed() + 1);
         batchJobRepository.save(currentJob);
+        log.info("Candidate scored, composite={}", String.format("%.2f", composite));
+        MDC.remove("candidateId");
     }
 
     @Transactional

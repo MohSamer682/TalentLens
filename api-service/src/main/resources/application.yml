@@ -1,7 +1,17 @@
 server:
   port: 8080
+  error:
+    # The whitelabel page renders HTML; every error must leave this service as JSON
+    whitelabel:
+      enabled: false
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
 
 spring:
+  mvc:
+    # Surface unmapped paths as NoHandlerFoundException so GlobalExceptionHandler owns them
+    throw-exception-if-no-handler-found: true
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/resume_screener}
     username: ${SPRING_DATASOURCE_USERNAME:rs_user}
@@ -33,3 +43,8 @@ minio:
 batch-worker:
   url: ${BATCH_WORKER_URL:http://localhost:8081}
   shared-secret: ${BATCH_WORKER_SHARED_SECRET:change-me-shared-secret}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,loggers

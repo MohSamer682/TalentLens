@@ -1,9 +1,13 @@
 package com.resumescreener.api.batch;
 
+import com.resumescreener.api.common.ApiErrorCode;
+import com.resumescreener.api.common.ApiException;
 import com.resumescreener.common.entity.*;
 import com.resumescreener.common.enums.*;
 import com.resumescreener.common.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -14,6 +18,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BatchTriggerService {
 
     private final ScreeningSessionRepository sessionRepository;
@@ -29,23 +34,29 @@ public class BatchTriggerService {
     @Transactional
     public void triggerBatch(String sessionId) {
         ScreeningSession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Session not found"));
+                .orElseThrow(() -> ApiException.notFound("Session not found",
+                        "No session exists for id " + sessionId));
 
         if (session.getStatus() == SessionStatus.RUNNING) {
-            throw new RuntimeException("Session is already running");
+            throw ApiException.validation("Session is already running",
+                    "Session " + sessionId + " is in status RUNNING");
         }
 
         if (session.getJdFileKey() == null) {
-            throw new RuntimeException("JD file not uploaded");
+            throw ApiException.validation("JD file not uploaded",
+                    "Session " + sessionId + " has no jdFileKey");
         }
 
         long candidateCount = candidateRepository.countBySessionId(sessionId);
         if (candidateCount == 0) {
-            throw new RuntimeException("No candidates uploaded");
+            throw ApiException.validation("No candidates uploaded",
+                    "Session " + sessionId + " has zero candidates");
         }
 
         session.setStatus(SessionStatus.RUNNING);
         sessionRepository.save(session);
+
+        log.info("Triggering batch for session {} with {} candidates", sessionId, candidateCount);
 
         try {
             Map<String, String> body = new HashMap<>();
@@ -54,15 +65,19 @@ public class BatchTriggerService {
             restClient.post()
                     .uri(batchWorkerUrl + "/internal/jobs/start")
                     .header("X-Internal-Secret", sharedSecret)
+                    .header("X-Request-Id", MDC.get("requestId"))
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
                     .toBodilessEntity();
                     
         } catch (Exception e) {
+            log.error("Failed to trigger batch worker for session {}", sessionId, e);
             session.setStatus(SessionStatus.FAILED);
             sessionRepository.save(session);
-            throw new RuntimeException("Failed to trigger batch: " + e.getMessage());
+            throw new ApiException(HttpStatus.BAD_GATEWAY, ApiErrorCode.BATCH_WORKER_UNAVAILABLE,
+                    "Failed to trigger batch worker",
+                    e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
         }
     }
 }

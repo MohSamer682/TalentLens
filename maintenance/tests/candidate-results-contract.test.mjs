@@ -10,7 +10,7 @@ const controller = read('api-service/src/main/java/com/resumescreener/api/batch/
 const sessionDetail = read('ui/src/pages/SessionDetail.tsx');
 
 const dimensions = [
-  ['technicalSkills', 'TechnicalSkills', 'Technical'],
+  ['technicalSkills', 'TechnicalSkills', 'Technical Skills'],
   ['experience', 'Experience', 'Experience'],
   ['education', 'Education', 'Education'],
   ['softSkills', 'SoftSkills', 'Soft Skills'],
@@ -25,12 +25,18 @@ for (const [field, getter, label] of dimensions) {
   );
   assert.match(
     controller,
-    new RegExp(`s != null \\? s\\.get${getter}\\(\\) : 0\\.0`),
+    new RegExp(`valueOrZero\\(score\\.get${getter}\\(\\)\\)`),
     `BatchController must map score.${field} into candidate results`
+  );
+  // The results table abbreviates headers, so match the accessible full label
+  assert.match(
+    sessionDetail,
+    new RegExp(`full: '${label}'`),
+    `SessionDetail table must render the ${label} AI score column`
   );
   assert.match(
     sessionDetail,
-    new RegExp(`>\\s*${label}\\s*<`),
-    `SessionDetail table must render the ${label} AI score column`
+    new RegExp(`formatScore\\(c\\.${field}\\)`),
+    `SessionDetail table must render each candidate's ${field} value`
   );
 }

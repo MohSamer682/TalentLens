@@ -1,226 +1,140 @@
-import { useState, useEffect } from 'react';
-import { adminApi } from '@/api/client';
+import { useCallback, useEffect, useState } from 'react';
+import { adminApi, apiErrorMessage } from '@/api/client';
 import type { User } from '@/types';
-import { Navbar } from '@/components/Navbar';
+import { useAuthStore } from '@/store/authStore';
+import { Panel } from '@/components/ui/Card';
+import { Alert, SkeletonRows } from '@/components/ui/Feedback';
+import { Pagination } from '@/components/ui/Pagination';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { getInitials, formatRelativeDate } from '@/lib/utils';
-import { MoreVertical, Download, Plus, ChevronLeft, ChevronRight, Badge as BadgeIcon, History, ShieldCheck } from 'lucide-react';
+import { MainLayout, PageHeader } from '@/layouts/MainLayout';
+import { formatDate, formatRelativeDate, getInitials } from '@/lib/utils';
+import { stagger } from '@/lib/motion';
+
+const PAGE_SIZE = 20;
 
 export default function AdminUsers() {
+  const me = useAuthStore((s) => s.user);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadUsers();
-  }, [page]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
-      const res = await adminApi.listUsers(page);
+      const res = await adminApi.listUsers(page, PAGE_SIZE);
       setUsers(res.data.content || []);
-      setTotal(res.data.totalElements);
+      setTotal(res.data.totalElements ?? 0);
+      setTotalPages(res.data.totalPages ?? 0);
+      setError(null);
     } catch (err) {
-      console.error('Failed to load users:', err);
+      setError(apiErrorMessage(err, 'Could not load users'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
 
-  const handleRoleChange = async (userId: string, role: 'ADMIN' | 'RECRUITER') => {
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  const handleRoleChange = async (userId: string, role: User['role']) => {
+    setError(null);
+    setSavingId(userId);
     try {
-      await adminApi.updateRole(userId, role);
-      loadUsers();
+      const res = await adminApi.updateRole(userId, role);
+      setUsers((current) => current.map((u) => (u.id === userId ? res.data : u)));
     } catch (err) {
-      console.error('Failed to update role:', err);
+      setError(apiErrorMessage(err, 'Could not change the role'));
+    } finally {
+      setSavingId(null);
     }
   };
 
-  const pageSize = 10;
-  const totalPages = Math.ceil(total / pageSize);
+  const head = 'condensed px-3 py-2 text-left text-[13px] font-semibold uppercase tracking-wide text-ink-muted';
 
   return (
-    <div className="min-h-screen bg-surface">
-      <Navbar />
-      <main className="max-w-6xl mx-auto px-8 py-12">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-semibold tracking-tight">User Management</h1>
-            <div className="flex items-center gap-2 pt-2">
-              <Badge variant="primary">{total} Users Total</Badge>
-              <span className="text-sm text-on-surface-variant">
-                • {page * pageSize + 1} - {Math.min((page + 1) * pageSize, total)} shown
-              </span>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <Button variant="outline">
-              <Download className="w-4 h-4" />
-              Export CSV
-            </Button>
-            <Button>
-              <Plus className="w-4 h-4" />
-              New User
-            </Button>
-          </div>
-        </div>
+    <MainLayout>
+      <PageHeader
+        title="Users"
+        meta={!loading && <span className="num">{total} account{total === 1 ? '' : 's'}. Admins can manage users; recruiters run screening sessions.</span>}
+      />
 
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-outline-variant/10">
-          {loading ? (
-            <div className="flex items-center justify-center py-24">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-            </div>
-          ) : (
-            <table className="w-full text-left">
-              <thead className="bg-surface-container-low text-on-surface-variant">
+      {error && (
+        <Alert
+          className="mb-4"
+          action={!users.length && <Button variant="secondary" size="sm" onClick={() => { setLoading(true); loadUsers(); }}>Try again</Button>}
+        >
+          {error}
+        </Alert>
+      )}
+
+      {loading ? (
+        <Panel>
+          <SkeletonRows rows={4} columns={[22, 26, 10, 12]} />
+        </Panel>
+      ) : users.length > 0 ? (
+        <Panel>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-sm">
+              <thead className="border-b border-line bg-sunken">
                 <tr>
-                  <th className="px-8 py-5 text-xs font-semibold uppercase">Name</th>
-                  <th className="px-8 py-5 text-xs font-semibold uppercase">Email</th>
-                  <th className="px-8 py-5 text-xs font-semibold uppercase">Role</th>
-                  <th className="px-8 py-5 text-xs font-semibold uppercase">Joined</th>
-                  <th className="px-8 py-5 text-xs font-semibold uppercase text-right">
-                    Actions
-                  </th>
+                  <th scope="col" className={`${head} pl-4 sm:pl-5`}>Name</th>
+                  <th scope="col" className={head}>Email</th>
+                  <th scope="col" className={head}>Joined</th>
+                  <th scope="col" className={`${head} pr-4 sm:pr-5`}>Role</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-container/50">
-                {users.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="hover:bg-surface-container-low/30 transition-colors"
-                  >
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-primary font-bold text-xs">
-                          {getInitials(user.fullName)}
+              <tbody>
+                {users.map((user) => {
+                  const isMe = user.id === me?.id;
+                  return (
+                    <tr key={user.id} style={stagger(users.indexOf(user))} className="animate-fade-up border-b border-line transition-colors last:border-b-0 hover:bg-ground">
+                      <td className="py-2.5 pl-4 pr-3 sm:pl-5">
+                        <div className="flex items-center gap-3">
+                          <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded bg-sunken text-[13px] font-bold text-ink-muted">
+                            {getInitials(user.fullName)}
+                          </span>
+                          <span className="font-semibold">
+                            {user.fullName}
+                            {isMe && <span className="ml-1.5 font-normal text-ink-muted">(you)</span>}
+                          </span>
                         </div>
-                        <span className="font-semibold">{user.fullName}</span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-5 text-on-surface-variant font-medium">
-                      {user.email}
-                    </td>
-                    <td className="px-8 py-5">
-                      <Badge
-                        variant={user.role === 'ADMIN' ? 'secondary' : 'default'}
-                      >
-                        {user.role}
-                      </Badge>
-                    </td>
-                    <td className="px-8 py-5 text-on-surface-variant text-sm">
-                      {formatRelativeDate(user.createdAt)}
-                    </td>
-                    <td className="px-8 py-5 text-right">
-                      <div className="relative inline-block">
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-outline-variant/10 py-2 z-10 hidden group-hover:block">
-                          {user.role === 'ADMIN' ? (
-                            <button
-                              onClick={() =>
-                                handleRoleChange(user.id, 'RECRUITER')
-                              }
-                              className="w-full px-4 py-2 text-sm text-left hover:bg-surface-container-low flex items-center gap-2"
-                            >
-                              Set as Recruiter
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() =>
-                                handleRoleChange(user.id, 'ADMIN')
-                              }
-                              className="w-full px-4 py-2 text-sm text-left hover:bg-surface-container-low flex items-center gap-2"
-                            >
-                              Set as Admin
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-3 py-2.5 text-ink-muted">{user.email}</td>
+                      <td className="px-3 py-2.5 text-ink-muted" title={formatDate(user.createdAt)}>
+                        {formatRelativeDate(user.createdAt)}
+                      </td>
+                      <td className="py-2.5 pl-3 pr-4 sm:pr-5">
+                        <select
+                          value={user.role}
+                          disabled={savingId === user.id}
+                          aria-label={`Role for ${user.fullName}`}
+                          onChange={(e) => handleRoleChange(user.id, e.target.value as User['role'])}
+                          className="h-8 rounded-md border border-line-strong bg-surface px-2 text-sm font-semibold focus:border-accent-text focus:outline-none focus:ring-4 focus:ring-accent/25 disabled:bg-sunken disabled:text-ink-muted"
+                        >
+                          <option value="RECRUITER">Recruiter</option>
+                          <option value="ADMIN">Admin</option>
+                        </select>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
-          )}
-
-          <div className="px-8 py-5 bg-surface-container-low/20 flex items-center justify-between border-t border-surface-container/50">
-            <span className="text-sm text-on-surface-variant">
-              Showing{' '}
-              <span className="font-bold text-on-surface">
-                {page * pageSize + 1} - {Math.min((page + 1) * pageSize, total)}
-              </span>
-              {' '}of {total} users
+          </div>
+          <div className="flex flex-col items-center justify-between gap-3 border-t border-line px-4 py-3 text-sm text-ink-muted sm:flex-row sm:px-5">
+            <span className="num">
+              {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + users.length} of {total}
             </span>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled={page === 0}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => (
-                <Button
-                  key={i}
-                  variant={page === i ? 'default' : 'ghost'}
-                  size="icon"
-                  onClick={() => setPage(i)}
-                >
-                  {i + 1}
-                </Button>
-              ))}
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled={page >= totalPages - 1}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
+            <Pagination page={page} totalPages={totalPages} onPage={setPage} />
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-          <div className="bg-surface-container-low/40 rounded-xl p-6 flex items-center gap-4 border border-outline-variant/10">
-            <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-primary">
-              <BadgeIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
-                Active Roles
-              </p>
-              <h4 className="text-2xl font-bold">14 Core Roles</h4>
-            </div>
-          </div>
-          <div className="bg-surface-container-low/40 rounded-xl p-6 flex items-center gap-4 border border-outline-variant/10">
-            <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-secondary">
-              <History className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
-                Avg. Tenure
-              </p>
-              <h4 className="text-2xl font-bold">1.4 Years</h4>
-            </div>
-          </div>
-          <div className="bg-surface-container-low/40 rounded-xl p-6 flex items-center gap-4 border border-outline-variant/10">
-            <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-tertiary">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
-                Compliance
-              </p>
-              <h4 className="text-2xl font-bold">99.8% Pass</h4>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+        </Panel>
+      ) : (
+        !error && <Panel className="px-6 py-12 text-center text-sm text-ink-muted">No user accounts yet.</Panel>
+      )}
+    </MainLayout>
   );
 }

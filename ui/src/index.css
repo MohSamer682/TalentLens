@@ -1,45 +1,128 @@
+/* Self-hosted so no request leaves the company network for a font. Width axis drives the condensed table voice. */
+@import '@fontsource-variable/archivo/wdth.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Shell: near-black with a green undertone */
+    --pitch: 11 20 18;          /* #0B1412 */
+    --pitch-raised: 27 40 36;   /* #1B2824 */
+    --pitch-ink: 157 184 174;   /* #9DB8AE, secondary text on pitch */
+
+    --ground: 245 247 246;      /* #F5F7F6 page */
+    --surface: 255 255 255;
+    --sunken: 237 241 239;      /* #EDF1EF table head, chips */
+    --line: 223 229 226;        /* #DFE5E2 */
+    --line-strong: 194 203 199; /* #C2CBC7 */
+
+    --ink: 17 25 22;            /* #111916 */
+    --ink-muted: 94 107 102;    /* #5E6B66, 5.6:1 on white */
+
+    /* Mint emerald. Fills carry dark text; green text on light uses accent-text. */
+    --accent: 34 195 138;       /* #22C38A */
+    --accent-strong: 27 174 122;/* #1BAE7A */
+    --accent-ink: 4 36 27;      /* #04241B, 7.3:1 on accent */
+    --accent-text: 3 105 76;    /* #03694C, 6.7:1 on white */
+    --accent-bar: 21 154 107;   /* #159A6B */
+    --accent-soft: 227 248 238; /* #E3F8EE */
+
+    --info: 29 95 168;          /* scoring */
+    --info-soft: 232 240 251;
+    --warn: 138 75 0;
+    --warn-soft: 251 241 222;
+    --danger: 180 35 24;
+    --danger-soft: 253 237 235;
+
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    @apply bg-surface text-on-surface font-body antialiased;
-    font-family: 'Inter', sans-serif;
+    @apply bg-ground text-ink font-sans antialiased;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  ::selection {
+    background: rgb(var(--accent) / 0.3);
+    color: rgb(var(--ink));
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent-text));
+    outline-offset: 2px;
+  }
+
+  input,
+  textarea {
+    caret-color: rgb(var(--accent-text));
+  }
+
+  input[type='range'] {
+    accent-color: rgb(var(--accent-text));
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* Loading placeholder: a soft highlight sweeping across the shape of the content that is coming. */
+  .skeleton {
+    @apply animate-shimmer rounded-md;
+    background: linear-gradient(90deg, rgb(var(--sunken)) 25%, rgb(var(--line) / 0.6) 50%, rgb(var(--sunken)) 75%);
+    background-size: 200% 100%;
+  }
+
+  /* Moving stripes on a live progress bar, so a slow batch never looks frozen. */
+  .stripes {
+    background-image: linear-gradient(
+      135deg,
+      rgb(255 255 255 / 0.22) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgb(255 255 255 / 0.22) 50%,
+      rgb(255 255 255 / 0.22) 75%,
+      transparent 75%
+    );
+    background-size: 24px 24px;
   }
 }
 
 @layer utilities {
-  .glass {
-    @apply bg-white/60 backdrop-blur-xl border border-white/40;
+  /* The league-table voice: condensed, used for column heads, positions, nav and status. */
+  .condensed {
+    font-stretch: 72%;
   }
 
-  .glass-card {
-    @apply bg-white/70 backdrop-blur-2xl;
+  .num {
+    font-variant-numeric: tabular-nums;
   }
+}
 
-  .glass-panel {
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
+/* Reduced motion keeps every state change but drops travel, growth and loops. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up {
+    animation-name: fade-in;
   }
-
-  .primary-gradient {
-    @apply bg-gradient-to-r from-primary to-secondary;
+  .animate-grow-x,
+  .animate-shimmer,
+  .animate-stripes,
+  .animate-ping {
+    animation: none;
   }
-
-  .ghost-border {
-    @apply outline outline-1 outline-black/[0.05];
-  }
-
-  .radar-grid {
-    stroke: #e5e9eb;
-    stroke-width: 1;
-    fill: none;
-  }
-
-  .radar-area {
-    fill: rgba(70, 71, 211, 0.15);
-    stroke: #4647d3;
-    stroke-width: 2;
+  .animate-rank {
+    animation-duration: 2.4s;
   }
 }

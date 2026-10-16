@@ -1,49 +1,49 @@
 import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
-export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {}
+const field =
+  'w-full rounded-md border border-line-strong bg-surface px-3 text-[15px] text-ink transition-colors placeholder:text-ink-muted hover:border-ink-muted focus:border-accent-text focus:outline-none focus:ring-4 focus:ring-accent/25 disabled:cursor-not-allowed disabled:bg-sunken aria-[invalid=true]:border-danger';
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, ...props }, ref) => {
-    return (
-      <input
-        type={type}
-        className={cn(
-          'flex h-14 w-full rounded-2xl border border-surface-container bg-surface-container-lowest px-5 py-4 text-sm text-on-surface transition-all duration-300',
-          'placeholder:text-outline/50',
-          'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary',
-          'disabled:cursor-not-allowed disabled:opacity-50',
-          className
-        )}
-        ref={ref}
-        {...props}
-      />
-    );
-  }
+export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  ({ className, ...props }, ref) => <input ref={ref} className={cn(field, 'h-10', className)} {...props} />
 );
 
 Input.displayName = 'Input';
 
-export interface TextareaProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
-
-export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, ...props }, ref) => {
-    return (
-      <textarea
-        className={cn(
-          'flex min-h-[100px] w-full rounded-2xl border border-surface-container bg-surface-container-lowest px-5 py-4 text-sm text-on-surface transition-all duration-300 resize-none',
-          'placeholder:text-outline/50',
-          'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary',
-          'disabled:cursor-not-allowed disabled:opacity-50',
-          className
-        )}
-        ref={ref}
-        {...props}
-      />
-    );
-  }
+export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
+  ({ className, ...props }, ref) => (
+    <textarea ref={ref} className={cn(field, 'min-h-[96px] resize-y py-2', className)} {...props} />
+  )
 );
 
 Textarea.displayName = 'Textarea';
+
+export function Field({
+  id,
+  label,
+  hint,
+  error,
+  children,
+}: {
+  id: string;
+  label: React.ReactNode;
+  hint?: React.ReactNode;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="block text-sm font-semibold">
+        {label}
+      </label>
+      {children}
+      {error ? (
+        <p id={`${id}-error`} className="text-[13px] text-danger">
+          {error}
+        </p>
+      ) : hint ? (
+        <p className="text-[13px] text-ink-muted">{hint}</p>
+      ) : null}
+    </div>
+  );
+}

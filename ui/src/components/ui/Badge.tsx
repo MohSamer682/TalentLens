@@ -1,47 +1,39 @@
-import { forwardRef } from 'react';
-import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
+import type { ScreeningSession } from '@/types';
 
-const badgeVariants = cva(
-  'inline-flex items-center rounded-full font-semibold uppercase tracking-widest',
-  {
-    variants: {
-      variant: {
-        default: 'bg-surface-container text-on-surface-variant',
-        primary: 'bg-primary-container/20 text-primary',
-        secondary: 'bg-secondary-container/30 text-secondary-dim',
-        success: 'bg-green-100 text-green-700',
-        warning: 'bg-yellow-100 text-yellow-700',
-        error: 'bg-red-100 text-red-700',
-        running: 'bg-blue-100 text-blue-700',
-      },
-      size: {
-        default: 'px-3 py-1 text-[10px]',
-        sm: 'px-2 py-0.5 text-[8px]',
-        lg: 'px-4 py-1.5 text-xs',
-      },
-    },
-    defaultVariants: {
-      variant: 'default',
-      size: 'default',
-    },
-  }
-);
+type Status = ScreeningSession['status'];
 
-export interface BadgeProps
-  extends React.HTMLAttributes<HTMLSpanElement>,
-    VariantProps<typeof badgeVariants> {}
+const STATUS: Record<Status, { label: string; className: string; dot: string; live?: boolean }> = {
+  PENDING: { label: 'Not started', className: 'bg-sunken text-ink-muted', dot: 'bg-ink-muted' },
+  RUNNING: { label: 'Scoring', className: 'bg-info-soft text-info', dot: 'bg-info', live: true },
+  DONE: { label: 'Ranked', className: 'bg-accent-soft text-accent-text', dot: 'bg-accent-bar' },
+  FAILED: { label: 'Failed', className: 'bg-danger-soft text-danger', dot: 'bg-danger' },
+};
 
-export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
-  ({ className, variant, size, ...props }, ref) => {
-    return (
-      <span
-        ref={ref}
-        className={cn(badgeVariants({ variant, size, className }))}
-        {...props}
-      />
-    );
-  }
-);
+export function StatusBadge({ status, className }: { status: Status; className?: string }) {
+  const s = STATUS[status];
+  return (
+    <span
+      className={cn(
+        'condensed inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[13px] font-semibold uppercase tracking-wide',
+        s.className,
+        className
+      )}
+    >
+      <span aria-hidden="true" className="relative flex size-1.5">
+        {s.live && <span className={cn('absolute inset-0 animate-ping rounded-full', s.dot)} />}
+        <span className={cn('relative size-1.5 rounded-full', s.dot)} />
+      </span>
+      {s.label}
+    </span>
+  );
+}
 
-Badge.displayName = 'Badge';
+export function Tag({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span
+      className={cn('inline-flex items-center rounded-full border border-line bg-ground px-2.5 py-0.5 text-[13px] text-ink', className)}
+      {...props}
+    />
+  );
+}
