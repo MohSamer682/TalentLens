@@ -52,7 +52,6 @@ public class RoleService {
         Set<Permission> after = requested.isEmpty() ? EnumSet.noneOf(Permission.class) : EnumSet.copyOf(requested);
 
         grants.deleteByRole(role);
-        grants.flush();
         grants.saveAll(after.stream().map(p -> new RolePermission(role, p)).toList());
 
         StringBuilder diff = new StringBuilder(role.name());
