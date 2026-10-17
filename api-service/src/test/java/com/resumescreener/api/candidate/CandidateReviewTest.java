@@ -47,7 +47,8 @@ class CandidateReviewTest {
     private final CandidateScoreRepository scores = mock(CandidateScoreRepository.class);
     private final UserRepository users = mock(UserRepository.class);
     private final AuditService audit = mock(AuditService.class);
-    private final CandidateService service = new CandidateService(sessions, candidates, scores, users, audit);
+    private final com.resumescreener.common.session.CandidateNoteRepository notes = mock(com.resumescreener.common.session.CandidateNoteRepository.class);
+    private final CandidateService service = new CandidateService(sessions, candidates, scores, users, audit, notes);
     private final ScreeningSession session = ScreeningSession.builder().id("s1").status(SessionStatus.DONE).build();
 
     @BeforeEach
