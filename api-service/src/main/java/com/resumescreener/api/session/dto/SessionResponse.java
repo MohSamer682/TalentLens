@@ -20,6 +20,8 @@ public class SessionResponse {
     private String lastErrorMessage;
     private String reportFileKey;
     private Integer shortlistedCount;
+    /** Set only when listing everyone's sessions */
+    private String ownerName;
     /** Model the batch worker scores with and whether it is reachable; set on the session detail only */
     private LlmStatusDto llm;
 

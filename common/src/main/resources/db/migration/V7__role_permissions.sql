@@ -1,0 +1,11 @@
+CREATE TABLE role_permissions (
+    role       VARCHAR(32) NOT NULL,
+    permission VARCHAR(64) NOT NULL,
+    PRIMARY KEY (role, permission)
+);
+
+INSERT INTO role_permissions (role, permission) VALUES
+    ('ADMIN', 'SESSION_RUN'), ('ADMIN', 'SESSION_VIEW_ALL'), ('ADMIN', 'CANDIDATE_REVIEW'), ('ADMIN', 'ANALYTICS_VIEW'),
+    ('ADMIN', 'USER_MANAGE'), ('ADMIN', 'ROLE_MANAGE'), ('ADMIN', 'AUDIT_VIEW'),
+    ('HR_CHIEF', 'SESSION_RUN'), ('HR_CHIEF', 'SESSION_VIEW_ALL'), ('HR_CHIEF', 'CANDIDATE_REVIEW'), ('HR_CHIEF', 'ANALYTICS_VIEW'),
+    ('RECRUITER', 'SESSION_RUN'), ('RECRUITER', 'CANDIDATE_REVIEW');

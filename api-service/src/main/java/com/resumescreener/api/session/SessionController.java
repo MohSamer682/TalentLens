@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -27,6 +28,7 @@ public class SessionController {
     private final LlmStatusClient llmStatusClient;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('SESSION_RUN')")
     public ResponseEntity<ApiResponse<SessionResponse>> createSession(
             @jakarta.validation.Valid @RequestBody CreateSessionRequest request, Authentication auth) {
         ScreeningSession session = sessionService.createSession(request, auth.getName());
@@ -36,9 +38,13 @@ public class SessionController {
     @GetMapping
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Page<SessionResponse>>> listSessions(
-            Pageable pageable, Authentication auth) {
-        Page<SessionResponse> data = sessionService.getSessions(auth.getName(), pageable)
-                .map(this::mapToResponse);
+            Pageable pageable, @RequestParam(defaultValue = "false") boolean everyone, Authentication auth) {
+        Page<SessionResponse> data = sessionService.getSessions(auth.getName(), everyone, pageable)
+                .map(s -> {
+                    SessionResponse r = mapToResponse(s);
+                    if (everyone) r.setOwnerName(s.getUser().getFullName());
+                    return r;
+                });
         return ResponseEntity.ok(ApiResponse.success("Sessions loaded", data));
     }
 
@@ -52,6 +58,7 @@ public class SessionController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAuthority('SESSION_RUN')")
     public ResponseEntity<ApiResponse<SessionResponse>> updateSession(
             @PathVariable String id, @RequestBody CreateSessionRequest request, Authentication auth) {
         SessionResponse data = mapToResponse(sessionService.updateSession(id, request, auth.getName()));
@@ -59,6 +66,7 @@ public class SessionController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('SESSION_RUN')")
     public ResponseEntity<ApiResponse<SessionActionResponse>> deleteSession(
             @PathVariable String id, Authentication auth) {
         sessionService.deleteSession(id, auth.getName());
@@ -68,6 +76,7 @@ public class SessionController {
     }
 
     @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAuthority('SESSION_RUN')")
     public ResponseEntity<ApiResponse<SessionActionResponse>> cancelSession(
             @PathVariable String id, Authentication auth) {
         sessionService.cancelSession(id, auth.getName());

@@ -28,14 +28,14 @@ public class AdminController {
     public record UserDto(String id, String email, String fullName, Role role, java.time.Instant createdAt) {}
 
     @GetMapping("/users")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<ApiResponse<Page<UserDto>>> listUsers(Pageable pageable) {
         Page<UserDto> data = userRepository.findAll(pageable).map(AdminController::toDto);
         return ResponseEntity.ok(ApiResponse.success("Users loaded", data));
     }
 
     @PatchMapping("/users/{id}/role")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<ApiResponse<UserDto>> updateRole(
             @PathVariable String id,
             @RequestBody RoleRequest request,
@@ -69,7 +69,7 @@ public class AdminController {
     }
 
     @GetMapping("/audit")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('AUDIT_VIEW')")
     public ResponseEntity<ApiResponse<Page<AuditEvent>>> getAuditLog(
             @RequestParam(required = false) String userId,
             @RequestParam(required = false) String action,

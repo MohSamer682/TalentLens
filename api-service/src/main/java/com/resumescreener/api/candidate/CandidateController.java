@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -35,6 +36,7 @@ public class CandidateController {
     }
 
     @PatchMapping("/{id}/candidates/{candidateId}/review")
+    @PreAuthorize("hasAuthority('CANDIDATE_REVIEW')")
     public ResponseEntity<ApiResponse<ReviewResult>> review(
             @PathVariable String id,
             @PathVariable String candidateId,
@@ -45,6 +47,7 @@ public class CandidateController {
     }
 
     @PostMapping("/{id}/candidates/review")
+    @PreAuthorize("hasAuthority('CANDIDATE_REVIEW')")
     public ResponseEntity<ApiResponse<ReviewResult>> reviewMany(
             @PathVariable String id,
             @Valid @RequestBody BulkReviewRequest request,
@@ -54,6 +57,7 @@ public class CandidateController {
     }
 
     @PostMapping("/{id}/shortlist/top")
+    @PreAuthorize("hasAuthority('CANDIDATE_REVIEW')")
     public ResponseEntity<ApiResponse<ReviewResult>> shortlistTop(
             @PathVariable String id,
             @Valid @RequestBody TopShortlistRequest request,

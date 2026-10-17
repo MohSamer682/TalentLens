@@ -50,16 +50,23 @@ class AnalyticsControllerTest {
     }
 
     @Test
-    void adminGetsOverview() {
-        signIn("ROLE_ADMIN");
+    void analyticsViewGetsOverview() {
+        signIn("ROLE_RECRUITER", "ANALYTICS_VIEW");
         when(repository.overview(any(), any())).thenReturn(empty());
 
         assertThat(controller.overview("90").getBody().getData()).isNotNull();
     }
 
     @Test
+    void hrChiefWithoutAnalyticsViewIsForbidden() {
+        signIn("ROLE_HR_CHIEF", "SESSION_RUN");
+
+        assertThrows(AccessDeniedException.class, () -> controller.overview("30"));
+    }
+
+    @Test
     void hrChiefGetsOverview() {
-        signIn("ROLE_HR_CHIEF");
+        signIn("ROLE_HR_CHIEF", "ANALYTICS_VIEW");
         when(repository.overview(any(), any())).thenReturn(empty());
 
         assertThat(controller.overview("30").getStatusCode().value()).isEqualTo(200);
@@ -67,14 +74,14 @@ class AnalyticsControllerTest {
 
     @Test
     void recruiterIsForbidden() {
-        signIn("ROLE_RECRUITER");
+        signIn("ROLE_RECRUITER", "SESSION_RUN", "CANDIDATE_REVIEW");
 
         assertThrows(AccessDeniedException.class, () -> controller.overview("90"));
     }
 
     @Test
     void invalidDaysIsRejected() {
-        signIn("ROLE_ADMIN");
+        signIn("ROLE_ADMIN", "ANALYTICS_VIEW");
 
         for (String days : new String[]{"7", "abc", ""}) {
             ApiException e = assertThrows(ApiException.class, () -> controller.overview(days));
@@ -92,8 +99,8 @@ class AnalyticsControllerTest {
         service.setClock(Clock.systemUTC());
     }
 
-    private static void signIn(String authority) {
-        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("u@example.com", null, authority));
+    private static void signIn(String... authorities) {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("u@example.com", null, authorities));
     }
 
     private static AnalyticsOverview empty() {

@@ -74,7 +74,7 @@ public class CandidateService {
     }
 
     private ScreeningSession reviewableSession(String sessionId, String email) {
-        ScreeningSession session = sessionService.getSession(sessionId, email);
+        ScreeningSession session = sessionService.getOwnedSession(sessionId, email);
         if (session.getStatus() == SessionStatus.RUNNING) {
             throw ApiException.validation("Wait for scoring to finish before reviewing",
                     "Session " + sessionId + " is in status RUNNING");
