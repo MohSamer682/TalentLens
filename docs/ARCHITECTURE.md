@@ -86,6 +86,16 @@ A feature is a package that owns its controller, service, DTOs and, in `common`,
 
 Where a rule failed when written, the fix was to move code to its real owner: `AuditService` to `api.audit`, `RequestIdFilter` to `api.common`, `SessionActionResponse` to `session.dto`, `LlmStatusClient` to `api.llm`.
 
+### Permissions
+
+Access is decided by permissions, not role names. `common.user.Permission` lists seven (`SESSION_RUN`, `SESSION_VIEW_ALL`, `CANDIDATE_REVIEW`, `ANALYTICS_VIEW`, and the admin-only `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_VIEW`); `role_permissions` (V7) maps roles to them and admins edit it on the Roles and permissions screen.
+
+- `UserDetailsServiceImpl` grants `ROLE_<role>` plus the role's permissions on every request, so an edit applies on the next request without a new token.
+- `Permission.effective` gives `ADMIN` every permission and strips admin-only ones from other roles, whatever the table holds.
+- Endpoints use `@PreAuthorize("hasAuthority('...')")`; `/api/admin/**` also keeps `hasRole('ADMIN')` in `SecurityConfig` as a second wall.
+- Viewing a session (`SessionService.getSession`) needs ownership or `SESSION_VIEW_ALL`; changing it (`getOwnedSession`) needs ownership or the admin role.
+- The UI reads `user.permissions` (login, register, `GET /api/auth/me`) only to hide what the server would refuse, and refreshes it on load and after any 403.
+
 ### Adding a feature
 
 1. Create `common/<feature>` for entities, repositories, enums and DTOs shared with the worker. Skip it if only one service needs the data.

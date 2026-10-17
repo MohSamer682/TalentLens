@@ -16,8 +16,11 @@ import type {
   ResumeDownloadResponse,
   ResumeFile,
   ReviewResult,
+  Permission,
   ReviewStatus,
   Role,
+  RoleInfo,
+  RolesCatalog,
   ScoringScope,
   ScreeningSession,
   SessionActionResponse,
@@ -98,6 +101,8 @@ api.interceptors.response.use(
           error.response?.status
         );
       reportClientError(apiErr);
+      // A 403 usually means an admin changed this role's permissions; pick up the new set.
+      if (apiErr.code === 'ACCESS_DENIED') void refreshCurrentUser();
       return Promise.reject(apiErr);
     }
 
@@ -133,11 +138,23 @@ export function apiErrorDetails(error: unknown): string | undefined {
 export const authApi = {
   login: (data: LoginRequest) => api.post<AuthResponse>('/auth/login', data),
   register: (data: RegisterRequest) => api.post<AuthResponse>('/auth/register', data),
+  me: () => api.get<User>('/auth/me'),
 };
 
+/** Replaces the stored user with the server's current role and permissions. */
+export async function refreshCurrentUser() {
+  if (!useAuthStore.getState().token) return;
+  try {
+    const { data } = await authApi.me();
+    useAuthStore.getState().setUser(data);
+  } catch {
+    // a 401 signs out in the interceptor; anything else keeps the stored user until the next try
+  }
+}
+
 export const sessionsApi = {
-  list: (page = 0, size = 20) =>
-    api.get<Page<ScreeningSession>>('/sessions', { params: { page, size } }),
+  list: (page = 0, size = 20, everyone = false) =>
+    api.get<Page<ScreeningSession>>('/sessions', { params: { page, size, everyone } }),
   get: (id: string) => api.get<ScreeningSession>(`/sessions/${id}`),
   create: (data: CreateSessionRequest) => api.post<ScreeningSession>('/sessions', data),
   update: (id: string, data: Partial<CreateSessionRequest>) =>
@@ -196,6 +213,9 @@ export const adminApi = {
     api.get<Page<User>>('/admin/users', { params: { page, size } }),
   updateRole: (userId: string, role: Role) =>
     api.patch<User>(`/admin/users/${userId}/role`, { role }),
+  roles: () => api.get<RolesCatalog>('/admin/roles'),
+  updatePermissions: (role: Role, permissions: Permission[]) =>
+    api.put<RoleInfo>(`/admin/roles/${role}/permissions`, { permissions }),
 };
 
 function reportClientError(error: ApiRequestError) {

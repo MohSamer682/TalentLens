@@ -7,6 +7,7 @@ import { Alert, SkeletonRows } from '@/components/ui/Feedback';
 import { Pagination } from '@/components/ui/Pagination';
 import { Button } from '@/components/ui/Button';
 import { MainLayout, PageHeader } from '@/layouts/MainLayout';
+import { AdminTabs } from '@/components/AdminTabs';
 import { ROLE_LABEL, formatDate, formatRelativeDate, getInitials } from '@/lib/utils';
 import { stagger } from '@/lib/motion';
 
@@ -59,8 +60,9 @@ export default function AdminUsers() {
     <MainLayout>
       <PageHeader
         title="Users"
-        meta={!loading && <span className="num">{total} account{total === 1 ? '' : 's'}. Admins can manage users; recruiters run screening sessions.</span>}
+        meta={!loading && <span className="num">{total} account{total === 1 ? '' : 's'}. What each role can do is set under Roles and permissions.</span>}
       />
+      <AdminTabs />
 
       {error && (
         <Alert
@@ -110,7 +112,8 @@ export default function AdminUsers() {
                       <td className="py-2.5 pl-3 pr-4 sm:pr-5">
                         <select
                           value={user.role}
-                          disabled={savingId === user.id}
+                          disabled={savingId === user.id || isMe}
+                          title={isMe ? 'You cannot change your own role, so at least one admin always remains' : undefined}
                           aria-label={`Role for ${user.fullName}`}
                           onChange={(e) => handleRoleChange(user.id, e.target.value as User['role'])}
                           className="h-8 rounded-md border border-line-strong bg-surface px-2 text-sm font-semibold focus:border-accent-text focus:outline-none focus:ring-4 focus:ring-accent/25 disabled:bg-sunken disabled:text-ink-muted"
