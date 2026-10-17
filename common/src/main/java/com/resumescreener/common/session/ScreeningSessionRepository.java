@@ -26,4 +26,7 @@ public interface ScreeningSessionRepository extends JpaRepository<ScreeningSessi
 
     @EntityGraph(attributePaths = {"weights"})
     Optional<ScreeningSession> findWithWeightsById(String id);
+
+    @EntityGraph(attributePaths = {"user"})
+    Optional<ScreeningSession> findWithUserById(String id);
 }

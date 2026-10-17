@@ -45,7 +45,7 @@ class MinioUploadServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(service, "bucket", "test");
-        when(sessions.findById("s1")).thenReturn(Optional.of(session));
+        when(sessions.findWithUserById("s1")).thenReturn(Optional.of(session));
         AtomicInteger ids = new AtomicInteger();
         when(candidates.save(any(Candidate.class))).thenAnswer(inv -> {
             Candidate c = inv.getArgument(0);

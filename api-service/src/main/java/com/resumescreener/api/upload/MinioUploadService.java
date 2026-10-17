@@ -47,19 +47,20 @@ public class MinioUploadService {
     @Value("${minio.bucket}")
     private String bucket;
 
-    public void checkOwnership(String sessionId, String userEmail) {
-        ScreeningSession session = sessionRepository.findById(sessionId)
+    /** Loads the owner with the session, so callers outside a transaction can use it. */
+    public ScreeningSession checkOwnership(String sessionId, String userEmail) {
+        ScreeningSession session = sessionRepository.findWithUserById(sessionId)
                 .orElseThrow(() -> ApiException.notFound("Session not found",
                         "No session exists for id " + sessionId));
         if (!session.getUser().getEmail().equalsIgnoreCase(userEmail)) {
             throw new org.springframework.security.access.AccessDeniedException("Not authorized");
         }
+        return session;
     }
 
     @Transactional
     public String uploadJd(String sessionId, MultipartFile file, String userEmail) {
-        checkOwnership(sessionId, userEmail);
-        ScreeningSession session = sessionRepository.findById(sessionId).get();
+        ScreeningSession session = checkOwnership(sessionId, userEmail);
 
         String key = "jd/" + sessionId + "/" + UUID.randomUUID() + ".pdf";
 
@@ -84,8 +85,7 @@ public class MinioUploadService {
      * so files stored before a storage failure stay in the session (a retry skips them as duplicates).
      */
     public UploadResumesResponse uploadResumes(String sessionId, MultipartFile[] files, String userEmail) {
-        checkOwnership(sessionId, userEmail);
-        ScreeningSession session = sessionRepository.findById(sessionId).get();
+        ScreeningSession session = checkOwnership(sessionId, userEmail);
         if (session.getStatus() == SessionStatus.RUNNING) {
             throw ApiException.validation("Wait for scoring to finish before adding resumes",
                     "Session " + sessionId + " is in status RUNNING");
@@ -145,8 +145,7 @@ public class MinioUploadService {
 
     @Transactional
     public void removeResume(String sessionId, String candidateId, String userEmail) {
-        checkOwnership(sessionId, userEmail);
-        ScreeningSession session = sessionRepository.findById(sessionId).get();
+        ScreeningSession session = checkOwnership(sessionId, userEmail);
         if (session.getStatus() == SessionStatus.RUNNING) {
             throw ApiException.validation("Wait for scoring to finish before removing resumes",
                     "Session " + sessionId + " is in status RUNNING");
