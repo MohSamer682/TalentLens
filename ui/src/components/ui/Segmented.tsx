@@ -43,7 +43,7 @@ export function Segmented<T extends string>({
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            'condensed relative flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[15px] font-semibold uppercase tracking-wide transition-colors',
+            'relative flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold transition-colors',
             value === o.value ? 'text-ink' : 'text-ink-muted hover:text-ink'
           )}
         >
@@ -52,7 +52,7 @@ export function Segmented<T extends string>({
             <span
               className={cn(
                 'num rounded-full px-1.5 text-[12px] leading-5 transition-colors',
-                value === o.value ? 'bg-accent text-accent-ink' : 'bg-line text-ink-muted'
+                value === o.value ? 'bg-ink text-ground' : 'bg-line text-ink-muted'
               )}
             >
               {o.count}

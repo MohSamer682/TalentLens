@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Download, Minus, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { apiErrorMessage, sessionsApi } from '@/api/client';
-import type { CandidateResultDto, ProgressResponse, ScreeningSession } from '@/types';
+import type { CandidateResultDto, LlmState, LlmStatus, ProgressResponse, ScreeningSession } from '@/types';
 import { Button, buttonVariants } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Panel } from '@/components/ui/Card';
@@ -158,6 +158,7 @@ export default function SessionDetail() {
                 {DIMENSIONS.map((d) => `${d.short} ${session.weights[d.key]}`).join(' · ')}
               </span>
             )}
+            {session.llm && <LlmStatusLine llm={session.llm} />}
           </>
         }
         actions={
@@ -318,6 +319,29 @@ export default function SessionDetail() {
         </Panel>
       )}
     </MainLayout>
+  );
+}
+
+const LLM_STATE: Record<LlmState, { label: string; dot: string }> = {
+  AVAILABLE: { label: 'Available', dot: 'bg-success' },
+  REACHABLE: { label: 'Reachable', dot: 'bg-info' },
+  MODEL_NOT_FOUND: { label: 'Model not found', dot: 'bg-danger' },
+  AUTH_FAILED: { label: 'API key rejected', dot: 'bg-danger' },
+  UNREACHABLE: { label: 'Unreachable', dot: 'bg-danger' },
+  NOT_CONFIGURED: { label: 'Not configured', dot: 'bg-danger' },
+  UNKNOWN: { label: 'Status unknown', dot: 'bg-ink-muted' },
+};
+
+function LlmStatusLine({ llm }: { llm: LlmStatus }) {
+  const s = LLM_STATE[llm.state] ?? LLM_STATE.UNKNOWN;
+  return (
+    <span className="inline-flex items-center gap-1.5" title={llm.message}>
+      <span aria-hidden="true" className={`size-1.5 rounded-full ${s.dot}`} />
+      <span>
+        Model {llm.model ?? 'unknown'}
+        {llm.provider ? ` on ${llm.provider}` : ''} · {s.label}
+      </span>
+    </span>
   );
 }
 

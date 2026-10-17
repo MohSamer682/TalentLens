@@ -31,7 +31,7 @@ export function Pagination({
             aria-current={page === i ? 'page' : undefined}
             className={cn(
               'num h-9 min-w-9 rounded-md px-2 text-sm font-semibold transition-colors',
-              page === i ? 'bg-ink text-white' : 'text-ink-muted hover:bg-sunken hover:text-ink'
+              page === i ? 'bg-ink text-ground' : 'text-ink-muted hover:bg-sunken hover:text-ink'
             )}
           >
             {i + 1}

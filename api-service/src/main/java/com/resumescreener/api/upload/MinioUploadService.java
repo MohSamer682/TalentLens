@@ -2,11 +2,11 @@ package com.resumescreener.api.upload;
 
 import com.resumescreener.api.common.ApiErrorCode;
 import com.resumescreener.api.common.ApiException;
-import com.resumescreener.common.entity.ScreeningSession;
-import com.resumescreener.common.entity.Candidate;
-import com.resumescreener.common.enums.CandidateStatus;
-import com.resumescreener.common.repository.CandidateRepository;
-import com.resumescreener.common.repository.ScreeningSessionRepository;
+import com.resumescreener.common.session.ScreeningSession;
+import com.resumescreener.common.session.Candidate;
+import com.resumescreener.common.session.CandidateStatus;
+import com.resumescreener.common.session.CandidateRepository;
+import com.resumescreener.common.session.ScreeningSessionRepository;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.GetObjectArgs;
@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 public class MinioUploadService {
 
     private final MinioClient minioClient;
+    private final MinioClient presignClient;
     private final ScreeningSessionRepository sessionRepository;
     private final CandidateRepository candidateRepository;
 
@@ -139,7 +140,7 @@ public class MinioUploadService {
 
     public String getPresignedUrl(String key) {
         try {
-            return minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
+            return presignClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
                     .method(Method.GET)
                     .bucket(bucket)
                     .object(key)

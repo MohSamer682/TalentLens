@@ -2,9 +2,9 @@ package com.resumescreener.api.batch;
 
 import com.resumescreener.api.common.ApiErrorCode;
 import com.resumescreener.api.common.ApiException;
-import com.resumescreener.common.entity.*;
-import com.resumescreener.common.enums.*;
-import com.resumescreener.common.repository.*;
+import com.resumescreener.common.audit.*;
+import com.resumescreener.common.session.*;
+import com.resumescreener.common.user.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -53,8 +53,10 @@ public class BatchTriggerService {
                     "Session " + sessionId + " has zero candidates");
         }
 
-        session.setStatus(SessionStatus.RUNNING);
-        sessionRepository.save(session);
+        if (sessionRepository.markRunning(sessionId) == 0) {
+            throw ApiException.validation("Session is already running",
+                    "Session " + sessionId + " is in status RUNNING");
+        }
 
         log.info("Triggering batch for session {} with {} candidates", sessionId, candidateCount);
 

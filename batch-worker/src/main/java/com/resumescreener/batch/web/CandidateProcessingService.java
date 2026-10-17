@@ -1,12 +1,13 @@
 package com.resumescreener.batch.web;
 
 import com.resumescreener.batch.llm.LlmClient;
-import com.resumescreener.common.dto.LlmScoreDto;
+import com.resumescreener.common.llm.LlmScoreDto;
 import com.resumescreener.batch.pdf.PdfTextExtractor;
 import com.resumescreener.batch.storage.MinioStorageService;
-import com.resumescreener.common.entity.*;
-import com.resumescreener.common.enums.CandidateStatus;
-import com.resumescreener.common.repository.*;
+import com.resumescreener.common.audit.*;
+import com.resumescreener.common.session.*;
+import com.resumescreener.common.user.*;
+import com.resumescreener.common.session.CandidateStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.Getter;
@@ -28,7 +29,10 @@ public class CandidateProcessingService {
     private final LlmClient llmClient;
 
     @Transactional
-    public void processSingleCandidate(Candidate candidate, String jdText, ScoringWeights weights, BatchJob job) throws Exception {
+    public void processSingleCandidate(Candidate detached, String jdText, ScoringWeights weights, BatchJob job) throws Exception {
+        // The caller loaded this candidate outside any transaction; work on a managed copy so its lazy
+        // associations (session, existing score) can load and the save does not merge a detached graph
+        Candidate candidate = candidateRepository.findById(detached.getId()).orElse(detached);
         MDC.put("candidateId", candidate.getId());
         log.info("Processing candidate");
         byte[] pdfBytes = minioStorageService.downloadBytes(candidate.getResumeFileKey());
@@ -43,21 +47,24 @@ public class CandidateProcessingService {
                            score.getSoftSkills() * weights.getSoftSkills() +
                            score.getCultureFit() * weights.getCultureFit()) / 100.0;
 
-        CandidateScore candidateScore = CandidateScore.builder()
-                .candidate(candidate)
-                .technicalSkills((double) score.getTechnicalSkills())
-                .experience((double) score.getExperience())
-                .education((double) score.getEducation())
-                .softSkills((double) score.getSoftSkills())
-                .cultureFit((double) score.getCultureFit())
-                .compositeScore(composite)
-                .skills(score.getSkills())
-                .justification(score.getJustification())
-                .strengths(score.getStrengths())
-                .gaps(score.getGaps())
-                .build();
-        
-        candidateScoreRepository.save(candidateScore);
+        // A retried session re-scores candidates that already have a row; candidate_scores is one-to-one,
+        // so update it in place instead of inserting a second score for the same candidate
+        CandidateScore candidateScore = candidate.getScore() != null ? candidate.getScore() : new CandidateScore();
+        candidateScore.setCandidate(candidate);
+        candidateScore.setTechnicalSkills((double) score.getTechnicalSkills());
+        candidateScore.setExperience((double) score.getExperience());
+        candidateScore.setEducation((double) score.getEducation());
+        candidateScore.setSoftSkills((double) score.getSoftSkills());
+        candidateScore.setCultureFit((double) score.getCultureFit());
+        candidateScore.setCompositeScore(composite);
+        candidateScore.setRank(null);
+        candidateScore.setSkills(score.getSkills());
+        candidateScore.setJustification(score.getJustification());
+        candidateScore.setStrengths(score.getStrengths());
+        candidateScore.setGaps(score.getGaps());
+
+        candidateScore = candidateScoreRepository.save(candidateScore);
+        candidate.setScore(candidateScore);
         candidate.setStatus(CandidateStatus.SCORED);
         candidateRepository.save(candidate);
 
@@ -69,7 +76,8 @@ public class CandidateProcessingService {
     }
 
     @Transactional
-    public void handleCandidateFailure(Candidate candidate, BatchJob job) {
+    public void handleCandidateFailure(Candidate detached, BatchJob job) {
+        Candidate candidate = candidateRepository.findById(detached.getId()).orElse(detached);
         candidate.setStatus(CandidateStatus.FAILED);
         candidateRepository.save(candidate);
 

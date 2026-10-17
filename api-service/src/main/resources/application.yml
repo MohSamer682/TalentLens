@@ -15,12 +15,17 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/resume_screener}
     username: ${SPRING_DATASOURCE_USERNAME:rs_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:rs_password}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     hikari:
       maximum-pool-size: 10
+  flyway:
+    # Databases built earlier by ddl-auto=update are adopted as V1 instead of re-created
+    baseline-on-migrate: true
+    baseline-version: 1
   jpa:
     hibernate:
-      ddl-auto: update
+      # Flyway owns the schema (common/src/main/resources/db/migration); Hibernate only checks it
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -31,20 +36,22 @@ spring:
       max-request-size: 210MB
 
 jwt:
-  secret: ${JWT_SECRET:ZGV2LXNlY3JldC1iYXNlNjQtZW5jb2RlZC1rZXktZm9yLWp3dC1oczI1Ni1zaWduaW5nLXVzZS1zdHJvbmdlci1pbi1wcm9k}
+  secret: ${JWT_SECRET}
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
 minio:
   endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
-  access-key: ${MINIO_ACCESS_KEY:minio_admin}
-  secret-key: ${MINIO_SECRET_KEY:minio_password_123}
+  access-key: ${MINIO_ACCESS_KEY}
+  secret-key: ${MINIO_SECRET_KEY}
   bucket: ${MINIO_BUCKET:resumes}
+  # Host the browser uses to reach MinIO; presigned URLs are signed for this host
+  public-endpoint: ${MINIO_PUBLIC_ENDPOINT:${minio.endpoint}}
 
 batch-worker:
   url: ${BATCH_WORKER_URL:http://localhost:8081}
-  shared-secret: ${BATCH_WORKER_SHARED_SECRET:change-me-shared-secret}
+  shared-secret: ${BATCH_WORKER_SHARED_SECRET}
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,loggers
+        include: health,info

@@ -17,6 +17,19 @@ public class MinioConfig {
     @Value("${minio.secret-key}")
     private String secretKey;
 
+    @Value("${minio.public-endpoint}")
+    private String publicEndpoint;
+
+    /** Signs download links for the host browsers reach; the fixed region avoids a network lookup at signing. */
+    @Bean
+    public MinioClient presignClient() {
+        return MinioClient.builder()
+                .endpoint(publicEndpoint)
+                .credentials(accessKey, secretKey)
+                .region("us-east-1")
+                .build();
+    }
+
     @Bean
     public MinioClient minioClient() {
         return MinioClient.builder()

@@ -2,13 +2,13 @@ package com.resumescreener.api.session;
 
 import com.resumescreener.api.config.GlobalExceptionHandler;
 import com.resumescreener.api.session.dto.CreateSessionRequest;
-import com.resumescreener.common.entity.ScoringWeights;
-import com.resumescreener.common.entity.ScreeningSession;
-import com.resumescreener.common.entity.User;
-import com.resumescreener.common.enums.SessionStatus;
-import com.resumescreener.common.repository.CandidateRepository;
-import com.resumescreener.common.repository.ScreeningSessionRepository;
-import com.resumescreener.common.repository.UserRepository;
+import com.resumescreener.common.session.ScoringWeights;
+import com.resumescreener.common.session.ScreeningSession;
+import com.resumescreener.common.user.User;
+import com.resumescreener.common.session.SessionStatus;
+import com.resumescreener.common.session.CandidateRepository;
+import com.resumescreener.common.session.ScreeningSessionRepository;
+import com.resumescreener.common.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.TestingAuthenticationToken;
@@ -30,7 +30,7 @@ class SessionControllerTest {
 
     @Test
     void createRejectsBlankTitleWithJsonErrorBody() throws Exception {
-        MockMvc mvc = mvcFor(new SessionController(null, null));
+        MockMvc mvc = mvcFor(new SessionController(null, null, null));
 
         mvc.perform(post("/api/sessions").principal(auth)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -47,7 +47,7 @@ class SessionControllerTest {
         SessionService service = new SessionService(
                 savingSessionRepository(), null, null,
                 userRepositoryReturning(user()), null);
-        MockMvc mvc = mvcFor(new SessionController(service, countingCandidateRepository()));
+        MockMvc mvc = mvcFor(new SessionController(service, countingCandidateRepository(), null));
 
         mvc.perform(post("/api/sessions").principal(auth)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -71,7 +71,7 @@ class SessionControllerTest {
                 userRepositoryReturning(user()), null);
         CreateSessionRequest request = new CreateSessionRequest();
         request.setTitle("T");
-        request.setWeights(com.resumescreener.common.dto.WeightsDto.builder()
+        request.setWeights(com.resumescreener.common.session.WeightsDto.builder()
                 .technicalSkills(30.0).experience(25.0).education(15.0)
                 .softSkills(20.0).cultureFit(10.0).build());
 
@@ -101,7 +101,7 @@ class SessionControllerTest {
                 UserRepository.class.getClassLoader(),
                 new Class<?>[]{UserRepository.class},
                 (proxy, method, args) ->
-                        "findByEmail".equals(method.getName()) ? Optional.of(user) : null
+                        "findByEmailIgnoreCase".equals(method.getName()) ? Optional.of(user) : null
         );
     }
 

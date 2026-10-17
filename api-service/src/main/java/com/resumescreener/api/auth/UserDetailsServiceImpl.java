@@ -1,7 +1,7 @@
 package com.resumescreener.api.auth;
 
-import com.resumescreener.common.entity.User;
-import com.resumescreener.common.repository.UserRepository;
+import com.resumescreener.common.user.User;
+import com.resumescreener.common.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,7 +18,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         
         return new org.springframework.security.core.userdetails.User(

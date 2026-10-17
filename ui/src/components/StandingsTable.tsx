@@ -20,7 +20,7 @@ export function StandingsTable({
   weights?: Weights;
   shortlistSize: number;
 }) {
-  const head = 'condensed px-3 py-2 text-[13px] font-semibold uppercase tracking-wide text-ink-muted';
+  const head = 'px-3 py-2 text-[13px] font-medium text-ink-muted';
 
   return (
     <div className="relative overflow-x-auto">
@@ -31,7 +31,7 @@ export function StandingsTable({
         <thead className="border-b border-line bg-sunken">
           <tr>
             <th scope="col" className={cn(head, 'w-14 pl-4 text-center sm:pl-5')}>
-              Pos
+              Rank
             </th>
             <th scope="col" className={cn(head, 'text-left')}>
               Candidate
@@ -58,12 +58,12 @@ export function StandingsTable({
             const lastInZone = c.rank === shortlistSize;
             return (
               <Fragment key={c.id}>
-                <tr style={stagger(i)} className="group relative animate-fade-up border-b border-line transition-colors hover:bg-ground">
+                <tr style={stagger(i)} className={cn('group relative animate-fade-up border-b border-line transition-colors', inZone ? 'bg-mark-soft/40 hover:bg-mark-soft/70' : 'hover:bg-ground')}>
                   <td className="py-2.5 pl-4 sm:pl-5">
                     <span
                       className={cn(
-                        'condensed num mx-auto flex size-8 items-center justify-center rounded-md text-base font-bold transition-colors duration-300',
-                        inZone ? 'bg-accent text-accent-ink' : 'text-ink-muted'
+                        'display mx-auto flex h-7 min-w-8 items-center justify-center px-1.5 text-base font-bold transition-colors duration-300',
+                        inZone ? 'marker' : 'text-ink-muted'
                       )}
                     >
                       {c.rank}
@@ -87,11 +87,11 @@ export function StandingsTable({
                     <div className="flex items-center justify-end gap-2.5">
                       <span aria-hidden="true" className="hidden h-1.5 w-14 overflow-hidden rounded-full bg-line lg:block">
                         <span
-                          className={cn('block h-full origin-left animate-grow-x rounded-full transition-colors duration-300', inZone ? 'bg-accent-bar' : 'bg-ink-muted/60')}
+                          className={cn('block h-full origin-left animate-grow-x rounded-full transition-colors duration-300', inZone ? 'bg-accent-bar' : 'bg-line-strong')}
                           style={{ width: `${Math.max(0, Math.min(100, c.compositeScore))}%`, animationDelay: `${Math.min(i * 35, 420) + 150}ms` }}
                         />
                       </span>
-                      <span className="num w-10 text-right text-base font-bold">{formatScore(c.compositeScore)}</span>
+                      <span className="display w-12 text-right text-[17px]" style={{ fontWeight: Math.round(380 + Math.max(0, Math.min(100, c.compositeScore)) * 4.4) }}>{formatScore(c.compositeScore)}</span>
                     </div>
                   </td>
                   <td className="pr-4 text-ink-muted sm:pr-5">
@@ -101,9 +101,10 @@ export function StandingsTable({
                 {lastInZone && (
                   <tr aria-hidden="true">
                     <td colSpan={DIMENSIONS.length + 4} className="p-0">
-                      <div key={shortlistSize} style={{ animationDelay: `${Math.min(i * 35, 420) + 200}ms` }} className="flex origin-left animate-grow-x items-center gap-3 border-y-[3px] border-double border-accent-text bg-accent-soft px-4 py-1 sm:px-5">
-                        <span className="condensed animate-fade-in text-[13px] font-bold uppercase tracking-wide text-accent-text">
-                          Shortlist line · top {shortlistSize}
+                      <div key={shortlistSize} style={{ animationDelay: `${Math.min(i * 35, 420) + 200}ms` }} className="relative flex h-7 origin-left animate-grow-x items-center px-4 sm:px-5">
+                        <span className="absolute inset-x-0 top-1/2 border-t border-mark" />
+                        <span className="relative animate-fade-in rounded-sm bg-mark px-2 py-0.5 text-[12px] font-semibold text-mark-ink">
+                          The call: top {shortlistSize} shortlisted
                         </span>
                       </div>
                     </td>

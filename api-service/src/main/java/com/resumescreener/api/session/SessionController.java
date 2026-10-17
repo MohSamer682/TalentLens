@@ -1,12 +1,14 @@
 package com.resumescreener.api.session;
 
-import com.resumescreener.api.batch.dto.SessionActionResponse;
+import com.resumescreener.api.session.dto.SessionActionResponse;
+import com.resumescreener.api.llm.LlmStatusClient;
 import com.resumescreener.api.common.ApiResponse;
 import com.resumescreener.api.session.dto.*;
-import com.resumescreener.common.dto.WeightsDto;
-import com.resumescreener.common.entity.*;
-import com.resumescreener.common.enums.SessionStatus;
-import com.resumescreener.common.repository.*;
+import com.resumescreener.common.session.WeightsDto;
+import com.resumescreener.common.audit.*;
+import com.resumescreener.common.session.*;
+import com.resumescreener.common.user.*;
+import com.resumescreener.common.session.SessionStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +24,7 @@ public class SessionController {
 
     private final SessionService sessionService;
     private final CandidateRepository candidateRepository;
+    private final LlmStatusClient llmStatusClient;
 
     @PostMapping
     public ResponseEntity<ApiResponse<SessionResponse>> createSession(
@@ -44,6 +47,7 @@ public class SessionController {
     public ResponseEntity<ApiResponse<SessionResponse>> getSession(
             @PathVariable String id, Authentication auth) {
         SessionResponse data = mapToResponse(sessionService.getSession(id, auth.getName()));
+        data.setLlm(llmStatusClient.getStatus());
         return ResponseEntity.ok(ApiResponse.success("Session loaded", data));
     }
 

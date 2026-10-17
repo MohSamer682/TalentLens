@@ -6,7 +6,7 @@ type Status = ScreeningSession['status'];
 const STATUS: Record<Status, { label: string; className: string; dot: string; live?: boolean }> = {
   PENDING: { label: 'Not started', className: 'bg-sunken text-ink-muted', dot: 'bg-ink-muted' },
   RUNNING: { label: 'Scoring', className: 'bg-info-soft text-info', dot: 'bg-info', live: true },
-  DONE: { label: 'Ranked', className: 'bg-accent-soft text-accent-text', dot: 'bg-accent-bar' },
+  DONE: { label: 'Ranked', className: 'bg-success-soft text-success', dot: 'bg-success' },
   FAILED: { label: 'Failed', className: 'bg-danger-soft text-danger', dot: 'bg-danger' },
 };
 
@@ -15,7 +15,7 @@ export function StatusBadge({ status, className }: { status: Status; className?:
   return (
     <span
       className={cn(
-        'condensed inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[13px] font-semibold uppercase tracking-wide',
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[13px] font-semibold',
         s.className,
         className
       )}
@@ -32,7 +32,7 @@ export function StatusBadge({ status, className }: { status: Status; className?:
 export function Tag({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
   return (
     <span
-      className={cn('inline-flex items-center rounded-full border border-line bg-ground px-2.5 py-0.5 text-[13px] text-ink', className)}
+      className={cn('inline-flex items-center rounded-md border border-line bg-ground px-2 py-0.5 text-[13px] text-ink', className)}
       {...props}
     />
   );

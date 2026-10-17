@@ -53,7 +53,7 @@ export default function AdminUsers() {
     }
   };
 
-  const head = 'condensed px-3 py-2 text-left text-[13px] font-semibold uppercase tracking-wide text-ink-muted';
+  const head = 'px-3 py-2 text-left text-[13px] font-medium text-ink-muted';
 
   return (
     <MainLayout>

@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication(scanBasePackages = "com.resumescreener")
-@EntityScan("com.resumescreener.common.entity")
-@EnableJpaRepositories("com.resumescreener.common.repository")
+@EntityScan("com.resumescreener.common")
+@EnableJpaRepositories("com.resumescreener.common")
 @EnableAsync
 public class BatchWorkerApplication {
 

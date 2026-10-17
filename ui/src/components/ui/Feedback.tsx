@@ -6,7 +6,7 @@ import { Button } from './Button';
 const TONES = {
   danger: { box: 'border-danger/25 bg-danger-soft text-danger', Icon: AlertCircle },
   info: { box: 'border-info/25 bg-info-soft text-info', Icon: Info },
-  success: { box: 'border-accent-text/25 bg-accent-soft text-accent-text', Icon: CheckCircle2 },
+  success: { box: 'border-success/25 bg-success-soft text-success', Icon: CheckCircle2 },
 } as const;
 
 export function Alert({
@@ -49,7 +49,7 @@ export function Loader({ label, className }: { label: string; className?: string
         {[0, 1, 2, 3].map((i) => (
           <span
             key={i}
-            className={cn('h-1.5 origin-left animate-rank rounded-full', i === 0 ? 'bg-accent' : 'bg-line-strong')}
+            className={cn('h-1.5 origin-left animate-rank rounded-full', i === 0 ? 'bg-mark' : 'bg-line-strong')}
             style={{ animationDelay: `${i * 120}ms`, width: `${100 - i * 18}%` }}
           />
         ))}

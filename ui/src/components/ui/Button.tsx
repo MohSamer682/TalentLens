@@ -12,7 +12,7 @@ export const buttonVariants = cva(
         secondary: 'border border-line-strong bg-surface text-ink shadow-sm hover:border-ink-muted hover:bg-ground',
         ghost: 'text-ink-muted hover:bg-sunken hover:text-ink',
         danger: 'text-danger hover:bg-danger-soft',
-        dangerSolid: 'bg-danger text-white shadow-button hover:bg-danger/90',
+        dangerSolid: 'bg-danger text-ground shadow-button hover:bg-danger/90',
       },
       size: {
         sm: 'h-8 px-3 text-[13px]',
