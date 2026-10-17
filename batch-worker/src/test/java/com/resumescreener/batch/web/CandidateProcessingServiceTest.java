@@ -70,6 +70,40 @@ class CandidateProcessingServiceTest {
         assertEquals(0, batchJobSaves.writeCount);
     }
 
+    @Test
+    void failureReasonIsStoredAndTruncatedTo500() {
+        Candidate candidate = Candidate.builder().id("c1").status(CandidateStatus.PENDING).build();
+        CandidateProcessingService service = new CandidateProcessingService(
+                repositoryProxy(CandidateRepository.class, new SaveTracker()),
+                repositoryProxy(CandidateScoreRepository.class, new SaveTracker()),
+                repositoryProxy(BatchJobRepository.class, new SaveTracker()),
+                null, null, null);
+
+        service.handleCandidateFailure(candidate, BatchJob.builder().id("j1").processed(0).failed(0).build(),
+                "x".repeat(600));
+
+        assertEquals(CandidateStatus.FAILED, candidate.getStatus());
+        assertEquals(500, candidate.getFailureReason().length());
+    }
+
+    @Test
+    void successfulRescoreClearsFailureReason() throws Exception {
+        Candidate candidate = Candidate.builder().id("c1").resumeFileKey("resumes/c1.pdf")
+                .status(CandidateStatus.FAILED).failureReason("Could not read text").build();
+        CandidateProcessingService service = new CandidateProcessingService(
+                repositoryProxy(CandidateRepository.class, new SaveTracker()),
+                repositoryProxy(CandidateScoreRepository.class, new SaveTracker()),
+                repositoryProxy(BatchJobRepository.class, new SaveTracker()),
+                new FakeMinioStorageService(), new FakePdfTextExtractor(), new ScoringLlmClient());
+
+        service.processSingleCandidate(candidate, "jd", ScoringWeights.builder().technicalSkills(30.0)
+                .experience(25.0).education(15.0).softSkills(20.0).cultureFit(10.0).build(),
+                BatchJob.builder().id("j1").processed(0).failed(0).build());
+
+        assertEquals(CandidateStatus.SCORED, candidate.getStatus());
+        assertEquals(null, candidate.getFailureReason());
+    }
+
     @SuppressWarnings("unchecked")
     private static <T> T repositoryProxy(Class<T> repositoryType, SaveTracker saveTracker) {
         InvocationHandler handler = new RepositoryInvocationHandler(saveTracker);
@@ -166,6 +200,23 @@ class CandidateProcessingServiceTest {
             receivedJdText = jdText;
             receivedResumeText = resumeText;
             throw new LlmException("Invalid LLM score");
+        }
+    }
+
+    private static class ScoringLlmClient extends LlmClient {
+        private ScoringLlmClient() {
+            super(null, null);
+        }
+
+        @Override
+        public LlmScoreDto score(String jdText, String resumeText) {
+            LlmScoreDto dto = new LlmScoreDto();
+            dto.setTechnicalSkills(80);
+            dto.setExperience(70);
+            dto.setEducation(60);
+            dto.setSoftSkills(50);
+            dto.setCultureFit(40);
+            return dto;
         }
     }
 }

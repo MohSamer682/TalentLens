@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Getter
 public class CandidateProcessingService {
 
+    static final int MAX_REASON_LENGTH = 500;
+
     private final CandidateRepository candidateRepository;
     private final CandidateScoreRepository candidateScoreRepository;
     private final BatchJobRepository batchJobRepository;
@@ -66,6 +68,7 @@ public class CandidateProcessingService {
         candidateScore = candidateScoreRepository.save(candidateScore);
         candidate.setScore(candidateScore);
         candidate.setStatus(CandidateStatus.SCORED);
+        candidate.setFailureReason(null);
         candidateRepository.save(candidate);
 
         BatchJob currentJob = batchJobRepository.findById(job.getId()).orElse(job);
@@ -76,9 +79,11 @@ public class CandidateProcessingService {
     }
 
     @Transactional
-    public void handleCandidateFailure(Candidate detached, BatchJob job) {
+    public void handleCandidateFailure(Candidate detached, BatchJob job, String reason) {
         Candidate candidate = candidateRepository.findById(detached.getId()).orElse(detached);
         candidate.setStatus(CandidateStatus.FAILED);
+        candidate.setFailureReason(reason == null || reason.length() <= MAX_REASON_LENGTH
+                ? reason : reason.substring(0, MAX_REASON_LENGTH));
         candidateRepository.save(candidate);
 
         BatchJob currentJob = batchJobRepository.findById(job.getId()).orElse(job);
