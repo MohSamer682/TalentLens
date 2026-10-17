@@ -33,4 +33,20 @@ public class Candidate {
 
     @OneToOne(mappedBy = "candidate", cascade = CascadeType.ALL)
     private CandidateScore score;
+
+    /** SHA-256 of the uploaded file; one session never holds the same file twice */
+    private String contentHash;
+    private String originalFileName;
+    @Column(columnDefinition = "TEXT")
+    private String failureReason;
+
+    @Column(nullable = false)
+    private java.time.Instant createdAt;
+
+    @PrePersist
+    public void prePersist() {
+        if (createdAt == null) {
+            createdAt = java.time.Instant.now();
+        }
+    }
 }

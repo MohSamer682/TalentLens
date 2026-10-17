@@ -15,9 +15,10 @@ public interface ScreeningSessionRepository extends JpaRepository<ScreeningSessi
     Page<ScreeningSession> findByUserId(String userId, Pageable pageable);
     Optional<ScreeningSession> findByIdAndUserId(String id, String userId);
 
-    /** Atomic compare-and-set so two concurrent starts cannot both win. */
+    /** Atomic compare-and-set so two concurrent starts cannot both win; clears the previous run's error. */
     @Modifying
-    @Query("update ScreeningSession s set s.status = com.resumescreener.common.session.SessionStatus.RUNNING "
+    @Query("update ScreeningSession s set s.status = com.resumescreener.common.session.SessionStatus.RUNNING, "
+            + "s.lastErrorMessage = null "
             + "where s.id = :id and s.status <> com.resumescreener.common.session.SessionStatus.RUNNING")
     int markRunning(@Param("id") String id);
 
