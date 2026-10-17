@@ -1,5 +1,6 @@
 package com.resumescreener.api.upload;
 
+import com.resumescreener.api.audit.AuditService;
 import com.resumescreener.api.common.ApiErrorCode;
 import com.resumescreener.api.common.ApiException;
 import com.resumescreener.api.common.ApiResponse;
@@ -12,17 +13,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/sessions")
 @RequiredArgsConstructor
 public class UploadController {
 
     private static final long JD_MAX_BYTES = 5L * 1024 * 1024;
-    private static final long RESUME_MAX_BYTES = 10L * 1024 * 1024;
 
     private final MinioUploadService uploadService;
+    private final AuditService auditService;
 
     @PostMapping("/{id}/jd")
     public ResponseEntity<ApiResponse<UploadJdResponse>> uploadJd(
@@ -47,14 +46,22 @@ public class UploadController {
         if (files == null || files.length == 0) {
             throw ApiException.validation("No resumes provided", "The files parameter was empty");
         }
-        for (MultipartFile file : files) {
-            requirePdf(file);
-            requireUnder(file, RESUME_MAX_BYTES, "Resume max size is 10MB");
-        }
+        // Type and size are checked per file inside the service, so one bad file never sinks the batch
+        UploadResumesResponse data = uploadService.uploadResumes(id, files, auth.getName());
+        auditService.record("RESUME_UPLOAD", "session", id, "success",
+                data.getUploadedCount() + " added, " + data.getDuplicateCount() + " duplicates, "
+                        + data.getRejected().size() + " rejected");
+        return ResponseEntity.ok(ApiResponse.success("Resumes uploaded", data));
+    }
 
-        List<String> candidateIds = uploadService.uploadResumes(id, files, auth.getName());
-        UploadResumesResponse data = new UploadResumesResponse(id, candidateIds.size(), candidateIds);
-        return ResponseEntity.ok(ApiResponse.success("Resumes uploaded successfully", data));
+    @DeleteMapping("/{id}/candidates/{candidateId}")
+    public ResponseEntity<ApiResponse<Void>> removeResume(
+            @PathVariable String id,
+            @PathVariable String candidateId,
+            Authentication auth) {
+        uploadService.removeResume(id, candidateId, auth.getName());
+        auditService.record("RESUME_REMOVE", "candidate", candidateId, "success");
+        return ResponseEntity.ok(ApiResponse.success("Resume removed", null));
     }
 
     private static void requirePdf(MultipartFile file) {
