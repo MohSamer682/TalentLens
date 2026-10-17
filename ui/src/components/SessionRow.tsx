@@ -103,7 +103,11 @@ export function SessionRow({ session, index = 0, onChanged }: { session: Screeni
           </p>
         )}
         {session.status === 'PENDING' && <p className="text-ink-muted">{session.jdFileKey ? 'Ready to launch' : 'Needs a job description'}</p>}
-        {session.status === 'DONE' && <p className="text-ink-muted">Shortlist ready</p>}
+        {session.status === 'DONE' && (
+          <p className={session.shortlistedCount ? 'font-semibold text-mark-text' : 'text-ink-muted'}>
+            {session.shortlistedCount ? `${session.shortlistedCount} shortlisted` : 'Ranked, nobody shortlisted yet'}
+          </p>
+        )}
         {error && (
           <p role="alert" className="text-danger">
             {error}

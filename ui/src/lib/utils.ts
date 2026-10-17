@@ -56,21 +56,3 @@ export const DEFAULT_WEIGHTS: Weights = {
   cultureFit: 10,
 };
 
-/** The shortlist line is a per-session, per-browser reading aid; it never changes the ranking. */
-export function readShortlistSize(sessionId: string, fallback: number) {
-  try {
-    const raw = localStorage.getItem(`shortlist:${sessionId}`);
-    const n = raw === null ? NaN : Number(raw);
-    return Number.isInteger(n) && n >= 0 ? n : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-export function writeShortlistSize(sessionId: string, n: number) {
-  try {
-    localStorage.setItem(`shortlist:${sessionId}`, String(n));
-  } catch {
-    // storage unavailable (private mode); the line just resets next visit
-  }
-}

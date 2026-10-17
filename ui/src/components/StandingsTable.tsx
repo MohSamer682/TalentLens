@@ -1,4 +1,3 @@
-import { Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import type { CandidateResultDto, Weights } from '@/types';
@@ -6,31 +5,49 @@ import { DIMENSIONS, cn, formatScore } from '@/lib/utils';
 import { stagger } from '@/lib/motion';
 
 /**
- * The ranking, set like a league table. Rows at or above `shortlistSize` sit in the shortlist zone:
- * their position cell is filled, and a labelled rule is drawn under the last one, like a qualification line.
+ * The ranking, set like a league table. Shortlisted candidates get the saffron position cell and a
+ * warm row wash; the shortlist need not be contiguous, so there is no cut-off line.
  */
 export function StandingsTable({
   sessionId,
   candidates,
   weights,
-  shortlistSize,
+  selected,
+  onToggle,
+  onToggleAll,
 }: {
   sessionId: string;
   candidates: CandidateResultDto[];
   weights?: Weights;
-  shortlistSize: number;
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+  onToggleAll: (ids: string[]) => void;
 }) {
   const head = 'px-3 py-2 text-[13px] font-medium text-ink-muted';
+  const pageIds = candidates.map((c) => c.id);
+  const selectedOnPage = pageIds.filter((id) => selected.has(id)).length;
 
   return (
     <div className="relative overflow-x-auto">
       <table className="w-full border-collapse text-sm sm:min-w-[680px] lg:min-w-0">
         <caption className="sr-only">
-          Candidates ranked by weighted score. The top {shortlistSize} are inside the shortlist.
+          Candidates ranked by weighted score. Shortlisted candidates are marked.
         </caption>
         <thead className="border-b border-line bg-sunken">
           <tr>
-            <th scope="col" className={cn(head, 'w-14 pl-4 text-center sm:pl-5')}>
+            <th scope="col" className="w-10 pl-4 sm:pl-5">
+              <input
+                type="checkbox"
+                aria-label="Select all on this page"
+                checked={selectedOnPage > 0 && selectedOnPage === pageIds.length}
+                ref={(el) => {
+                  if (el) el.indeterminate = selectedOnPage > 0 && selectedOnPage < pageIds.length;
+                }}
+                onChange={() => onToggleAll(pageIds)}
+                className="size-[18px] accent-[rgb(var(--ink))]"
+              />
+            </th>
+            <th scope="col" className={cn(head, 'w-16 text-center')}>
               Rank
             </th>
             <th scope="col" className={cn(head, 'text-left')}>
@@ -54,12 +71,19 @@ export function StandingsTable({
         </thead>
         <tbody>
           {candidates.map((c, i) => {
-            const inZone = c.rank <= shortlistSize;
-            const lastInZone = c.rank === shortlistSize;
+            const inZone = c.reviewStatus === 'SHORTLISTED';
             return (
-              <Fragment key={c.id}>
-                <tr style={stagger(i)} className={cn('group relative animate-fade-up border-b border-line transition-colors', inZone ? 'bg-mark-soft/40 hover:bg-mark-soft/70' : 'hover:bg-ground')}>
-                  <td className="py-2.5 pl-4 sm:pl-5">
+                <tr key={c.id} style={stagger(i)} className={cn('group relative animate-fade-up border-b border-line transition-colors', inZone ? 'bg-mark-soft/40 hover:bg-mark-soft/70' : 'hover:bg-ground')}>
+                  <td className="relative z-10 py-2.5 pl-4 sm:pl-5">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${c.name || 'candidate ranked ' + c.rank}`}
+                      checked={selected.has(c.id)}
+                      onChange={() => onToggle(c.id)}
+                      className="size-[18px] accent-[rgb(var(--ink))]"
+                    />
+                  </td>
+                  <td className="px-2 py-2.5">
                     <span
                       className={cn(
                         'display mx-auto flex h-7 min-w-8 items-center justify-center px-1.5 text-base font-bold transition-colors duration-300',
@@ -68,6 +92,7 @@ export function StandingsTable({
                     >
                       {c.rank}
                     </span>
+                    {inZone && <span className="sr-only">, shortlisted</span>}
                   </td>
                   <td className="max-w-0 px-3 py-2.5">
                     <Link
@@ -98,19 +123,6 @@ export function StandingsTable({
                     <ChevronRight className="ml-auto size-4" aria-hidden="true" />
                   </td>
                 </tr>
-                {lastInZone && (
-                  <tr aria-hidden="true">
-                    <td colSpan={DIMENSIONS.length + 4} className="p-0">
-                      <div key={shortlistSize} style={{ animationDelay: `${Math.min(i * 35, 420) + 200}ms` }} className="relative flex h-7 origin-left animate-grow-x items-center px-4 sm:px-5">
-                        <span className="absolute inset-x-0 top-1/2 border-t border-mark" />
-                        <span className="relative animate-fade-in rounded-sm bg-mark px-2 py-0.5 text-[12px] font-semibold text-mark-ink">
-                          The call: top {shortlistSize} shortlisted
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
             );
           })}
         </tbody>

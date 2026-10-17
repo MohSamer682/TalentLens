@@ -14,6 +14,8 @@ import type {
   RegisterRequest,
   ResumeDownloadResponse,
   ResumeFile,
+  ReviewResult,
+  ReviewStatus,
   ScoringScope,
   ScreeningSession,
   SessionActionResponse,
@@ -161,9 +163,9 @@ export const sessionsApi = {
     api.delete<void>(`/sessions/${id}/candidates/${candidateId}`),
   cancel: (id: string) => api.post<SessionActionResponse>(`/sessions/${id}/cancel`),
   progress: (id: string) => api.get<ProgressResponse>(`/sessions/${id}/progress`),
-  candidates: (id: string, page = 0, size = 20) =>
+  candidates: (id: string, page = 0, size = 20, review?: ReviewStatus) =>
     api.get<Page<CandidateResultDto>>(`/sessions/${id}/candidates`, {
-      params: { page, size },
+      params: { page, size, review },
     }),
   candidateDetail: (sessionId: string, candidateId: string) =>
     api.get<CandidateScore>(`/sessions/${sessionId}/candidates/${candidateId}`),
@@ -172,6 +174,15 @@ export const sessionsApi = {
       `/sessions/${sessionId}/candidates/${candidateId}/resume`
     ),
   export: (id: string) => api.get<ExportResponse>(`/sessions/${id}/export`),
+};
+
+export const candidatesApi = {
+  review: (sessionId: string, candidateId: string, status: ReviewStatus) =>
+    api.patch<ReviewResult>(`/sessions/${sessionId}/candidates/${candidateId}/review`, { status }),
+  reviewMany: (sessionId: string, candidateIds: string[], status: ReviewStatus) =>
+    api.post<ReviewResult>(`/sessions/${sessionId}/candidates/review`, { candidateIds, status }),
+  shortlistTop: (sessionId: string, count: number) =>
+    api.post<ReviewResult>(`/sessions/${sessionId}/shortlist/top`, { count }),
 };
 
 export const adminApi = {

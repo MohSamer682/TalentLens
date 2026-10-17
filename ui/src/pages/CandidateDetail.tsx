@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { FileText, Loader2, Mail } from 'lucide-react';
-import { apiErrorMessage, sessionsApi } from '@/api/client';
+import { Check, FileText, Loader2, Mail } from 'lucide-react';
+import { apiErrorMessage, candidatesApi, sessionsApi } from '@/api/client';
 import type { CandidateScore, ScreeningSession } from '@/types';
 import { Tag } from '@/components/ui/Badge';
 import { Panel, PanelHeader } from '@/components/ui/Card';
@@ -9,7 +9,7 @@ import { Alert, Loader } from '@/components/ui/Feedback';
 import { Button } from '@/components/ui/Button';
 import { MainLayout } from '@/layouts/MainLayout';
 import { useCountUp } from '@/lib/motion';
-import { DEFAULT_WEIGHTS, DIMENSIONS, cn, formatScore, readShortlistSize } from '@/lib/utils';
+import { DEFAULT_WEIGHTS, DIMENSIONS, cn, formatScore } from '@/lib/utils';
 
 /** The LLM returns strengths/gaps as free text; split on newlines or bullets, never crash on null. */
 function toLines(text: string | null | undefined): string[] {
@@ -27,6 +27,7 @@ export default function CandidateDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
   const composite = useCountUp(score?.compositeScore ?? 0, 900);
 
   useEffect(() => {
@@ -62,6 +63,24 @@ export default function CandidateDetail() {
     }
   };
 
+  // Optimistic: the chip flips at once and flips back if the save fails
+  const toggleShortlist = async () => {
+    if (!sessionId || !candidateId || !score) return;
+    const previous = score.reviewStatus;
+    const next = previous === 'SHORTLISTED' ? 'NONE' : 'SHORTLISTED';
+    setError(null);
+    setReviewing(true);
+    setScore({ ...score, reviewStatus: next });
+    try {
+      await candidatesApi.review(sessionId, candidateId, next);
+    } catch (err) {
+      setScore((s) => s && { ...s, reviewStatus: previous });
+      setError(apiErrorMessage(err, 'Could not save the shortlist'));
+    } finally {
+      setReviewing(false);
+    }
+  };
+
   const back = (
     <Link to={`/sessions/${sessionId}`} className="mb-3 inline-block text-sm font-semibold text-ink-muted hover:text-ink">
       ← {session ? session.title : 'Back to ranking'}
@@ -91,8 +110,7 @@ export default function CandidateDetail() {
     return { ...d, value, weight: weights[d.key], weighted: (value * weights[d.key]) / 100 };
   });
   const total = rows.reduce((sum, r) => sum + r.weighted, 0);
-  const shortlist = sessionId ? readShortlistSize(sessionId, 5) : 5;
-  const inZone = score.rank <= shortlist;
+  const inZone = score.reviewStatus === 'SHORTLISTED';
   const strengths = toLines(score.strengths);
   const gaps = toLines(score.gaps);
 
@@ -121,9 +139,12 @@ export default function CandidateDetail() {
             ) : (
               <span>No email found in resume</span>
             )}
-            <span className={inZone ? 'font-semibold text-mark-text' : undefined}>
-              {inZone ? `Inside the shortlist (top ${shortlist})` : `Below the shortlist line (top ${shortlist})`}
-            </span>
+            {inZone && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-mark-soft px-2.5 py-0.5 font-semibold text-mark-text">
+                <Check className="size-3.5" aria-hidden="true" />
+                Shortlisted
+              </span>
+            )}
           </p>
         </div>
         <div className="text-right">
@@ -197,6 +218,21 @@ export default function CandidateDetail() {
         </div>
 
         <aside className="min-w-0 space-y-5">
+          <Panel className="animate-fade-up p-4">
+            <h2 className="font-semibold">{inZone ? 'On the shortlist' : 'Not shortlisted yet'}</h2>
+            <p className="mb-3 mt-1 text-[13px] text-ink-muted">
+              Everyone working on this session sees the same shortlist.
+            </p>
+            <Button
+              variant={inZone ? 'secondary' : 'primary'}
+              className="w-full"
+              onClick={toggleShortlist}
+              disabled={reviewing || session?.status === 'RUNNING'}
+              aria-pressed={inZone}
+            >
+              {inZone ? 'Remove from shortlist' : 'Shortlist'}
+            </Button>
+          </Panel>
           <Panel className="animate-fade-up p-4" style={{ animationDelay: '60ms' }}>
             <h2 className="mb-1 font-semibold">Original resume</h2>
             <p className="mb-3 text-[13px] text-ink-muted">Opens the PDF from your company storage. The link expires after 15 minutes.</p>

@@ -103,6 +103,7 @@ export interface ScreeningSession {
   weights: Weights;
   candidateCount: number;
   reportFileKey?: string;
+  shortlistedCount?: number;
   lastErrorMessage?: string;
   /** Present on the session detail response only */
   llm?: LlmStatus;
@@ -154,6 +155,14 @@ export interface CandidateScore {
   strengths: string;
   gaps: string;
   weights?: Weights;
+  reviewStatus: ReviewStatus;
+}
+
+export type ReviewStatus = 'NONE' | 'SHORTLISTED';
+
+export interface ReviewResult {
+  changed: number;
+  shortlistedTotal: number;
 }
 
 export interface ProgressResponse {
@@ -170,6 +179,7 @@ export interface CandidateResultDto {
   name: string;
   email: string;
   compositeScore: number;
+  reviewStatus: ReviewStatus;
   technicalSkills: number;
   experience: number;
   education: number;
