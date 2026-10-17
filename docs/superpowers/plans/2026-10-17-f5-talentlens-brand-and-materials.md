@@ -12,6 +12,7 @@
 
 ## Global Constraints
 
+- **Design spec is binding:** before coding any screen, analyse its artboard in the TalentLens designs (canvas or PDF) against [2026-10-17-talentlens-design-spec.md](2026-10-17-talentlens-design-spec.md), and finish with that spec's section 5 acceptance checklist in the PR. A screen that does not match its design is not done.
 - Branch `feat/talentlens-materials` from `feat/roles-and-permissions`. One PR. The only backend change is migration `V8__hr_chief_view_only.sql` (Task 5).
 - The PR body carries the project thread link and the Claude Code session link (see the brief).
 - Product name in user-visible text: `TalentLens` (one word, capital T and L). Never "Talent Lens" or "Talentlens".

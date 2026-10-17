@@ -12,6 +12,7 @@
 
 ## Global Constraints
 
+- **Design spec is binding:** before coding any screen, analyse its artboard in the TalentLens designs (canvas or PDF) against [2026-10-17-talentlens-design-spec.md](2026-10-17-talentlens-design-spec.md), and finish with that spec's section 5 acceptance checklist in the PR. A screen that does not match its design is not done.
 - Branch `feat/candidate-notes` from `feat/talentlens-materials`. One PR. Migration `V9__candidate_notes.sql`.
 - Note body: 1 to 4,000 characters after trimming. Error copy: "Write something before adding the note" and "Notes can be up to 4,000 characters".
 - Read and add: anyone `SessionService.getSession` lets in (owner or `SESSION_VIEW_ALL`). Delete: the author, or `Role.ADMIN`.

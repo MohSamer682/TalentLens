@@ -12,6 +12,7 @@
 
 ## Global Constraints
 
+- **Design spec is binding:** before coding any screen, analyse its artboard in the TalentLens designs (canvas or PDF) against [2026-10-17-talentlens-design-spec.md](2026-10-17-talentlens-design-spec.md), and finish with that spec's section 5 acceptance checklist in the PR. A screen that does not match its design is not done.
 - Branch `feat/hiring-pipeline` from `feat/candidate-notes`. One PR. Migration `V10__hiring_pipeline.sql`.
 - `enum ReviewStatus` in this order: `NONE, SHORTLISTED, CONTACTED, INTERVIEW_SCHEDULED, INTERVIEWED, OFFER, OFFER_APPROVED`. UI labels: Screened, Shortlisted, Contacted, Interviewing, Interviewed, Offer, Offer approved.
 - `enum Role` adds `TECHNICAL_INTERVIEWER` ("Technical interviewer") and `HR_INTERVIEWER` ("HR interviewer").

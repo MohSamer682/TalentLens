@@ -12,6 +12,7 @@
 
 ## Global Constraints
 
+- **Design spec is binding:** before coding any screen, analyse its artboard in the TalentLens designs (canvas or PDF) against [2026-10-17-talentlens-design-spec.md](2026-10-17-talentlens-design-spec.md), and finish with that spec's section 5 acceptance checklist in the PR. A screen that does not match its design is not done.
 - Branch `feat/analytics-funnel` from `feat/hiring-pipeline`. One PR. `V11__analytics_pipeline_indexes.sql` only if `EXPLAIN` on a 50k-candidate seed shows a sequential scan on `interviews` or `candidate_stage_events` (indexes from V10 may be enough).
 - Cohort rule everywhere: candidates whose session was created in `[from, to)`. The page says so under the title: "Candidates from sessions created in this period".
 - Previous period: same length, ending where this one starts.
