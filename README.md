@@ -1,8 +1,24 @@
-# Resume Screener
+# TalentLens: Enterprise Resume Screening Platform
 
-AI-assisted resume screening for recruiters. Create a screening session, upload a job description and a batch of resumes, and an LLM scores every candidate against the role. You get a ranked list with per-criterion breakdowns, short justifications, and an Excel report.
+**TalentLens** is a recruitment intelligence platform that helps hiring teams evaluate large applicant pools quickly, consistently and transparently. Recruiters open a screening session for a role, upload the job description and the incoming resumes, and the platform scores every candidate against the role's own weighted criteria. The result is a ranked shortlist with a clear, explainable breakdown for each person, ready for human review and export.
 
-Built with Java 21 / Spring Boot 3, React, PostgreSQL and MinIO. It works with any OpenAI-compatible LLM provider (OpenAI, Gemini, DeepSeek, OpenRouter, Qwen, Kimi, Grok, ...) by changing a few environment variables.
+It is built for high-volume hiring, where a single opening can attract hundreds of applications and reviewers need the same yardstick applied to every one of them.
+
+**Stack:** Java 21 · Spring Boot 3 · React + TypeScript · PostgreSQL · MinIO (S3-compatible storage) · Docker. The scoring engine is provider-neutral and works with any OpenAI-compatible LLM (OpenAI, Gemini, DeepSeek, OpenRouter, Qwen, Kimi, Grok, ...).
+
+## Key capabilities
+
+| Capability | What it gives the recruiting team |
+|---|---|
+| **Role-specific weighted scoring** | Each session defines how much technical skills, experience, education, soft skills and culture fit matter (totalling 100), so the ranking reflects the role, not a generic template. |
+| **Explainable results** | Every candidate gets five criterion scores, an overall score, a written justification, strengths, gaps and extracted skills. Reviewers see why someone ranked where they did. |
+| **High-volume batch processing** | Resumes are processed asynchronously by a dedicated worker with live progress, cancellation and per-candidate failure isolation. |
+| **Resilient AI integration** | Rate-limit aware, with automatic retries for provider throttling and malformed output, and request timeouts. One bad response never fails a whole batch. |
+| **Provider independence** | Switch LLM vendor or model through configuration. No vendor lock-in. |
+| **Reporting** | Ranked Excel export of every session for sharing with hiring managers. |
+| **Access control and audit** | JWT authentication, recruiter and admin roles, user management, and an audit trail of sensitive actions with request tracing. |
+| **Secure document handling** | Resumes and job descriptions live in object storage and are served through short-lived presigned links. |
+| **Operable by design** | Versioned database migrations, structured JSON logging, health endpoints, containerized services and CI on every pull request. |
 
 ## How it works
 
@@ -120,6 +136,17 @@ The model must be able to return JSON. The worker asks for `json_object` output 
 - Postgres, MinIO and Adminer ports are published for local development. Do not expose them on a public host: remove their `ports:` entries or firewall them.
 - `docker-compose.yml` uses `bitnamilegacy/minio` because the official MinIO images are no longer pullable from Docker Hub. It gets no security updates, so use a maintained S3-compatible store in production.
 - Resumes contain personal data. Before real use, decide how long to keep files and scores and check your obligations (for example GDPR).
+
+## Roadmap
+
+Planned work, not yet implemented:
+
+- Durable job queue so scoring scales across several worker instances
+- Multi-tenant organizations with per-team data isolation
+- Single sign-on (SAML / OIDC) and fine-grained permissions
+- Integration with applicant tracking systems and email intake
+- DOCX and image-based resume support
+- Bias and fairness reporting for scored cohorts
 
 ## Known limitations
 
