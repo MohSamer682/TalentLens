@@ -32,6 +32,16 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void badQueryParameterMapsTo400WithoutEchoingInput() {
+        ResponseEntity<ApiResponse<Void>> response = handler.handleTypeMismatch(
+                new org.springframework.web.method.annotation.MethodArgumentTypeMismatchException(
+                        "<script>", com.resumescreener.common.session.ScoringScope.class, "scope", null, null));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().getError().getDetails()).isEqualTo("scope has an unsupported value");
+    }
+
+    @Test
     void accessDeniedMapsTo403WithAccessDeniedCode() {
         ResponseEntity<ApiResponse<Void>> response =
                 handler.handleAccessDenied(new AccessDeniedException("Not authorized or session not found"));

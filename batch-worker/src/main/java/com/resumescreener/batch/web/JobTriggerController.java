@@ -2,6 +2,7 @@ package com.resumescreener.batch.web;
 
 import com.resumescreener.batch.llm.LlmStatusService;
 import com.resumescreener.common.llm.LlmStatusDto;
+import com.resumescreener.common.session.ScoringScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,8 +22,14 @@ public class JobTriggerController {
         if (sessionId == null) {
             return ResponseEntity.badRequest().build();
         }
-        
-        jobService.processCandidates(sessionId);
+        ScoringScope scope;
+        try {
+            scope = ScoringScope.valueOf(request.getOrDefault("scope", ScoringScope.UNSCORED.name()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        jobService.processCandidates(sessionId, scope);
         return ResponseEntity.accepted().build();
     }
 

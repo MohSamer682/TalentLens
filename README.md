@@ -78,7 +78,7 @@ Then open:
 | MinIO console | http://localhost:9001 |
 | Adminer (DB browser) | http://localhost:8085 |
 
-The **first account you register becomes the admin**; later accounts are recruiters. Admins manage roles from the Admin screen. To try the flow, use the fictional files in [`samples/`](samples) (`JD.pdf`, `Resume.pdf`).
+The **first account you register becomes the admin**; later accounts are recruiters. Admins assign roles on the Admin screen and choose what each role can do under Roles and permissions. By default an HR chief runs sessions, opens any recruiter's sessions read-only and sees the Analytics page (sessions, scored and shortlisted resumes, score bands and per-recruiter throughput for the last 30, 90 or 365 days); recruiters run and review their own sessions. Managing users, roles and the audit log always stays with admins. To try the flow, use the fictional files in [`samples/`](samples) (`JD.pdf`, `Resume.pdf`).
 
 ## Local development
 
@@ -105,14 +105,18 @@ All endpoints except register and login need `Authorization: Bearer <token>`. Re
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/api/auth/register`, `/api/auth/login` | Create an account, get a JWT |
-| POST, GET, PATCH, DELETE | `/api/sessions`, `/api/sessions/{id}` | Manage sessions and weights; the detail response includes the LLM status |
-| POST | `/api/sessions/{id}/jd`, `/api/sessions/{id}/resumes` | Upload the job description and resumes (PDF) |
-| POST | `/api/sessions/{id}/start`, `/api/sessions/{id}/cancel` | Start or cancel scoring |
+| POST, GET, PATCH, DELETE | `/api/sessions`, `/api/sessions/{id}` | Manage sessions and weights; the detail response includes the LLM status. `GET /api/sessions?everyone=true` lists every recruiter's sessions for roles that may open any session |
+| POST | `/api/sessions/{id}/jd`, `/api/sessions/{id}/resumes` | Upload the job description; add resumes (PDFs or a ZIP of PDFs, up to 1000 per session). Duplicates are skipped and bad files reported per file |
+| GET, DELETE | `/api/sessions/{id}/resumes?status=`, `/api/sessions/{id}/candidates/{candidateId}` | List a session's resumes with processing status and failure reason; remove one |
+| POST | `/api/sessions/{id}/start?scope=UNSCORED\|ALL`, `/api/sessions/{id}/cancel` | Score unscored resumes (default) or re-score all; cancel scoring |
 | GET | `/api/sessions/{id}/progress` | Live progress |
 | GET | `/api/sessions/{id}/candidates`, `.../candidates/{candidateId}` | Ranked results and detail |
 | GET | `/api/sessions/{id}/export` | Excel report |
+| GET | `/api/auth/me` | The signed-in user with their current role and permissions |
 | GET, PATCH | `/api/admin/users`, `/api/admin/users/{id}/role` | User management (admin only) |
+| GET, PUT | `/api/admin/roles`, `/api/admin/roles/{role}/permissions` | What each role can do (admin only) |
 | GET | `/api/admin/audit` | Audit log (admin only) |
+| GET | `/api/analytics/overview?days=30\|90\|365` | Recruiting analytics (needs Analytics permission) |
 
 The worker's `/internal/**` endpoints require the shared secret and are not for clients.
 
@@ -132,7 +136,7 @@ The model must be able to return JSON. The worker asks for `json_object` output 
 ## Security notes
 
 - No secrets are committed. `.env` is git-ignored and the apps refuse to start without their secrets.
-- Passwords are hashed, admin routes require the admin role, resumes are served through presigned URLs, and sensitive actions are written to an audit log.
+- Passwords are hashed, every endpoint checks a permission granted to the caller's role, resumes are served through presigned URLs, and sensitive actions are written to an audit log.
 - Postgres, MinIO and Adminer ports are published for local development. Do not expose them on a public host: remove their `ports:` entries or firewall them.
 - `docker-compose.yml` uses `bitnamilegacy/minio` because the official MinIO images are no longer pullable from Docker Hub. It gets no security updates, so use a maintained S3-compatible store in production.
 - Resumes contain personal data. Before real use, decide how long to keep files and scores and check your obligations (for example GDPR).

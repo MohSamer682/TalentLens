@@ -1,5 +1,6 @@
 package com.resumescreener.api.upload;
 
+import com.resumescreener.api.audit.AuditService;
 import com.resumescreener.api.common.ApiErrorCode;
 import com.resumescreener.api.common.ApiException;
 import com.resumescreener.api.common.ApiResponse;
@@ -9,10 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/sessions")
@@ -20,11 +20,12 @@ import java.util.List;
 public class UploadController {
 
     private static final long JD_MAX_BYTES = 5L * 1024 * 1024;
-    private static final long RESUME_MAX_BYTES = 10L * 1024 * 1024;
 
     private final MinioUploadService uploadService;
+    private final AuditService auditService;
 
     @PostMapping("/{id}/jd")
+    @PreAuthorize("hasAuthority('SESSION_RUN')")
     public ResponseEntity<ApiResponse<UploadJdResponse>> uploadJd(
             @PathVariable String id,
             @RequestParam("file") MultipartFile file,
@@ -39,6 +40,7 @@ public class UploadController {
     }
 
     @PostMapping("/{id}/resumes")
+    @PreAuthorize("hasAuthority('SESSION_RUN')")
     public ResponseEntity<ApiResponse<UploadResumesResponse>> uploadResumes(
             @PathVariable String id,
             @RequestParam("files") MultipartFile[] files,
@@ -47,14 +49,23 @@ public class UploadController {
         if (files == null || files.length == 0) {
             throw ApiException.validation("No resumes provided", "The files parameter was empty");
         }
-        for (MultipartFile file : files) {
-            requirePdf(file);
-            requireUnder(file, RESUME_MAX_BYTES, "Resume max size is 10MB");
-        }
+        // Type and size are checked per file inside the service, so one bad file never sinks the batch
+        UploadResumesResponse data = uploadService.uploadResumes(id, files, auth.getName());
+        auditService.record("RESUME_UPLOAD", "session", id, "success",
+                data.getUploadedCount() + " added, " + data.getDuplicates().size() + " duplicates, "
+                        + data.getRejected().size() + " rejected");
+        return ResponseEntity.ok(ApiResponse.success("Resumes uploaded", data));
+    }
 
-        List<String> candidateIds = uploadService.uploadResumes(id, files, auth.getName());
-        UploadResumesResponse data = new UploadResumesResponse(id, candidateIds.size(), candidateIds);
-        return ResponseEntity.ok(ApiResponse.success("Resumes uploaded successfully", data));
+    @DeleteMapping("/{id}/candidates/{candidateId}")
+    @PreAuthorize("hasAuthority('SESSION_RUN')")
+    public ResponseEntity<ApiResponse<Void>> removeResume(
+            @PathVariable String id,
+            @PathVariable String candidateId,
+            Authentication auth) {
+        uploadService.removeResume(id, candidateId, auth.getName());
+        auditService.record("RESUME_REMOVE", "candidate", candidateId, "success");
+        return ResponseEntity.ok(ApiResponse.success("Resume removed", null));
     }
 
     private static void requirePdf(MultipartFile file) {

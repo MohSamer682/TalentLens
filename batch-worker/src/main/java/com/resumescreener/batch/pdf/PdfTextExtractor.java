@@ -16,7 +16,7 @@ public class PdfTextExtractor {
             String text = stripper.getText(document);
             return cleanText(text);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to extract PDF text: " + e.getMessage());
+            throw new RuntimeException("Could not read text from this PDF. It may be damaged or password protected.", e);
         }
     }
 
