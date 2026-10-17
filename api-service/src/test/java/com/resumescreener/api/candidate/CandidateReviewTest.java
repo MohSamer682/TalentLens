@@ -52,7 +52,7 @@ class CandidateReviewTest {
 
     @BeforeEach
     void setUp() {
-        when(sessions.getSession("s1", EMAIL)).thenReturn(session);
+        when(sessions.getOwnedSession("s1", EMAIL)).thenReturn(session);
         when(users.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(User.builder().id("u1").email(EMAIL).build()));
     }
 

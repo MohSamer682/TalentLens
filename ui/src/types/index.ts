@@ -78,12 +78,35 @@ export interface Page<T> {
 
 export type Role = 'ADMIN' | 'HR_CHIEF' | 'RECRUITER';
 
+export type Permission =
+  | 'SESSION_RUN'
+  | 'SESSION_VIEW_ALL'
+  | 'CANDIDATE_REVIEW'
+  | 'ANALYTICS_VIEW'
+  | 'USER_MANAGE'
+  | 'ROLE_MANAGE'
+  | 'AUDIT_VIEW';
+
 export interface User {
   id: string;
   email: string;
   fullName: string;
   role: Role;
   createdAt: string;
+  /** Only on the signed-in user (login, register, /auth/me) */
+  permissions?: Permission[];
+}
+
+export interface RoleInfo {
+  role: Role;
+  permissions: Permission[];
+  editable: boolean;
+  userCount: number;
+}
+
+export interface RolesCatalog {
+  permissions: { name: Permission; description: string; adminOnly: boolean }[];
+  roles: RoleInfo[];
 }
 
 export interface Weights {
@@ -106,6 +129,9 @@ export interface ScreeningSession {
   candidateCount: number;
   reportFileKey?: string;
   shortlistedCount?: number;
+  ownerId?: string;
+  /** Only when listing everyone's sessions */
+  ownerName?: string;
   lastErrorMessage?: string;
   /** Present on the session detail response only */
   llm?: LlmStatus;

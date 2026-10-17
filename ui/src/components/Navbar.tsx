@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ListOrdered, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { ROLE_LABEL, cn } from '@/lib/utils';
+import { can } from '@/lib/permissions';
 
 export function Navbar() {
   const { user, logout } = useAuthStore();
@@ -28,8 +29,8 @@ export function Navbar() {
 
   const links = [
     { to: '/dashboard', label: 'Sessions', match: ['/dashboard', '/sessions'] },
-    ...(user?.role === 'ADMIN' || user?.role === 'HR_CHIEF' ? [{ to: '/analytics', label: 'Analytics', match: ['/analytics'] }] : []),
-    ...(user?.role === 'ADMIN' ? [{ to: '/admin/users', label: 'Users', match: ['/admin'] }] : []),
+    ...(can(user, 'ANALYTICS_VIEW') ? [{ to: '/analytics', label: 'Analytics', match: ['/analytics'] }] : []),
+    ...(can(user, 'USER_MANAGE') ? [{ to: '/admin/users', label: 'Admin', match: ['/admin'] }] : []),
   ];
 
   return (
@@ -50,7 +51,7 @@ export function Navbar() {
               className={({ isActive }) => {
                 const active = isActive || l.match.some((m) => pathname.startsWith(m));
                 return cn(
-                  'relative flex h-14 shrink-0 items-center px-2.5 text-[15px] font-semibold transition-colors after:absolute after:inset-x-2.5 after:bottom-0 after:h-[3px] after:rounded-t-sm after:transition-colors sm:px-3',
+                  'relative flex h-14 shrink-0 items-center px-1.5 text-[14px] font-semibold transition-colors after:absolute after:inset-x-1.5 after:bottom-0 after:h-[3px] after:rounded-t-sm after:transition-colors sm:px-3 sm:text-[15px] sm:after:inset-x-3',
                   active ? 'text-white after:bg-mark' : 'text-pitch-ink after:bg-transparent hover:text-white'
                 );
               }}

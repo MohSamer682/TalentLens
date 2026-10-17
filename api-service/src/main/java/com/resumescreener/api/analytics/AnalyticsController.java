@@ -21,7 +21,7 @@ public class AnalyticsController {
 
     // days is a String so "abc" gets the same message as 7
     @GetMapping("/overview")
-    @PreAuthorize("hasAnyRole('ADMIN','HR_CHIEF')")
+    @PreAuthorize("hasAuthority('ANALYTICS_VIEW')")
     public ResponseEntity<ApiResponse<AnalyticsOverview>> overview(@RequestParam(defaultValue = "90") String days) {
         AnalyticsOverview data = analyticsService.overview(days);
         auditService.record("ANALYTICS_VIEW", "analytics", null, "success");

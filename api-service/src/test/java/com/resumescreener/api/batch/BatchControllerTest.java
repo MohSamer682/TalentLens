@@ -129,5 +129,10 @@ class BatchControllerTest {
         public ScreeningSession getSession(String id, String userEmail) {
             return ScreeningSession.builder().id(id).build();
         }
+
+        @Override
+        public ScreeningSession getOwnedSession(String id, String userEmail) {
+            return getSession(id, userEmail);
+        }
     }
 }

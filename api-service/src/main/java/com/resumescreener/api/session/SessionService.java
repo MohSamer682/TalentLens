@@ -1,6 +1,7 @@
 package com.resumescreener.api.session;
 
 import com.resumescreener.api.common.ApiException;
+import com.resumescreener.api.common.Authorities;
 import com.resumescreener.common.audit.*;
 import com.resumescreener.common.session.*;
 import com.resumescreener.common.user.*;
@@ -74,7 +75,7 @@ public class SessionService {
     @Transactional
     public ScreeningSession updateSession(String id, CreateSessionRequest request, String userEmail) {
         if (request.getWeights() != null) requireWeightsTotal100(request.getWeights());
-        ScreeningSession session = getSession(id, userEmail);
+        ScreeningSession session = getOwnedSession(id, userEmail);
         
         if (request.getTitle() != null) session.setTitle(request.getTitle());
         if (request.getDescription() != null) session.setDescription(request.getDescription());
@@ -96,26 +97,41 @@ public class SessionService {
         return sessionRepository.save(session);
     }
 
-    public Page<ScreeningSession> getSessions(String userEmail, Pageable pageable) {
-        User user = userRepository.findByEmailIgnoreCase(userEmail)
-                .orElseThrow(() -> ApiException.notFound("User not found",
-                        "No user exists for email " + userEmail));
-        return sessionRepository.findByUserId(user.getId(), pageable);
+    /** {@code everyone} lists all recruiters' sessions and needs SESSION_VIEW_ALL. */
+    public Page<ScreeningSession> getSessions(String userEmail, boolean everyone, Pageable pageable) {
+        if (everyone) {
+            if (!Authorities.has(Permission.SESSION_VIEW_ALL)) {
+                throw new AccessDeniedException("You can only list your own sessions");
+            }
+            return sessionRepository.findAll(pageable);
+        }
+        return sessionRepository.findByUserId(findUser(userEmail).getId(), pageable);
     }
 
+    /** Read access: the owner, or anyone holding SESSION_VIEW_ALL. */
     public ScreeningSession getSession(String id, String userEmail) {
-        User user = userRepository.findByEmailIgnoreCase(userEmail)
-                .orElseThrow(() -> ApiException.notFound("User not found",
-                        "No user exists for email " + userEmail));
-        
+        User user = findUser(userEmail);
         return sessionRepository.findWithWeightsById(id)
-                .filter(s -> user.getRole().name().equals("ADMIN") || s.getUser().getId().equals(user.getId()))
+                .filter(s -> s.getUser().getId().equals(user.getId()) || Authorities.has(Permission.SESSION_VIEW_ALL))
                 .orElseThrow(() -> new AccessDeniedException("Not authorized or session not found"));
+    }
+
+    /** Write access: the owner or an admin. Viewing someone's session never lets you change it. */
+    public ScreeningSession getOwnedSession(String id, String userEmail) {
+        User user = findUser(userEmail);
+        return sessionRepository.findWithWeightsById(id)
+                .filter(s -> user.getRole() == Role.ADMIN || s.getUser().getId().equals(user.getId()))
+                .orElseThrow(() -> new AccessDeniedException("Not authorized or session not found"));
+    }
+
+    private User findUser(String email) {
+        return userRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> ApiException.notFound("User not found", "No user exists for email " + email));
     }
 
     @Transactional
     public void deleteSession(String id, String userEmail) {
-        ScreeningSession session = getSession(id, userEmail);
+        ScreeningSession session = getOwnedSession(id, userEmail);
         if (session.getStatus() == SessionStatus.RUNNING) {
             throw ApiException.validation("Session is currently running. Cancel it first, then delete.",
                     "Session " + id + " is in status RUNNING");
@@ -126,7 +142,7 @@ public class SessionService {
 
     @Transactional
     public void cancelSession(String id, String userEmail) {
-        ScreeningSession session = getSession(id, userEmail);
+        ScreeningSession session = getOwnedSession(id, userEmail);
         if (session.getStatus() != SessionStatus.RUNNING) {
             throw ApiException.validation("Session is not running",
                     "Session " + id + " is in status " + session.getStatus());
