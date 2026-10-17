@@ -153,6 +153,21 @@ class AnalyticsRepositoryTest {
                 });
     }
 
+    @Test
+    void calibrationByBand() {
+        String u = user("Rana");
+        String s = session(u, "DONE", recent, Duration.ofHours(1));
+        String c = candidateWithId(s, "SCORED", "SHORTLISTED", 92.0);
+        interview(c, u, "COMPLETED", "HIRE");
+
+        ScoreBand topBand = repository.overview(from, to).scoreBands().get(4);
+        assertThat(topBand.label()).isEqualTo("90–100");
+        assertThat(topBand.count()).isEqualTo(1L);
+        assertThat(topBand.shortlistRate()).isEqualTo(1.0);
+        assertThat(topBand.hireRate()).isEqualTo(1.0);
+        assertThat(topBand.interviewed()).isEqualTo(1L);
+    }
+
     private String user(String name) {
         String id = UUID.randomUUID().toString();
         jdbc.update("INSERT INTO users (id, email, password_hash, full_name, role, created_at) VALUES (?, ?, 'x', ?, 'RECRUITER', now())",
@@ -168,11 +183,24 @@ class AnalyticsRepositoryTest {
     }
 
     private void candidate(String sessionId, String status, String review, Double composite) {
+        candidateWithId(sessionId, status, review, composite);
+    }
+
+    private String candidateWithId(String sessionId, String status, String review, Double composite) {
         String id = UUID.randomUUID().toString();
         jdbc.update("INSERT INTO candidates (id, session_id, status, review_status) VALUES (?, ?, ?, ?)", id, sessionId, status, review);
         if (composite != null) {
             jdbc.update("INSERT INTO candidate_scores (id, candidate_id, composite_score) VALUES (?, ?, ?)",
                     UUID.randomUUID().toString(), id, composite);
         }
+        return id;
+    }
+
+    private void interview(String candidateId, String interviewerId, String status, String recommendation) {
+        jdbc.update("""
+                INSERT INTO candidate_interviews (id, candidate_id, kind, interviewer_id, scheduled_start,
+                                                 status, recommendation, created_by, feedback_submitted_at)
+                VALUES (?, ?, 'TECHNICAL', ?, now(), ?, ?, ?, now())
+                """, UUID.randomUUID().toString(), candidateId, interviewerId, status, recommendation, interviewerId);
     }
 }
