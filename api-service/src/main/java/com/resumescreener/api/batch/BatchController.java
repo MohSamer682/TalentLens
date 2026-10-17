@@ -85,6 +85,9 @@ public class BatchController {
 
         Page<CandidateScore> scores = review == null
                 ? candidateScoreRepository.findByCandidateSessionIdOrderByRankAsc(id, pageable)
+                // the shortlist view keeps candidates who moved further down the pipeline
+                : review == ReviewStatus.SHORTLISTED
+                ? candidateScoreRepository.findByCandidateSessionIdAndCandidateReviewStatusNotOrderByRankAsc(id, ReviewStatus.NONE, pageable)
                 : candidateScoreRepository.findByCandidateSessionIdAndCandidateReviewStatusOrderByRankAsc(id, review, pageable);
         Page<CandidateResultDto> dtos = scores.map(BatchController::toCandidateResultDto);
 

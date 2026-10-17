@@ -102,8 +102,8 @@ public class SessionController {
                 weightsDto, count, session.getLastErrorMessage(), session.getReportFileKey());
         // getId on the lazy owner reads the foreign key, so this never touches the users table
         if (session.getUser() != null) response.setOwnerId(session.getUser().getId());
-        response.setShortlistedCount((int) candidateRepository.countBySessionIdAndReviewStatus(
-                session.getId(), ReviewStatus.SHORTLISTED));
+        response.setShortlistedCount((int) candidateRepository.countBySessionIdAndReviewStatusNot(
+                session.getId(), ReviewStatus.NONE));
         return response;
     }
 }

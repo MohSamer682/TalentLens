@@ -2,15 +2,28 @@ import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { refreshCurrentUser } from '@/api/client';
 import { PermissionRoute, ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuthStore } from '@/store/authStore';
+import { can } from '@/lib/permissions';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import Dashboard from '@/pages/Dashboard';
 import NewSession from '@/pages/NewSession';
 import SessionDetail from '@/pages/SessionDetail';
 import CandidateDetail from '@/pages/CandidateDetail';
+import Pipeline from '@/pages/Pipeline';
+import MyInterviews from '@/pages/MyInterviews';
+import InterviewFeedback from '@/pages/InterviewFeedback';
 import AdminUsers from '@/pages/AdminUsers';
 import AdminRoles from '@/pages/AdminRoles';
 import Analytics from '@/pages/Analytics';
+
+function RootRedirect() {
+  const user = useAuthStore((s) => s.user);
+  if (user && can(user, 'INTERVIEW_FEEDBACK') && !can(user, 'SESSION_RUN') && !can(user, 'SESSION_VIEW_ALL')) {
+    return <Navigate to="/interviews" replace />;
+  }
+  return <Navigate to="/dashboard" replace />;
+}
 
 export default function App() {
   // Permissions stored at sign-in go stale when an admin edits a role; refresh them once per load.
@@ -55,6 +68,38 @@ export default function App() {
         }
       />
       <Route
+        path="/sessions/:sessionId/candidates/:candidateId"
+        element={
+          <ProtectedRoute>
+            <CandidateDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pipeline"
+        element={
+          <ProtectedRoute>
+            <Pipeline />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/interviews"
+        element={
+          <PermissionRoute permission="INTERVIEW_FEEDBACK">
+            <MyInterviews />
+          </PermissionRoute>
+        }
+      />
+      <Route
+        path="/interviews/:interviewId/feedback"
+        element={
+          <PermissionRoute permission="INTERVIEW_FEEDBACK">
+            <InterviewFeedback />
+          </PermissionRoute>
+        }
+      />
+      <Route
         path="/admin/users"
         element={
           <PermissionRoute permission="USER_MANAGE">
@@ -78,8 +123,8 @@ export default function App() {
           </PermissionRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<RootRedirect />} />
+      <Route path="*" element={<RootRedirect />} />
     </Routes>
   );
 }

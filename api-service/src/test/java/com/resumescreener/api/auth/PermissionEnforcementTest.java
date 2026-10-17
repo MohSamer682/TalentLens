@@ -54,6 +54,8 @@ class PermissionEnforcementTest {
         @Bean CandidateController candidateController() { return new CandidateController(mock(CandidateService.class)); }
         @Bean RoleController roleController() { return new RoleController(mock(RoleService.class)); }
         @Bean AnalyticsController analyticsController() { return new AnalyticsController(mock(AnalyticsService.class), mock(AuditService.class)); }
+        @Bean com.resumescreener.api.pipeline.PipelineService pipelineService() { return mock(com.resumescreener.api.pipeline.PipelineService.class); }
+        @Bean com.resumescreener.api.pipeline.PipelineController pipelineController(com.resumescreener.api.pipeline.PipelineService p) { return new com.resumescreener.api.pipeline.PipelineController(p); }
     }
 
     @Autowired SessionController sessions;
@@ -62,6 +64,7 @@ class PermissionEnforcementTest {
     @Autowired CandidateController candidates;
     @Autowired AnalyticsController analytics;
     @Autowired RoleController roles;
+    @Autowired com.resumescreener.api.pipeline.PipelineController pipeline;
 
     @AfterEach
     void clear() {
@@ -115,6 +118,49 @@ class PermissionEnforcementTest {
 
         assertThrows(AccessDeniedException.class, () -> sessions.createSession(new CreateSessionRequest(), auth));
         assertDoesNotThrow(() -> sessions.listSessions(PageRequest.of(0, 20), true, auth));
+    }
+
+    @Test
+    void pipelineManageRequiresPipelineManage() {
+        Authentication auth = signIn("ROLE_RECRUITER", "CANDIDATE_REVIEW");
+
+        assertThrows(AccessDeniedException.class, () -> pipeline.markContacted("s1", "c1", auth));
+        assertThrows(AccessDeniedException.class, () -> pipeline.moveToOffer("s1", "c1", auth));
+    }
+
+    @Test
+    void offerApproveRequiresOfferApprove() {
+        Authentication auth = signIn("ROLE_RECRUITER", "PIPELINE_MANAGE");
+
+        assertThrows(AccessDeniedException.class, () -> pipeline.approveOffer("s1", "c1", auth));
+    }
+
+    @Test
+    void interviewFeedbackRequiresInterviewFeedback() {
+        Authentication auth = signIn("ROLE_RECRUITER", "PIPELINE_MANAGE");
+
+        assertThrows(AccessDeniedException.class, () -> pipeline.getMyInterviews(auth));
+    }
+
+    @Test
+    void getPipelineRequiresPipelineManageOrOfferApprove() {
+        Authentication denied = signIn("ROLE_RECRUITER", "CANDIDATE_REVIEW");
+        assertThrows(AccessDeniedException.class, () -> pipeline.getPipeline(false, denied));
+
+        Authentication allowedPipeline = signIn("ROLE_RECRUITER", "PIPELINE_MANAGE");
+        assertDoesNotThrow(() -> pipeline.getPipeline(false, allowedPipeline));
+
+        Authentication allowedApprove = signIn("ROLE_HR_CHIEF", "OFFER_APPROVE");
+        assertDoesNotThrow(() -> pipeline.getPipeline(false, allowedApprove));
+    }
+
+    @Test
+    void getInterviewersRequiresPipelineManage() {
+        signIn("ROLE_TECHNICAL_INTERVIEWER", "INTERVIEW_FEEDBACK");
+        assertThrows(AccessDeniedException.class, () -> pipeline.getInterviewers(null));
+
+        signIn("ROLE_RECRUITER", "PIPELINE_MANAGE");
+        assertDoesNotThrow(() -> pipeline.getInterviewers(null));
     }
 
     private static Authentication signIn(String... authorities) {

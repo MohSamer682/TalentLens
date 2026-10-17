@@ -35,7 +35,7 @@ class CandidateNotesTest {
     private final UserRepository users = mock(UserRepository.class);
     private final AuditService audit = mock(AuditService.class);
     private final CandidateNoteRepository notes = mock(CandidateNoteRepository.class);
-    private final CandidateService service = new CandidateService(sessions, candidates, null, users, audit, notes);
+    private final CandidateService service = new CandidateService(sessions, candidates, null, users, audit, notes, null);
 
     private final User author = User.builder().id("u1").email("a@example.com").fullName("Ana").role(Role.RECRUITER).build();
     private final User other = User.builder().id("u2").email("b@example.com").fullName("Ben").role(Role.RECRUITER).build();

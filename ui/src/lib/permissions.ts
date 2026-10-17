@@ -6,6 +6,9 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
   SESSION_RUN: 'Run sessions',
   SESSION_VIEW_ALL: 'Open any session',
   CANDIDATE_REVIEW: 'Shortlist candidates',
+  PIPELINE_MANAGE: 'Manage hiring pipeline',
+  OFFER_APPROVE: 'Approve job offers',
+  INTERVIEW_FEEDBACK: 'Give interview feedback',
   ANALYTICS_VIEW: 'Analytics',
   USER_MANAGE: 'Manage users',
   ROLE_MANAGE: 'Manage roles',
@@ -16,6 +19,8 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
 export function can(user: User | null | undefined, permission: Permission): boolean {
   return !!user?.permissions?.includes(permission);
 }
+
+export const hasPermission = can;
 
 export function useCan(permission: Permission): boolean {
   return useAuthStore((s) => can(s.user, permission));

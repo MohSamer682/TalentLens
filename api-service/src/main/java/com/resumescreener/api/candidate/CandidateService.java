@@ -16,6 +16,8 @@ import com.resumescreener.common.session.SessionStatus;
 import com.resumescreener.api.candidate.dto.CandidateNoteDto;
 import com.resumescreener.common.session.CandidateNote;
 import com.resumescreener.common.session.CandidateNoteRepository;
+import com.resumescreener.common.session.CandidateStageEvent;
+import com.resumescreener.common.session.CandidateStageEventRepository;
 import com.resumescreener.common.user.User;
 import com.resumescreener.common.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,7 @@ public class CandidateService {
     private final UserRepository userRepository;
     private final AuditService auditService;
     private final CandidateNoteRepository candidateNoteRepository;
+    private final CandidateStageEventRepository candidateStageEventRepository;
 
     public Page<ResumeFileDto> listResumes(String sessionId, CandidateStatus status, Pageable pageable, String email) {
         sessionService.getSession(sessionId, email);
@@ -88,22 +91,35 @@ public class CandidateService {
     }
 
     private ReviewResult apply(String sessionId, List<Candidate> candidates, ReviewStatus status, String email) {
-        String reviewerId = status == ReviewStatus.NONE ? null
-                : userRepository.findByEmailIgnoreCase(email).map(u -> u.getId()).orElse(null);
+        User reviewer = userRepository.findByEmailIgnoreCase(email).orElse(null);
+        String reviewerId = status == ReviewStatus.NONE ? null : (reviewer != null ? reviewer.getId() : null);
         String action = status == ReviewStatus.SHORTLISTED ? "CANDIDATE_SHORTLIST" : "CANDIDATE_UNSHORTLIST";
         int changed = 0;
+        if (status == ReviewStatus.NONE && candidates.stream().anyMatch(c -> c.getReviewStatus().compareTo(ReviewStatus.SHORTLISTED) > 0)) {
+            throw ApiException.validation("Candidates past the shortlist can't be unshortlisted",
+                    "One or more candidates are already contacted or further along");
+        }
         for (Candidate c : candidates) {
-            if (c.getReviewStatus() == status) {
+            // shortlisting never moves a candidate who is further along back to SHORTLISTED
+            if (c.getReviewStatus() == status || (status == ReviewStatus.SHORTLISTED && c.getReviewStatus().isShortlistedOrBeyond())) {
                 continue;
             }
             c.setReviewStatus(status);
             c.setReviewedBy(reviewerId);
             c.setReviewedAt(status == ReviewStatus.NONE ? null : Instant.now());
             auditService.record(action, "candidate", c.getId(), "success");
+            candidateStageEventRepository.save(CandidateStageEvent.builder()
+                    .candidateId(c.getId())
+                    .stage(status.name())
+                    .actorId(reviewer != null ? reviewer.getId() : null)
+                    .actorName(reviewer != null ? reviewer.getFullName() : null)
+                    .summary((status == ReviewStatus.SHORTLISTED ? "Shortlisted by " : "Removed from the shortlist by ")
+                            + (reviewer != null ? reviewer.getFullName() : "a recruiter"))
+                    .build());
             changed++;
         }
         candidateRepository.saveAll(candidates);
-        return new ReviewResult(changed, candidateRepository.countBySessionIdAndReviewStatus(sessionId, ReviewStatus.SHORTLISTED));
+        return new ReviewResult(changed, candidateRepository.countBySessionIdAndReviewStatusNot(sessionId, ReviewStatus.NONE));
     }
 
     @Transactional(readOnly = true)

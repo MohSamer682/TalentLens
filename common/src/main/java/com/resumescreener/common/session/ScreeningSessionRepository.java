@@ -29,4 +29,9 @@ public interface ScreeningSessionRepository extends JpaRepository<ScreeningSessi
 
     @EntityGraph(attributePaths = {"user"})
     Optional<ScreeningSession> findWithUserById(String id);
+
+    @Query("SELECT s FROM ScreeningSession s WHERE LOWER(s.user.email) = LOWER(:email) ORDER BY s.createdAt DESC")
+    List<ScreeningSession> findByUserEmailOrderByCreatedAtDesc(@Param("email") String email);
+
+    List<ScreeningSession> findByUser_EmailOrderByCreatedAtDesc(String email);
 }
