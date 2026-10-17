@@ -16,6 +16,8 @@ import { DIMENSIONS, formatDate } from '@/lib/utils';
 import { toggle, toggleAll } from '@/lib/selection';
 import { Segmented } from '@/components/ui/Segmented';
 import { ShortlistBar } from '@/components/ShortlistBar';
+import { useAuthStore } from '@/store/authStore';
+import { canChangeSession, canReviewSession } from '@/lib/permissions';
 
 const PAGE_SIZE = 20;
 
@@ -24,6 +26,7 @@ type View = 'ALL' | 'SHORTLISTED' | 'FAILED' | 'PENDING';
 export default function SessionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const me = useAuthStore((s) => s.user);
   const [session, setSession] = useState<ScreeningSession | null>(null);
   const [progress, setProgress] = useState<ProgressResponse | null>(null);
   const [candidates, setCandidates] = useState<CandidateResultDto[]>([]);
@@ -171,6 +174,9 @@ export default function SessionDetail() {
   const remaining = progress ? Math.max(0, progress.total - progress.processed - progress.failed) : 0;
   const unscored = progress ? Math.max(0, progress.total - progress.processed) : 0;
   const finished = session.status === 'DONE' || session.status === 'FAILED';
+  // Hidden rather than disabled: someone viewing another recruiter's session only reads it.
+  const canChange = canChangeSession(me, session);
+  const canReview = canReviewSession(me, session);
   const score = (scope: 'UNSCORED' | 'ALL') =>
     act(async () => { await sessionsApi.start(session.id, scope); await loadData(); }, 'Could not start scoring');
 
@@ -195,13 +201,13 @@ export default function SessionDetail() {
         }
         actions={
           <>
-            {(session.status === 'PENDING' || session.status === 'FAILED') && (
+            {canChange && (session.status === 'PENDING' || session.status === 'FAILED') && (
               <Link to={`/sessions/new/${session.id}?step=1`} className={buttonVariants({ variant: 'secondary' })}>
                 <Pencil />
                 Edit session
               </Link>
             )}
-            {session.status === 'RUNNING' && (
+            {canChange && session.status === 'RUNNING' && (
               <ConfirmButton
                 label="Stop scoring"
                 confirmLabel="Stop scoring now"
@@ -210,13 +216,13 @@ export default function SessionDetail() {
                 onConfirm={() => act(async () => { await sessionsApi.cancel(session.id); await loadData(); }, 'Could not stop scoring')}
               />
             )}
-            {finished && (
+            {canChange && finished && (
               <Link to={`/sessions/new/${session.id}?step=2`} className={buttonVariants({ variant: 'secondary' })}>
                 <FilePlus2 />
                 Add resumes
               </Link>
             )}
-            {finished && (progress?.total ?? 0) > 0 && (
+            {canChange && finished && (progress?.total ?? 0) > 0 && (
               <ConfirmButton
                 label="Re-score all"
                 confirmLabel={`Re-score all ${progress?.total} resumes`}
@@ -225,14 +231,16 @@ export default function SessionDetail() {
                 onConfirm={() => score('ALL')}
               />
             )}
-            <ConfirmButton
-              label="Delete"
-              confirmLabel="Delete session"
-              icon={<Trash2 />}
-              disabled={busy}
-              onConfirm={() => act(async () => { await sessionsApi.delete(session.id); navigate('/dashboard'); }, 'Could not delete the session')}
-            />
-            {session.status === 'DONE' && unscored > 0 && (
+            {canChange && (
+              <ConfirmButton
+                label="Delete"
+                confirmLabel="Delete session"
+                icon={<Trash2 />}
+                disabled={busy}
+                onConfirm={() => act(async () => { await sessionsApi.delete(session.id); navigate('/dashboard'); }, 'Could not delete the session')}
+              />
+            )}
+            {canChange && session.status === 'DONE' && unscored > 0 && (
               <Button onClick={() => score('UNSCORED')} disabled={busy}>
                 <Play />
                 Score {unscored} unscored resume{unscored === 1 ? '' : 's'}
@@ -296,17 +304,19 @@ export default function SessionDetail() {
         <Alert
           title="Scoring stopped"
           action={
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={busy}
-                onClick={() => score('UNSCORED')}
-              >
-                <RotateCcw />
-                Retry
-              </Button>
-            </div>
+            canChange && (
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => score('UNSCORED')}
+                >
+                  <RotateCcw />
+                  Retry
+                </Button>
+              </div>
+            )
           }
         >
           {session.lastErrorMessage || 'The batch stopped before every resume was scored.'}
@@ -329,7 +339,7 @@ export default function SessionDetail() {
                 ]}
               />
             </div>
-            {(view === 'ALL' || view === 'SHORTLISTED') && (progress?.processed ?? 0) > 0 && (
+            {canReview && (view === 'ALL' || view === 'SHORTLISTED') && (progress?.processed ?? 0) > 0 && (
               <form
                 className="flex items-center gap-2 text-sm"
                 onSubmit={(e) => {
@@ -362,7 +372,7 @@ export default function SessionDetail() {
                 sessionId={session.id}
                 status={view}
                 title={(n) => (view === 'FAILED' ? `${n} resume${n === 1 ? '' : 's'} could not be read` : `${n} resume${n === 1 ? '' : 's'} waiting to be scored`)}
-                canRemove
+                canRemove={canChange}
                 open
                 refreshKey={session}
                 onRemoved={loadData}
@@ -374,9 +384,11 @@ export default function SessionDetail() {
                 sessionId={session.id}
                 candidates={candidates}
                 weights={session.weights}
-                selected={selected}
-                onToggle={(cid) => setSelected((s) => toggle(s, cid))}
-                onToggleAll={(ids) => setSelected((s) => toggleAll(s, ids))}
+                {...(canReview && {
+                  selected,
+                  onToggle: (cid: string) => setSelected((s) => toggle(s, cid)),
+                  onToggleAll: (ids: string[]) => setSelected((s) => toggleAll(s, ids)),
+                })}
               />
               <div className="flex flex-col items-center justify-between gap-3 px-4 py-3 text-sm text-ink-muted sm:flex-row sm:px-5">
                 <span className="num">

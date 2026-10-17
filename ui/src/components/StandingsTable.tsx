@@ -19,13 +19,14 @@ export function StandingsTable({
   sessionId: string;
   candidates: CandidateResultDto[];
   weights?: Weights;
-  selected: Set<string>;
-  onToggle: (id: string) => void;
-  onToggleAll: (ids: string[]) => void;
+  /** Leave out the three selection props for a read-only table (someone who can view but not review). */
+  selected?: Set<string>;
+  onToggle?: (id: string) => void;
+  onToggleAll?: (ids: string[]) => void;
 }) {
   const head = 'px-3 py-2 text-[13px] font-medium text-ink-muted';
   const pageIds = candidates.map((c) => c.id);
-  const selectedOnPage = pageIds.filter((id) => selected.has(id)).length;
+  const selectedOnPage = selected ? pageIds.filter((id) => selected.has(id)).length : 0;
 
   return (
     <div className="relative overflow-x-auto">
@@ -35,7 +36,7 @@ export function StandingsTable({
         </caption>
         <thead className="border-b border-line bg-sunken">
           <tr>
-            <th scope="col" className="w-10 pl-4 sm:pl-5">
+            {onToggleAll && <th scope="col" className="w-10 pl-4 sm:pl-5">
               <input
                 type="checkbox"
                 aria-label="Select all on this page"
@@ -46,8 +47,8 @@ export function StandingsTable({
                 onChange={() => onToggleAll(pageIds)}
                 className="size-[18px] accent-[rgb(var(--ink))]"
               />
-            </th>
-            <th scope="col" className={cn(head, 'w-16 text-center')}>
+            </th>}
+            <th scope="col" className={cn(head, 'w-16 text-center', !onToggleAll && 'pl-4 sm:pl-5')}>
               Rank
             </th>
             <th scope="col" className={cn(head, 'text-left')}>
@@ -74,7 +75,7 @@ export function StandingsTable({
             const inZone = c.reviewStatus === 'SHORTLISTED';
             return (
                 <tr key={c.id} style={stagger(i)} className={cn('group relative animate-fade-up border-b border-line transition-colors', inZone ? 'bg-mark-soft/40 hover:bg-mark-soft/70' : 'hover:bg-ground')}>
-                  <td className="relative z-10 py-2.5 pl-4 sm:pl-5">
+                  {onToggle && selected && <td className="relative z-10 py-2.5 pl-4 sm:pl-5">
                     <input
                       type="checkbox"
                       aria-label={`Select ${c.name || 'candidate ranked ' + c.rank}`}
@@ -82,8 +83,8 @@ export function StandingsTable({
                       onChange={() => onToggle(c.id)}
                       className="size-[18px] accent-[rgb(var(--ink))]"
                     />
-                  </td>
-                  <td className="px-2 py-2.5">
+                  </td>}
+                  <td className={cn('px-2 py-2.5', !onToggle && 'pl-4 sm:pl-5')}>
                     <span
                       className={cn(
                         'display mx-auto flex h-7 min-w-8 items-center justify-center px-1.5 text-base font-bold transition-colors duration-300',

@@ -25,6 +25,11 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Registration successful", response));
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<AuthResponse.UserDto>> me(org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.success("Current user", authService.me(auth.getName())));
+    }
+
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
         try {

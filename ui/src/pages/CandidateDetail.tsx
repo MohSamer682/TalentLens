@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Check, FileText, Loader2, Mail } from 'lucide-react';
 import { apiErrorMessage, candidatesApi, sessionsApi } from '@/api/client';
+import { useAuthStore } from '@/store/authStore';
+import { canReviewSession } from '@/lib/permissions';
 import type { CandidateScore, ScreeningSession } from '@/types';
 import { Tag } from '@/components/ui/Badge';
 import { Panel, PanelHeader } from '@/components/ui/Card';
@@ -28,6 +30,7 @@ export default function CandidateDetail() {
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  const me = useAuthStore((s) => s.user);
   const composite = useCountUp(score?.compositeScore ?? 0, 900);
 
   useEffect(() => {
@@ -111,6 +114,8 @@ export default function CandidateDetail() {
   });
   const total = rows.reduce((sum, r) => sum + r.weighted, 0);
   const inZone = score.reviewStatus === 'SHORTLISTED';
+  // Without the session (it failed to load) the owner is unknown, so the toggle stays hidden.
+  const canReview = !!session && canReviewSession(me, session);
   const strengths = toLines(score.strengths);
   const gaps = toLines(score.gaps);
 
@@ -220,10 +225,10 @@ export default function CandidateDetail() {
         <aside className="min-w-0 space-y-5">
           <Panel className="animate-fade-up p-4">
             <h2 className="font-semibold">{inZone ? 'On the shortlist' : 'Not shortlisted yet'}</h2>
-            <p className="mb-3 mt-1 text-[13px] text-ink-muted">
+            <p className={cn('mt-1 text-[13px] text-ink-muted', canReview && 'mb-3')}>
               Everyone working on this session sees the same shortlist.
             </p>
-            <Button
+            {canReview && <Button
               variant={inZone ? 'secondary' : 'primary'}
               className="w-full"
               onClick={toggleShortlist}
@@ -231,7 +236,7 @@ export default function CandidateDetail() {
               aria-pressed={inZone}
             >
               {inZone ? 'Remove from shortlist' : 'Shortlist'}
-            </Button>
+            </Button>}
           </Panel>
           <Panel className="animate-fade-up p-4" style={{ animationDelay: '60ms' }}>
             <h2 className="mb-1 font-semibold">Original resume</h2>

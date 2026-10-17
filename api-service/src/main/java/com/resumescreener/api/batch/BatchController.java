@@ -22,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -39,11 +40,12 @@ public class BatchController {
     private final com.resumescreener.api.audit.AuditService auditService;
 
     @PostMapping("/{id}/start")
+    @PreAuthorize("hasAuthority('SESSION_RUN')")
     public ResponseEntity<ApiResponse<SessionActionResponse>> startBatch(
             @PathVariable String id,
             @RequestParam(defaultValue = "UNSCORED") ScoringScope scope,
             Authentication auth) {
-        sessionService.getSession(id, auth.getName());
+        sessionService.getOwnedSession(id, auth.getName());
         batchTriggerService.triggerBatch(id, scope);
         auditService.record("BATCH_TRIGGER", "session", id, "success", "scope " + scope);
 
