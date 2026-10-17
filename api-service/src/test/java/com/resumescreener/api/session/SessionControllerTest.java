@@ -61,7 +61,8 @@ class SessionControllerTest {
                 .andExpect(jsonPath("$.message").value("Session created"))
                 .andExpect(jsonPath("$.data.weights.technicalSkills").value(30.0))
                 .andExpect(jsonPath("$.data.weights.cultureFit").value(10.0))
-                .andExpect(jsonPath("$.data.jdFileKey").hasJsonPath());
+                .andExpect(jsonPath("$.data.jdFileKey").hasJsonPath())
+                .andExpect(jsonPath("$.data.shortlistedCount").value(4));
     }
 
     @Test
@@ -126,7 +127,8 @@ class SessionControllerTest {
                 CandidateRepository.class.getClassLoader(),
                 new Class<?>[]{CandidateRepository.class},
                 (proxy, method, args) ->
-                        "countBySessionId".equals(method.getName()) ? 0L : null
+                        "countBySessionId".equals(method.getName()) ? 0L
+                                : "countBySessionIdAndReviewStatus".equals(method.getName()) ? 4L : null
         );
     }
 }

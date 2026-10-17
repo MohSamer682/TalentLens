@@ -7,12 +7,15 @@ import { StatusBadge } from '@/components/ui/Badge';
 import { ConfirmButton } from '@/components/ui/Feedback';
 import { formatRelativeDate, formatDate } from '@/lib/utils';
 import { stagger } from '@/lib/motion';
+import { useAuthStore } from '@/store/authStore';
+import { canChangeSession } from '@/lib/permissions';
 
 /** One session in the dashboard list. Polls its own progress while scoring and asks the list to reload when it ends. */
 export function SessionRow({ session, index = 0, onChanged }: { session: ScreeningSession; index?: number; onChanged: () => void }) {
   const [progress, setProgress] = useState<ProgressResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const canChange = useAuthStore((s) => canChangeSession(s.user, session));
 
   useEffect(() => {
     if (session.status !== 'RUNNING') return;
@@ -48,8 +51,9 @@ export function SessionRow({ session, index = 0, onChanged }: { session: Screeni
     }
   };
 
+  // The setup wizard is for whoever can change the session; anyone else opens the read-only detail.
   const href =
-    session.status === 'DONE' || session.status === 'RUNNING'
+    session.status === 'DONE' || session.status === 'RUNNING' || !canChange
       ? `/sessions/${session.id}`
       : `/sessions/new/${session.id}`;
 
@@ -62,7 +66,13 @@ export function SessionRow({ session, index = 0, onChanged }: { session: Screeni
         >
           {session.title}
         </Link>
-        {session.description && <p className="truncate text-[13px] text-ink-muted">{session.description}</p>}
+        {(session.ownerName || session.description) && (
+          <p className="truncate text-[13px] text-ink-muted">
+            {session.ownerName && <span className="font-medium text-ink">{session.ownerName}</span>}
+            {session.ownerName && session.description && ' · '}
+            {session.description}
+          </p>
+        )}
       </div>
 
       {/* On phones these three sit on one meta line; from md up each becomes its own grid column. */}
@@ -103,7 +113,11 @@ export function SessionRow({ session, index = 0, onChanged }: { session: Screeni
           </p>
         )}
         {session.status === 'PENDING' && <p className="text-ink-muted">{session.jdFileKey ? 'Ready to launch' : 'Needs a job description'}</p>}
-        {session.status === 'DONE' && <p className="text-ink-muted">Shortlist ready</p>}
+        {session.status === 'DONE' && (
+          <p className={session.shortlistedCount ? 'font-semibold text-mark-text' : 'text-ink-muted'}>
+            {session.shortlistedCount ? `${session.shortlistedCount} shortlisted` : 'Ranked, nobody shortlisted yet'}
+          </p>
+        )}
         {error && (
           <p role="alert" className="text-danger">
             {error}
@@ -113,7 +127,7 @@ export function SessionRow({ session, index = 0, onChanged }: { session: Screeni
 
       {/* Actions sit above the row's stretched link */}
       <div className="relative z-10 col-start-2 row-start-1 flex items-center justify-end gap-1 md:col-start-auto md:row-start-auto">
-        {session.status === 'RUNNING' && (
+        {canChange && session.status === 'RUNNING' && (
           <ConfirmButton
             compact
             label="Stop scoring"
@@ -123,14 +137,16 @@ export function SessionRow({ session, index = 0, onChanged }: { session: Screeni
             onConfirm={() => run(() => sessionsApi.cancel(session.id), 'Could not stop scoring')}
           />
         )}
-        <ConfirmButton
-          compact
-          label={`Delete ${session.title}`}
-          confirmLabel="Delete"
-          icon={<Trash2 />}
-          disabled={busy}
-          onConfirm={() => run(() => sessionsApi.delete(session.id), 'Could not delete the session')}
-        />
+        {canChange && (
+          <ConfirmButton
+            compact
+            label={`Delete ${session.title}`}
+            confirmLabel="Delete"
+            icon={<Trash2 />}
+            disabled={busy}
+            onConfirm={() => run(() => sessionsApi.delete(session.id), 'Could not delete the session')}
+          />
+        )}
       </div>
     </li>
   );

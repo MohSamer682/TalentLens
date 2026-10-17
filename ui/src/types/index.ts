@@ -34,6 +34,19 @@ export interface UploadResumesResponse {
   sessionId: string;
   uploadedCount: number;
   candidateIds: string[];
+  duplicates: string[];
+  rejected: { fileName: string; reason: string }[];
+}
+
+export type ScoringScope = 'UNSCORED' | 'ALL';
+
+export interface ResumeFile {
+  id: string;
+  name: string;
+  originalFileName: string | null;
+  status: 'PENDING' | 'SCORED' | 'FAILED';
+  failureReason: string | null;
+  createdAt: string;
 }
 
 export interface SessionActionResponse {
@@ -63,12 +76,37 @@ export interface Page<T> {
   size: number;
 }
 
+export type Role = 'ADMIN' | 'HR_CHIEF' | 'RECRUITER';
+
+export type Permission =
+  | 'SESSION_RUN'
+  | 'SESSION_VIEW_ALL'
+  | 'CANDIDATE_REVIEW'
+  | 'ANALYTICS_VIEW'
+  | 'USER_MANAGE'
+  | 'ROLE_MANAGE'
+  | 'AUDIT_VIEW';
+
 export interface User {
   id: string;
   email: string;
   fullName: string;
-  role: 'ADMIN' | 'RECRUITER';
+  role: Role;
   createdAt: string;
+  /** Only on the signed-in user (login, register, /auth/me) */
+  permissions?: Permission[];
+}
+
+export interface RoleInfo {
+  role: Role;
+  permissions: Permission[];
+  editable: boolean;
+  userCount: number;
+}
+
+export interface RolesCatalog {
+  permissions: { name: Permission; description: string; adminOnly: boolean }[];
+  roles: RoleInfo[];
 }
 
 export interface Weights {
@@ -90,6 +128,10 @@ export interface ScreeningSession {
   weights: Weights;
   candidateCount: number;
   reportFileKey?: string;
+  shortlistedCount?: number;
+  ownerId?: string;
+  /** Only when listing everyone's sessions */
+  ownerName?: string;
   lastErrorMessage?: string;
   /** Present on the session detail response only */
   llm?: LlmStatus;
@@ -141,6 +183,14 @@ export interface CandidateScore {
   strengths: string;
   gaps: string;
   weights?: Weights;
+  reviewStatus: ReviewStatus;
+}
+
+export type ReviewStatus = 'NONE' | 'SHORTLISTED';
+
+export interface ReviewResult {
+  changed: number;
+  shortlistedTotal: number;
 }
 
 export interface ProgressResponse {
@@ -157,6 +207,7 @@ export interface CandidateResultDto {
   name: string;
   email: string;
   compositeScore: number;
+  reviewStatus: ReviewStatus;
   technicalSkills: number;
   experience: number;
   education: number;
@@ -184,4 +235,31 @@ export interface CreateSessionRequest {
   title: string;
   description?: string;
   weights: Weights;
+}
+
+export interface AnalyticsTotals {
+  sessions: number;
+  sessionsByStatus: Record<ScreeningSession['status'], number>;
+  resumesUploaded: number;
+  resumesScored: number;
+  resumesUnreadable: number;
+  shortlisted: number;
+  shortlistRate: number | null;
+  medianHoursToRanked: number | null;
+}
+
+export interface AnalyticsOverview {
+  from: string;
+  to: string;
+  totals: AnalyticsTotals;
+  weeks: { weekStart: string; sessionsCreated: number; resumesScored: number; shortlisted: number }[];
+  scoreBands: { label: string; count: number }[];
+  recruiters: {
+    userId: string;
+    fullName: string;
+    sessions: number;
+    resumesScored: number;
+    shortlisted: number;
+    medianHoursToRanked: number | null;
+  }[];
 }

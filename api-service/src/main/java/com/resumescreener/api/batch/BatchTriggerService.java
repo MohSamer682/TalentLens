@@ -32,7 +32,7 @@ public class BatchTriggerService {
     private String sharedSecret;
 
     @Transactional
-    public void triggerBatch(String sessionId) {
+    public void triggerBatch(String sessionId, ScoringScope scope) {
         ScreeningSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> ApiException.notFound("Session not found",
                         "No session exists for id " + sessionId));
@@ -53,16 +53,24 @@ public class BatchTriggerService {
                     "Session " + sessionId + " has zero candidates");
         }
 
+        if (scope == ScoringScope.UNSCORED
+                && candidateRepository.countBySessionIdAndStatus(sessionId, CandidateStatus.PENDING) == 0
+                && candidateRepository.countBySessionIdAndStatus(sessionId, CandidateStatus.FAILED) == 0) {
+            throw ApiException.validation("Every resume in this session is already scored",
+                    "Session " + sessionId + " has no PENDING or FAILED candidates");
+        }
+
         if (sessionRepository.markRunning(sessionId) == 0) {
             throw ApiException.validation("Session is already running",
                     "Session " + sessionId + " is in status RUNNING");
         }
 
-        log.info("Triggering batch for session {} with {} candidates", sessionId, candidateCount);
+        log.info("Triggering {} batch for session {} with {} candidates", scope, sessionId, candidateCount);
 
         try {
             Map<String, String> body = new HashMap<>();
             body.put("sessionId", sessionId);
+            body.put("scope", scope.name());
 
             restClient.post()
                     .uri(batchWorkerUrl + "/internal/jobs/start")

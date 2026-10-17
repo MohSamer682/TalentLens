@@ -17,6 +17,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -59,7 +60,7 @@ public class JobService {
     }
 
     @Async
-    public void processCandidates(String sessionId) {
+    public void processCandidates(String sessionId, ScoringScope scope) {
         MDC.put("sessionId", sessionId);
         log.info("Starting batch processing for session with candidates");
         
@@ -69,7 +70,10 @@ public class JobService {
             return;
         }
 
-        List<Candidate> candidates = candidateRepository.findBySessionId(sessionId);
+        List<Candidate> candidates = scope == ScoringScope.ALL
+                ? candidateRepository.findBySessionId(sessionId)
+                : candidateRepository.findBySessionIdAndStatusIn(sessionId,
+                        EnumSet.of(CandidateStatus.PENDING, CandidateStatus.FAILED));
         ScoringWeights weights = weightsRepository.findBySessionId(sessionId);
 
         BatchJob job = BatchJob.builder()
@@ -118,8 +122,9 @@ public class JobService {
                 candidateProcessingService.processSingleCandidate(candidate, jdText, weights, job);
             } catch (Exception e) {
                 log.error("Failed to process candidate {}", candidate.getId(), e);
-                candidateProcessingService.handleCandidateFailure(candidate, job);
-                updateSessionErrorMessage(sessionId, e.getMessage());
+                String reason = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+                candidateProcessingService.handleCandidateFailure(candidate, job, reason);
+                updateSessionErrorMessage(sessionId, reason);
             }
         }
 
@@ -196,7 +201,8 @@ public class JobService {
         currentJob.setFinishedAt(java.time.Instant.now());
         batchJobRepository.save(currentJob);
 
-        if (session.getLastErrorMessage() != null && currentJob.getProcessed() == 0) {
+        // A run where every new resume fails still leaves earlier scores usable
+        if (!candidateRepository.existsBySessionIdAndStatus(sessionId, CandidateStatus.SCORED)) {
             session.setStatus(SessionStatus.FAILED);
         } else {
             session.setStatus(SessionStatus.DONE);

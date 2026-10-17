@@ -33,4 +33,28 @@ public class Candidate {
 
     @OneToOne(mappedBy = "candidate", cascade = CascadeType.ALL)
     private CandidateScore score;
+
+    /** SHA-256 of the uploaded file; one session never holds the same file twice */
+    private String contentHash;
+    private String originalFileName;
+    @Column(columnDefinition = "TEXT")
+    private String failureReason;
+
+    @Column(nullable = false)
+    private java.time.Instant createdAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private ReviewStatus reviewStatus = ReviewStatus.NONE;
+    private java.time.Instant reviewedAt;
+    /** Id of the user who made the current review decision */
+    private String reviewedBy;
+
+    @PrePersist
+    public void prePersist() {
+        if (createdAt == null) {
+            createdAt = java.time.Instant.now();
+        }
+    }
 }

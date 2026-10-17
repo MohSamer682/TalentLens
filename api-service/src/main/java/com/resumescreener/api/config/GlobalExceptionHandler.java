@@ -5,6 +5,7 @@ import com.resumescreener.api.common.ApiError;
 import com.resumescreener.api.common.ApiErrorCode;
 import com.resumescreener.api.common.ApiException;
 import com.resumescreener.api.common.ApiResponse;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
@@ -65,8 +67,19 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnreadableBody(HttpMessageNotReadableException e) {
+        // An unknown enum value (a typo'd permission or role) names the value instead of a generic parse error
+        if (e.getCause() instanceof InvalidFormatException f && f.getTargetType() != null && f.getTargetType().isEnum()) {
+            return envelope(HttpStatus.BAD_REQUEST, "Unknown value " + f.getValue(),
+                    ApiErrorCode.VALIDATION_ERROR, f.getValue() + " is not a valid " + f.getTargetType().getSimpleName());
+        }
         return envelope(HttpStatus.BAD_REQUEST, "Malformed request body",
                 ApiErrorCode.VALIDATION_ERROR, "Request body could not be parsed as JSON");
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        return envelope(HttpStatus.BAD_REQUEST, "Invalid request parameter",
+                ApiErrorCode.VALIDATION_ERROR, e.getName() + " has an unsupported value");
     }
 
     /**

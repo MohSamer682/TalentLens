@@ -18,6 +18,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final UserDetailsServiceImpl userDetailsService;
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
@@ -58,12 +59,19 @@ public class AuthService {
         return new AuthResponse(token, mapToUserDto(user));
     }
 
+    /** The signed-in user as they are now, so the UI picks up a role or permission change without signing out. */
+    public AuthResponse.UserDto me(String email) {
+        return userRepository.findByEmailIgnoreCase(email).map(this::mapToUserDto)
+                .orElseThrow(() -> new BadCredentialsException("User no longer exists"));
+    }
+
     private AuthResponse.UserDto mapToUserDto(User user) {
         AuthResponse.UserDto dto = new AuthResponse.UserDto();
         dto.setId(user.getId());
         dto.setEmail(user.getEmail());
         dto.setFullName(user.getFullName());
         dto.setRole(user.getRole().name());
+        dto.setPermissions(userDetailsService.permissionsOf(user).stream().map(Enum::name).sorted().toList());
         return dto;
     }
 }
