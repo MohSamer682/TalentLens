@@ -2,7 +2,7 @@ import type { Config } from 'tailwindcss';
 
 // Tokens live as CSS variables in src/index.css; see ui/DESIGN.md.
 const token = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
-const out = 'cubic-bezier(0.16, 1, 0.3, 1)';
+const out = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
@@ -11,7 +11,8 @@ export default {
       colors: {
         pitch: { DEFAULT: token('pitch'), raised: token('pitch-raised'), ink: token('pitch-ink') },
         ground: token('ground'),
-        surface: { DEFAULT: token('surface'), sunken: token('sunken') },
+        surface: { DEFAULT: token('surface'), raised: token('surface-raised'), sunken: token('sunken') },
+        sunken: token('sunken'),
         line: { DEFAULT: token('line'), strong: token('line-strong') },
         ink: { DEFAULT: token('ink'), muted: token('ink-muted') },
         accent: {
@@ -34,12 +35,15 @@ export default {
         mono: ['"Geist Mono Variable"', '"Geist Mono"', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
-        DEFAULT: '4px',
-        md: '6px',
-        lg: '8px',
+        DEFAULT: '6px',
+        md: '10px',
+        lg: '14px',
+        xl: '20px',
       },
       boxShadow: {
-        panel: '0 1px 0 rgb(var(--shadow) / 0.04)',
+        plate: 'inset 0 1px 0 rgb(255 255 255 / 0.04), 0 1px 2px rgb(var(--shadow) / 0.06), 0 2px 8px -2px rgb(var(--shadow) / 0.08)',
+        lift: 'inset 0 1px 0 rgb(255 255 255 / 0.06), 0 2px 4px rgb(var(--shadow) / 0.08), 0 12px 32px -8px rgb(var(--shadow) / 0.28)',
+        panel: 'inset 0 1px 0 rgb(255 255 255 / 0.04), 0 1px 2px rgb(var(--shadow) / 0.06), 0 2px 8px -2px rgb(var(--shadow) / 0.08)',
         menu: '0 12px 28px -8px rgb(var(--shadow) / 0.45), 0 0 0 1px rgb(var(--line))',
         button: 'inset 0 -1px 0 rgb(var(--shadow) / 0.2)',
       },
@@ -48,6 +52,7 @@ export default {
       },
       transitionTimingFunction: {
         out,
+        lens: out,
       },
       keyframes: {
         'fade-up': { from: { opacity: '0', transform: 'translateX(-8px)' }, to: { opacity: '1', transform: 'none' } },
@@ -59,7 +64,7 @@ export default {
         ping: { '75%, 100%': { transform: 'scale(2.2)', opacity: '0' } },
       },
       animation: {
-        'fade-up': `fade-up 360ms ${out} both`,
+        'fade-up': `fade-up 240ms ${out} both`,
         'fade-in': 'fade-in 200ms ease-out both',
         'grow-x': `grow-x 700ms ${out} both`,
         shimmer: 'shimmer 1.6s linear infinite',

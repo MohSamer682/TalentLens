@@ -108,6 +108,15 @@ class PermissionEnforcementTest {
         assertThrows(AccessDeniedException.class, () -> roles.list());
     }
 
+    @Test
+    void hrChiefCannotCreateSessions() {
+        Authentication auth = signIn("ROLE_HR_CHIEF", "SESSION_VIEW_ALL", "CANDIDATE_REVIEW", "ANALYTICS_VIEW");
+        when(sessionService.getSessions(anyString(), anyBoolean(), any())).thenReturn(Page.empty());
+
+        assertThrows(AccessDeniedException.class, () -> sessions.createSession(new CreateSessionRequest(), auth));
+        assertDoesNotThrow(() -> sessions.listSessions(PageRequest.of(0, 20), true, auth));
+    }
+
     private static Authentication signIn(String... authorities) {
         Authentication auth = new TestingAuthenticationToken("u@example.com", null, authorities);
         SecurityContextHolder.getContext().setAuthentication(auth);

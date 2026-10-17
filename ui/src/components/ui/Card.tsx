@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 /** A bordered panel with a soft shadow. Panels group content; they never lift on hover. */
 export const Panel = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('rounded-lg border border-line bg-surface shadow-panel', className)} {...props} />
+    <div ref={ref} className={cn('plate', className)} {...props} />
   )
 );
 

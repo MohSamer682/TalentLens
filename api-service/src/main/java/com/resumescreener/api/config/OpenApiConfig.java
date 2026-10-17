@@ -15,7 +15,7 @@ public class OpenApiConfig {
     public OpenAPI resumeScreenerOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Resume Screener API")
+                        .title("TalentLens API")
                         .description("Backend API for AI-powered resume screening")
                         .version("1.0.0"))
                 .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))

@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { can, canChangeSession, canReviewSession, diffGrants } from './permissions';
+import { can, canChangeSession, canReviewSession, canSwitchScope, defaultScope, diffGrants } from './permissions';
 import type { Permission, User } from '@/types';
+
+const ALL: Permission[] = [
+  'SESSION_RUN',
+  'SESSION_VIEW_ALL',
+  'CANDIDATE_REVIEW',
+  'ANALYTICS_VIEW',
+  'USER_MANAGE',
+  'ROLE_MANAGE',
+  'AUDIT_VIEW',
+];
 
 const user = (role: User['role'], permissions: Permission[], id = 'u1'): User => ({
   id,
@@ -43,4 +53,14 @@ describe('diffGrants', () => {
     }));
   it('is empty when nothing changed', () =>
     expect(diffGrants(['SESSION_RUN', 'ANALYTICS_VIEW'], ['ANALYTICS_VIEW', 'SESSION_RUN'])).toEqual({ added: [], removed: [] }));
+});
+
+describe('defaultScope & canSwitchScope', () => {
+  it('defaultScopeIsEveryoneForViewers', () => {
+    expect(defaultScope(user('HR_CHIEF', ['SESSION_VIEW_ALL', 'ANALYTICS_VIEW']))).toBe('EVERYONE');
+    expect(canSwitchScope(user('HR_CHIEF', ['SESSION_VIEW_ALL', 'ANALYTICS_VIEW']))).toBe(false);
+    expect(defaultScope(user('ADMIN', ALL))).toBe('MINE');
+    expect(canSwitchScope(user('ADMIN', ALL))).toBe(true);
+    expect(defaultScope(user('RECRUITER', ['SESSION_RUN', 'CANDIDATE_REVIEW']))).toBe('MINE');
+  });
 });

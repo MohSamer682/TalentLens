@@ -27,11 +27,11 @@ export function Segmented<T extends string>({
   }, [value, options]);
 
   return (
-    <div role="group" aria-label={label} className="relative flex shrink-0 rounded-full bg-sunken p-1">
+    <div role="radiogroup" aria-label={label} className="relative flex shrink-0 rounded-full bg-sunken p-1">
       {pill && (
         <span
           aria-hidden="true"
-          className="absolute inset-y-1 rounded-full bg-surface shadow-panel transition-[left,width] duration-300 ease-out"
+          className="absolute inset-y-1 rounded-full bg-surface-raised shadow-plate transition-[left,width] duration-300 ease-lens"
           style={{ left: pill.left, width: pill.width }}
         />
       )}
@@ -40,7 +40,8 @@ export function Segmented<T extends string>({
           key={o.value}
           ref={(el) => (refs.current[o.value] = el)}
           type="button"
-          aria-pressed={value === o.value}
+          role="radio"
+          aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
             'relative flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold transition-colors',
