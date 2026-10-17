@@ -37,7 +37,7 @@ export function WeightSliders({ weights, onChange }: { weights: Weights; onChang
         </div>
       </div>
 
-      <ul className="divide-y divide-line rounded-lg border border-line">
+      <ul className="divide-y divide-line plate overflow-hidden">
         {DIMENSIONS.map((d, i) => (
           <li key={d.key} className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 px-4 py-3 sm:grid-cols-[160px_1fr_auto]">
             <label htmlFor={`w-${d.key}`} className="flex items-center gap-2 text-sm font-semibold">

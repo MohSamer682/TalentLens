@@ -83,8 +83,11 @@ public class BatchController {
             Authentication auth) {
         sessionService.getSession(id, auth.getName());
 
+        // review=SHORTLISTED means shortlisted or any later stage, so a candidate who moves on stays in the view
         Page<CandidateScore> scores = review == null
                 ? candidateScoreRepository.findByCandidateSessionIdOrderByRankAsc(id, pageable)
+                : review == ReviewStatus.SHORTLISTED
+                ? candidateScoreRepository.findByCandidateSessionIdAndCandidateReviewStatusNotOrderByRankAsc(id, ReviewStatus.NONE, pageable)
                 : candidateScoreRepository.findByCandidateSessionIdAndCandidateReviewStatusOrderByRankAsc(id, review, pageable);
         Page<CandidateResultDto> dtos = scores.map(BatchController::toCandidateResultDto);
 

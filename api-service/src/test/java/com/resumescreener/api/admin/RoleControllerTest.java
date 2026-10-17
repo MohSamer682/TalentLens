@@ -53,11 +53,11 @@ class RoleControllerTest {
     void listsCatalogAndRoles() throws Exception {
         mvc.perform(get("/api/admin/roles"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.permissions.length()").value(7))
-                .andExpect(jsonPath("$.data.roles.length()").value(3))
+                .andExpect(jsonPath("$.data.permissions.length()").value(Permission.values().length))
+                .andExpect(jsonPath("$.data.roles.length()").value(Role.values().length))
                 .andExpect(jsonPath("$.data.roles[0].role").value("ADMIN"))
                 .andExpect(jsonPath("$.data.roles[0].editable").value(false))
-                .andExpect(jsonPath("$.data.roles[0].permissions.length()").value(7))
+                .andExpect(jsonPath("$.data.roles[0].permissions.length()").value(Permission.values().length))
                 .andExpect(jsonPath("$.data.roles[1].userCount").value(2));
     }
 

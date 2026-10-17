@@ -19,6 +19,10 @@ public interface CandidateScoreRepository extends JpaRepository<CandidateScore, 
     @EntityGraph(attributePaths = "candidate")
     Page<CandidateScore> findByCandidateSessionIdAndCandidateReviewStatusOrderByRankAsc(
             String sessionId, ReviewStatus reviewStatus, Pageable pageable);
+    /** Everyone past the screening: shortlisted and every later stage */
+    @EntityGraph(attributePaths = "candidate")
+    Page<CandidateScore> findByCandidateSessionIdAndCandidateReviewStatusNotOrderByRankAsc(
+            String sessionId, ReviewStatus excluded, Pageable pageable);
     @EntityGraph(attributePaths = "candidate")
     List<CandidateScore> findTop200ByCandidateSessionIdAndRankNotNullOrderByRankAsc(String sessionId);
 }

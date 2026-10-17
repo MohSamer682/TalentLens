@@ -114,9 +114,16 @@ export function SessionRow({ session, index = 0, onChanged }: { session: Screeni
         )}
         {session.status === 'PENDING' && <p className="text-ink-muted">{session.jdFileKey ? 'Ready to launch' : 'Needs a job description'}</p>}
         {session.status === 'DONE' && (
-          <p className={session.shortlistedCount ? 'font-semibold text-mark-text' : 'text-ink-muted'}>
-            {session.shortlistedCount ? `${session.shortlistedCount} shortlisted` : 'Ranked, nobody shortlisted yet'}
-          </p>
+          <div className="flex items-center gap-1.5">
+            {session.shortlistedCount && session.shortlistedCount > 0 ? (
+              <span className="rounded-full bg-mark px-2 py-0.5 text-xs font-semibold text-mark-ink">
+                {session.shortlistedCount}
+              </span>
+            ) : (
+              <span className="text-ink-muted">–</span>
+            )}
+            <span className="text-xs text-ink-muted">shortlisted</span>
+          </div>
         )}
         {error && (
           <p role="alert" className="text-danger">

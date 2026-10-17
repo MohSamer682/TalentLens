@@ -19,7 +19,7 @@ export function ShortlistBar({
     <div
       role="region"
       aria-label="Selection"
-      className="sticky bottom-0 z-20 flex animate-fade-up flex-wrap items-center gap-x-3 gap-y-2 border-t border-line bg-ink px-4 py-3 text-ground sm:px-5"
+      className="sticky bottom-0 z-20 flex animate-fade-up flex-wrap items-center gap-x-3 gap-y-2 lift rounded-xl bg-ink px-4 py-3 text-ground sm:px-5"
     >
       <p className="flex-1 text-sm font-bold" aria-live="polite">
         <span className="num">{count}</span> selected

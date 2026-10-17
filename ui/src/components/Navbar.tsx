@@ -1,9 +1,10 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { ListOrdered, LogOut, Moon, Sun } from 'lucide-react';
+import { LogOut, Moon, Sun } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { ROLE_LABEL, cn } from '@/lib/utils';
-import { can } from '@/lib/permissions';
+import { can, canSeeSessions as userCanSeeSessions, homePath } from '@/lib/permissions';
+import { BrandMark } from '@/components/BrandMark';
 
 export function Navbar() {
   const { user, logout } = useAuthStore();
@@ -14,6 +15,8 @@ export function Navbar() {
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', next === 'light' ? '#FFFFFF' : '#080C0B');
     try {
       localStorage.setItem('theme', next);
     } catch {
@@ -27,20 +30,31 @@ export function Navbar() {
     navigate('/login');
   };
 
+  const canSeeSessions = userCanSeeSessions(user);
+  const home = homePath(user);
+
   const links = [
-    { to: '/dashboard', label: 'Sessions', match: ['/dashboard', '/sessions'] },
-    ...(can(user, 'ANALYTICS_VIEW') ? [{ to: '/analytics', label: 'Analytics', match: ['/analytics'] }] : []),
-    ...(can(user, 'USER_MANAGE') ? [{ to: '/admin/users', label: 'Admin', match: ['/admin'] }] : []),
+    ...(canSeeSessions ? [{ to: '/dashboard', label: 'Sessions', match: ['/dashboard', '/sessions'] }] : []),
+    ...((can(user, 'PIPELINE_MANAGE') || can(user, 'OFFER_APPROVE'))
+      ? [{ to: '/pipeline', label: 'Pipeline', match: ['/pipeline'] }]
+      : []),
+    ...(can(user, 'INTERVIEW_FEEDBACK')
+      ? [{ to: '/interviews', label: 'My interviews', match: ['/interviews'] }]
+      : []),
+    ...(can(user, 'ANALYTICS_VIEW')
+      ? [{ to: '/analytics', label: 'Analytics', match: ['/analytics'] }]
+      : []),
+    ...((can(user, 'USER_MANAGE') || can(user, 'ROLE_MANAGE'))
+      ? [{ to: '/admin/users', label: 'Admin', match: ['/admin'] }]
+      : []),
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-pitch text-white">
+    <header className="sticky top-0 z-40 border-b border-line glass text-ink">
       <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-2 px-4 sm:gap-6 sm:px-6">
-        <Link to="/dashboard" aria-label="Resume Screener, all sessions" className="flex shrink-0 items-center gap-2 rounded-md">
-          <span className="flex size-7 items-center justify-center rounded bg-mark text-mark-ink" aria-hidden="true">
-            <ListOrdered className="size-4" />
-          </span>
-          <span className="hidden whitespace-nowrap font-display text-[17px] font-bold tracking-tight sm:inline">Resume Screener</span>
+        <Link to={home} aria-label="TalentLens, home" className="flex shrink-0 items-center gap-2 rounded-md">
+          <BrandMark size={28} />
+          <span className="hidden whitespace-nowrap font-display text-[17px] font-bold tracking-tight text-ink sm:inline">TalentLens</span>
         </Link>
 
         <nav aria-label="Main" className="flex min-w-0 items-center self-stretch overflow-x-auto [scrollbar-width:none] sm:gap-1">
@@ -52,7 +66,7 @@ export function Navbar() {
                 const active = isActive || l.match.some((m) => pathname.startsWith(m));
                 return cn(
                   'relative flex h-14 shrink-0 items-center px-1.5 text-[14px] font-semibold transition-colors after:absolute after:inset-x-1.5 after:bottom-0 after:h-[3px] after:rounded-t-sm after:transition-colors sm:px-3 sm:text-[15px] sm:after:inset-x-3',
-                  active ? 'text-white after:bg-mark' : 'text-pitch-ink after:bg-transparent hover:text-white'
+                  active ? 'text-ink after:bg-mark' : 'text-ink-muted after:bg-transparent hover:text-ink'
                 );
               }}
             >
@@ -64,22 +78,22 @@ export function Navbar() {
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
           {user && (
             <div className="hidden text-right leading-tight sm:block">
-              <p className="text-sm font-semibold">{user.fullName}</p>
-              <p className="text-xs text-pitch-ink">{ROLE_LABEL[user.role]}</p>
+              <p className="text-sm font-semibold text-ink">{user.fullName}</p>
+              <p className="text-[12.5px] text-ink-muted">{ROLE_LABEL[user.role] ?? user.role}</p>
             </div>
           )}
           <button
             type="button"
             onClick={toggleTheme}
             aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-            className="flex size-9 items-center justify-center rounded-md text-pitch-ink transition-colors hover:bg-pitch-raised hover:text-white"
+            className="flex size-9 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-surface-raised hover:text-ink"
           >
             {theme === 'dark' ? <Sun className="size-4" aria-hidden="true" /> : <Moon className="size-4" aria-hidden="true" />}
           </button>
           <button
             type="button"
             onClick={handleLogout}
-            className="flex h-9 min-w-9 items-center justify-center gap-2 rounded-md px-2 text-sm sm:px-3 font-semibold text-pitch-ink transition-colors hover:bg-pitch-raised hover:text-white"
+            className="flex h-9 min-w-9 items-center justify-center gap-2 rounded-md px-2 text-sm sm:px-3 font-semibold text-ink-muted transition-colors hover:bg-surface-raised hover:text-ink"
           >
             <LogOut className="size-4" aria-hidden="true" />
             <span className="hidden sm:inline">Sign out</span>

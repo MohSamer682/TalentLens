@@ -2,7 +2,16 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import type { Role, Weights } from '@/types';
 
-export const ROLE_LABEL: Record<Role, string> = { ADMIN: 'Admin', HR_CHIEF: 'HR chief', RECRUITER: 'Recruiter' };
+export const ROLE_LABEL: Record<Role, string> = {
+  ADMIN: 'Admin',
+  HR_CHIEF: 'HR chief',
+  RECRUITER: 'Recruiter',
+  TECHNICAL_INTERVIEWER: 'Technical interviewer',
+  HR_INTERVIEWER: 'HR interviewer',
+  DEPARTMENT_DIRECTOR: 'Department director',
+  CEO: 'CEO',
+  CHAIRMAN: 'Chairman',
+};
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

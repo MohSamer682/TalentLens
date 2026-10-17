@@ -9,9 +9,11 @@
       try {
         var t = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
         document.documentElement.dataset.theme = t;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', t === 'light' ? '#FFFFFF' : '#080C0B');
       } catch (e) {}
     </script>
-    <title>Resume Screener</title>
+    <title>TalentLens</title>
   </head>
   <body>
     <div id="root"></div>

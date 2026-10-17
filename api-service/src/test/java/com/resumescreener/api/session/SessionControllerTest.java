@@ -128,7 +128,7 @@ class SessionControllerTest {
                 new Class<?>[]{CandidateRepository.class},
                 (proxy, method, args) ->
                         "countBySessionId".equals(method.getName()) ? 0L
-                                : "countBySessionIdAndReviewStatus".equals(method.getName()) ? 4L : null
+                                : "countBySessionIdAndReviewStatusNot".equals(method.getName()) ? 4L : null
         );
     }
 }

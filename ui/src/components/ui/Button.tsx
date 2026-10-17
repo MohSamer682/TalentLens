@@ -4,12 +4,12 @@ import { cn } from '@/lib/utils';
 
 // Exported so <Link> can look like a button without nesting <button> inside <a>.
 export const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-semibold transition-[background-color,color,box-shadow,transform] duration-150 ease-out active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 motion-reduce:active:scale-100 [&_svg]:size-4 [&_svg]:shrink-0',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-semibold transition-[background-color,color,box-shadow,transform] duration-150 ease-lens active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 motion-reduce:active:scale-100 [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
         primary: 'bg-accent text-accent-ink shadow-button hover:bg-accent-strong',
-        secondary: 'border border-line-strong bg-surface text-ink shadow-sm hover:border-ink-muted hover:bg-ground',
+        secondary: 'border border-line-strong bg-transparent text-ink hover:bg-sunken',
         ghost: 'text-ink-muted hover:bg-sunken hover:text-ink',
         danger: 'text-danger hover:bg-danger-soft',
         dangerSolid: 'bg-danger text-ground shadow-button hover:bg-danger/90',

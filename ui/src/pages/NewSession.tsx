@@ -448,7 +448,7 @@ function FileList({
   const extra = Object.entries(outcomes).filter(([name]) => !names.has(name));
   const ready = files.filter((f) => isPending(outcomes[f.name])).length;
   return (
-    <div className="rounded-lg border border-line">
+    <div className="plate overflow-hidden">
       <p className="num border-b border-line bg-sunken px-3 py-1.5 text-[13px] font-semibold text-ink-muted">
         {ready === files.length
           ? `${files.length} file${files.length === 1 ? '' : 's'} ready to upload`

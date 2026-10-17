@@ -3,10 +3,13 @@ import { ChevronRight } from 'lucide-react';
 import type { CandidateResultDto, Weights } from '@/types';
 import { DIMENSIONS, cn, formatScore } from '@/lib/utils';
 import { stagger } from '@/lib/motion';
+import { STAGE_LABEL, madeTheCut } from '@/lib/pipeline';
+import { StageBadge } from '@/components/StageBadge';
 
 /**
- * The ranking, set like a league table. Shortlisted candidates get the saffron position cell and a
- * warm row wash; the shortlist need not be contiguous, so there is no cut-off line.
+ * The ranking, set like a league table. Candidates who made the cut (shortlisted or any later stage) get
+ * the saffron position cell and a warm row wash, and a stage badge says where each one is now. The
+ * shortlist need not be contiguous, so there is no cut-off line.
  */
 export function StandingsTable({
   sessionId,
@@ -54,6 +57,9 @@ export function StandingsTable({
             <th scope="col" className={cn(head, 'text-left')}>
               Candidate
             </th>
+            <th scope="col" className={cn(head, 'hidden w-36 text-left md:table-cell')}>
+              Stage
+            </th>
             {DIMENSIONS.map((d) => (
               <th key={d.key} scope="col" className={cn(head, 'hidden w-16 text-right sm:table-cell')}>
                 <abbr title={d.label} className="no-underline">
@@ -72,7 +78,7 @@ export function StandingsTable({
         </thead>
         <tbody>
           {candidates.map((c, i) => {
-            const inZone = c.reviewStatus === 'SHORTLISTED';
+            const inZone = madeTheCut(c.reviewStatus);
             return (
                 <tr key={c.id} style={stagger(i)} className={cn('group relative animate-fade-up border-b border-line transition-colors', inZone ? 'bg-mark-soft/40 hover:bg-mark-soft/70' : 'hover:bg-ground')}>
                   {onToggle && selected && <td className="relative z-10 py-2.5 pl-4 sm:pl-5">
@@ -93,7 +99,7 @@ export function StandingsTable({
                     >
                       {c.rank}
                     </span>
-                    {inZone && <span className="sr-only">, shortlisted</span>}
+                    {inZone && <span className="sr-only">, {STAGE_LABEL[c.reviewStatus]}</span>}
                   </td>
                   <td className="max-w-0 px-3 py-2.5">
                     <Link
@@ -103,6 +109,9 @@ export function StandingsTable({
                       {c.name || 'Name not found'}
                     </Link>
                     <p className="truncate text-[13px] text-ink-muted">{c.email || 'No email found in resume'}</p>
+                  </td>
+                  <td className="hidden px-3 py-2.5 md:table-cell">
+                    {inZone && <StageBadge stage={c.reviewStatus} />}
                   </td>
                   {DIMENSIONS.map((d) => (
                     <td key={d.key} className={cn('num hidden px-3 py-2.5 text-right sm:table-cell', c[d.key] < 50 ? 'text-danger' : 'text-ink')}>

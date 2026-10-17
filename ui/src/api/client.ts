@@ -5,12 +5,22 @@ import type {
   ApiError,
   ApiResponse,
   AuthResponse,
+  CandidateInterview,
+  CandidateNote,
+  CandidateOffer,
   CandidateResultDto,
   CandidateScore,
+  CandidateStageEvent,
   CreateSessionRequest,
   ExportResponse,
+  InterviewKind,
+  InterviewPlaceType,
+  InterviewRecommendation,
+  InterviewDetail,
   LoginRequest,
+  MyInterviewsResponse,
   Page,
+  PipelineCandidate,
   ProgressResponse,
   RegisterRequest,
   ResumeDownloadResponse,
@@ -202,6 +212,82 @@ export const candidatesApi = {
     api.post<ReviewResult>(`/sessions/${sessionId}/candidates/review`, { candidateIds, status }),
   shortlistTop: (sessionId: string, count: number) =>
     api.post<ReviewResult>(`/sessions/${sessionId}/shortlist/top`, { count }),
+  notes: (sessionId: string, candidateId: string) =>
+    api.get<CandidateNote[]>(`/sessions/${sessionId}/candidates/${candidateId}/notes`),
+  addNote: (sessionId: string, candidateId: string, content: string) =>
+    api.post<CandidateNote>(`/sessions/${sessionId}/candidates/${candidateId}/notes`, { content }),
+  deleteNote: (sessionId: string, candidateId: string, noteId: string) =>
+    api.delete<void>(`/sessions/${sessionId}/candidates/${candidateId}/notes/${noteId}`),
+};
+
+export const pipelineApi = {
+  getTimeline: (sessionId: string, candidateId: string) =>
+    api.get<CandidateStageEvent[]>(`/sessions/${sessionId}/candidates/${candidateId}/timeline`),
+  getInterviews: (sessionId: string, candidateId: string) =>
+    api.get<CandidateInterview[]>(`/sessions/${sessionId}/candidates/${candidateId}/interviews`),
+  markContacted: (sessionId: string, candidateId: string) =>
+    api.post<void>(`/sessions/${sessionId}/candidates/${candidateId}/contact`),
+  scheduleInterview: (
+    sessionId: string,
+    candidateId: string,
+    req: {
+      kind: InterviewKind;
+      interviewerId: string;
+      scheduledStart: string;
+      durationMinutes?: number;
+      placeType: InterviewPlaceType;
+      location?: string;
+      noteToInterviewer?: string;
+    }
+  ) => api.post<CandidateInterview>(`/sessions/${sessionId}/candidates/${candidateId}/interviews`, req),
+  rescheduleInterview: (
+    sessionId: string,
+    candidateId: string,
+    interviewId: string,
+    req: { scheduledStart: string; durationMinutes?: number; placeType?: InterviewPlaceType; location?: string }
+  ) => api.patch<CandidateInterview>(`/sessions/${sessionId}/candidates/${candidateId}/interviews/${interviewId}`, req),
+  cancelInterview: (sessionId: string, candidateId: string, interviewId: string) =>
+    api.delete<void>(`/sessions/${sessionId}/candidates/${candidateId}/interviews/${interviewId}`),
+  submitFeedback: (
+    interviewId: string,
+    req: { recommendation: InterviewRecommendation; rating: number; assessment: string }
+  ) => api.post<CandidateInterview>(`/interviews/${interviewId}/feedback`, req),
+  getInterview: (interviewId: string) => api.get<InterviewDetail>(`/interviews/${interviewId}`),
+  myInterviews: () => api.get<MyInterviewsResponse>('/my-interviews'),
+  moveToOffer: (sessionId: string, candidateId: string) =>
+    api.post<void>(`/sessions/${sessionId}/candidates/${candidateId}/move-to-offer`),
+  getInterviewPlan: (sessionId: string, candidateId: string) =>
+    api.get<InterviewKind[]>(`/sessions/${sessionId}/candidates/${candidateId}/interview-plan`),
+  setInterviewPlan: (sessionId: string, candidateId: string, kinds: InterviewKind[]) =>
+    api.put<InterviewKind[]>(`/sessions/${sessionId}/candidates/${candidateId}/interview-plan`, { kinds }),
+  rejectOffer: (sessionId: string, candidateId: string, note?: string) =>
+    api.post<CandidateOffer>(`/sessions/${sessionId}/candidates/${candidateId}/offer/reject`, { note }),
+  markOfferSent: (sessionId: string, candidateId: string) =>
+    api.post<CandidateOffer>(`/sessions/${sessionId}/candidates/${candidateId}/offer/sent`),
+  answerOffer: (sessionId: string, candidateId: string, accepted: boolean) =>
+    api.post<CandidateOffer>(`/sessions/${sessionId}/candidates/${candidateId}/offer/answer`, { accepted }),
+  saveJoining: (sessionId: string, candidateId: string, joiningDate: string, notes?: string) =>
+    api.put<CandidateOffer>(`/sessions/${sessionId}/candidates/${candidateId}/joining`, { joiningDate, notes }),
+  uploadOffer: (sessionId: string, candidateId: string, file: File, requiresDirectorApproval = false) => {
+    const data = new FormData();
+    data.append('file', file);
+    data.append('requiresDirectorApproval', String(requiresDirectorApproval));
+    return api.post<CandidateOffer>(`/sessions/${sessionId}/candidates/${candidateId}/offer`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  getOffer: (sessionId: string, candidateId: string) =>
+    api.get<CandidateOffer | null>(`/sessions/${sessionId}/candidates/${candidateId}/offer`),
+  downloadOffer: (sessionId: string, candidateId: string) =>
+    api.get<{ url: string }>(`/sessions/${sessionId}/candidates/${candidateId}/offer/download`),
+  approveOffer: (sessionId: string, candidateId: string) =>
+    api.post<CandidateOffer>(`/sessions/${sessionId}/candidates/${candidateId}/offer/approve`),
+  getPipeline: (awaitingApprovalOnly?: boolean) =>
+    api.get<PipelineCandidate[]>('/pipeline', { params: { awaitingApprovalOnly } }),
+  getInterviewers: (kind?: InterviewKind) =>
+    api.get<Array<{ id: string; name: string; email: string; role: Role }>>('/interviewers', {
+      params: { kind },
+    }),
 };
 
 export const analyticsApi = {

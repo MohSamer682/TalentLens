@@ -47,7 +47,9 @@ class CandidateReviewTest {
     private final CandidateScoreRepository scores = mock(CandidateScoreRepository.class);
     private final UserRepository users = mock(UserRepository.class);
     private final AuditService audit = mock(AuditService.class);
-    private final CandidateService service = new CandidateService(sessions, candidates, scores, users, audit);
+    private final com.resumescreener.common.session.CandidateNoteRepository notes = mock(com.resumescreener.common.session.CandidateNoteRepository.class);
+    private final com.resumescreener.common.session.CandidateStageEventRepository stageEvents = mock(com.resumescreener.common.session.CandidateStageEventRepository.class);
+    private final CandidateService service = new CandidateService(sessions, candidates, scores, users, audit, notes, stageEvents);
     private final ScreeningSession session = ScreeningSession.builder().id("s1").status(SessionStatus.DONE).build();
 
     @BeforeEach
@@ -60,7 +62,7 @@ class CandidateReviewTest {
     void shortlistsOneScoredCandidate() {
         Candidate c = scored("c1");
         when(candidates.findByIdInAndSessionId(List.of("c1"), "s1")).thenReturn(List.of(c));
-        when(candidates.countBySessionIdAndReviewStatus("s1", ReviewStatus.SHORTLISTED)).thenReturn(1L);
+        when(candidates.countBySessionIdAndReviewStatusNot("s1", ReviewStatus.NONE)).thenReturn(1L);
 
         ReviewResult result = service.review("s1", List.of("c1"), ReviewStatus.SHORTLISTED, EMAIL);
 
@@ -114,9 +116,35 @@ class CandidateReviewTest {
     void topNCapsAtScoredCount() {
         List<CandidateScore> ranked = List.of(rankedScore("c1"), rankedScore("c2"), rankedScore("c3"));
         when(scores.findTop200ByCandidateSessionIdAndRankNotNullOrderByRankAsc("s1")).thenReturn(ranked);
-        when(candidates.countBySessionIdAndReviewStatus("s1", ReviewStatus.SHORTLISTED)).thenReturn(3L);
+        when(candidates.countBySessionIdAndReviewStatusNot("s1", ReviewStatus.NONE)).thenReturn(3L);
 
         assertEquals(new ReviewResult(3, 3), service.shortlistTop("s1", 5, EMAIL));
+    }
+
+    @Test
+    void shortlistingNeverDragsACandidateBackFromALaterStage() {
+        Candidate contacted = scored("c1");
+        contacted.setReviewStatus(ReviewStatus.CONTACTED);
+        Candidate fresh = scored("c2");
+        when(candidates.findByIdInAndSessionId(anyCollection(), eq("s1"))).thenReturn(List.of(contacted, fresh));
+
+        ReviewResult result = service.review("s1", List.of("c1", "c2"), ReviewStatus.SHORTLISTED, EMAIL);
+
+        assertEquals(1, result.changed());
+        assertEquals(ReviewStatus.CONTACTED, contacted.getReviewStatus());
+        assertEquals(ReviewStatus.SHORTLISTED, fresh.getReviewStatus());
+    }
+
+    @Test
+    void unshortlistingLeavesCandidatesAlreadyInThePipeline() {
+        Candidate interviewing = scored("c1");
+        interviewing.setReviewStatus(ReviewStatus.INTERVIEW_SCHEDULED);
+        interviewing.setReviewedBy("u9");
+        when(candidates.findByIdInAndSessionId(anyCollection(), eq("s1"))).thenReturn(List.of(interviewing));
+
+        assertEquals(0, service.review("s1", List.of("c1"), ReviewStatus.NONE, EMAIL).changed());
+        assertEquals(ReviewStatus.INTERVIEW_SCHEDULED, interviewing.getReviewStatus());
+        assertEquals("u9", interviewing.getReviewedBy());
     }
 
     @Test

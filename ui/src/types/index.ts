@@ -76,12 +76,23 @@ export interface Page<T> {
   size: number;
 }
 
-export type Role = 'ADMIN' | 'HR_CHIEF' | 'RECRUITER';
+export type Role =
+  | 'ADMIN'
+  | 'HR_CHIEF'
+  | 'RECRUITER'
+  | 'TECHNICAL_INTERVIEWER'
+  | 'HR_INTERVIEWER'
+  | 'DEPARTMENT_DIRECTOR'
+  | 'CEO'
+  | 'CHAIRMAN';
 
 export type Permission =
   | 'SESSION_RUN'
   | 'SESSION_VIEW_ALL'
   | 'CANDIDATE_REVIEW'
+  | 'PIPELINE_MANAGE'
+  | 'OFFER_APPROVE'
+  | 'INTERVIEW_FEEDBACK'
   | 'ANALYTICS_VIEW'
   | 'USER_MANAGE'
   | 'ROLE_MANAGE'
@@ -186,11 +197,162 @@ export interface CandidateScore {
   reviewStatus: ReviewStatus;
 }
 
-export type ReviewStatus = 'NONE' | 'SHORTLISTED';
+export type ReviewStatus =
+  | 'NONE'
+  | 'SHORTLISTED'
+  | 'CONTACTED'
+  | 'INTERVIEW_SCHEDULED'
+  | 'INTERVIEWED'
+  | 'OFFER'
+  | 'OFFER_APPROVED'
+  | 'OFFER_SENT'
+  | 'ACCEPTED'
+  | 'DECLINED'
+  | 'JOINING_SET';
+
+export type InterviewKind = 'HR' | 'TECHNICAL' | 'MANAGEMENT';
+export type InterviewPlaceType = 'HQ' | 'ONLINE' | 'OTHER';
+export type InterviewStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+export type InterviewRecommendation = 'STRONG_HIRE' | 'HIRE' | 'NO_HIRE' | 'STRONG_NO_HIRE';
+
+export interface CandidateInterview {
+  id: string;
+  candidateId: string;
+  kind: InterviewKind;
+  interviewerId: string;
+  interviewerName: string;
+  interviewerRole: string | null;
+  scheduledStart: string;
+  durationMinutes: number;
+  placeType: InterviewPlaceType;
+  location: string | null;
+  noteToInterviewer: string | null;
+  status: InterviewStatus;
+  recommendation: InterviewRecommendation | null;
+  rating: number | null;
+  feedbackSubmittedAt: string | null;
+  feedbackAssessment: string | null;
+  createdById: string | null;
+  createdAt: string;
+}
+
+export interface CandidateOffer {
+  id: string;
+  candidateId: string;
+  fileName: string;
+  sizeBytes: number;
+  uploadedById: string | null;
+  uploadedByName: string;
+  uploadedAt: string;
+  approvedById: string | null;
+  approvedByName: string | null;
+  approvedAt: string | null;
+  isApproved: boolean;
+  requiresDirectorApproval: boolean;
+  directorApprovedByName: string | null;
+  directorApprovedAt: string | null;
+  rejectedByName: string | null;
+  rejectedAt: string | null;
+  rejectionNote: string | null;
+  sentAt: string | null;
+  candidateResponse: 'ACCEPTED' | 'DECLINED' | null;
+  respondedAt: string | null;
+  joiningDate: string | null;
+  joiningNotes: string | null;
+}
+
+export interface CandidateStageEvent {
+  id: string;
+  candidateId: string;
+  stage: string;
+  actorId: string | null;
+  actorName: string | null;
+  summary: string;
+  createdAt: string;
+}
+
+export interface PipelineCandidate {
+  id: string;
+  sessionId: string;
+  sessionTitle: string;
+  name: string;
+  email: string;
+  score: number | null;
+  stage: ReviewStatus;
+  inStageDays: number;
+  nextStep: string;
+  stageChangedAt: string;
+  offerFileName?: string;
+  offerUploaderName?: string;
+  offerUploadedById?: string;
+  /** Who must act on the offer next; null when no approval is pending */
+  offerStep?: 'DIRECTOR' | 'HR_CHIEF' | 'REJECTED' | null;
+}
+
+export interface MyInterviewItem {
+  id: string;
+  candidateId: string;
+  candidateName: string;
+  role: string;
+  kind: InterviewKind;
+  scheduledStart: string;
+  durationMinutes: number;
+  placeType: InterviewPlaceType;
+  location: string | null;
+  status: InterviewStatus;
+  recommendation: InterviewRecommendation | null;
+  rating: number | null;
+  feedbackSubmittedAt: string | null;
+}
+
+export interface MyInterviewsResponse {
+  waiting: MyInterviewItem[];
+  upcoming: MyInterviewItem[];
+  done: MyInterviewItem[];
+}
+
+export interface InterviewDetail {
+  id: string;
+  candidateId: string;
+  candidateName: string;
+  candidateEmail: string;
+  sessionId: string;
+  sessionTitle: string;
+  recruiterName: string | null;
+  kind: InterviewKind;
+  interviewerId: string;
+  interviewerName: string;
+  scheduledStart: string;
+  durationMinutes: number;
+  placeType: InterviewPlaceType;
+  location: string | null;
+  noteToInterviewer: string | null;
+  status: InterviewStatus;
+  recommendation: InterviewRecommendation | null;
+  rating: number | null;
+  feedbackAssessment: string | null;
+  feedbackSubmittedAt: string | null;
+  compositeScore: number | null;
+  rank: number | null;
+  strengths: string | null;
+  gaps: string | null;
+  resumeUrl: string | null;
+}
 
 export interface ReviewResult {
   changed: number;
   shortlistedTotal: number;
+}
+
+export interface CandidateNote {
+  id: string;
+  candidateId: string;
+  authorId: string | null;
+  authorName: string;
+  authorRole: Role | string | null;
+  content: string;
+  createdAt: string;
+  deletable: boolean;
 }
 
 export interface ProgressResponse {
@@ -246,14 +408,70 @@ export interface AnalyticsTotals {
   shortlisted: number;
   shortlistRate: number | null;
   medianHoursToRanked: number | null;
+  interviewsCompleted?: number;
+  offersApproved?: number;
+  medianDaysShortlistToOffer?: number | null;
+}
+
+export interface AnalyticsPriorTotals {
+  resumesScored: number;
+  shortlistRate: number | null;
+  interviewsCompleted: number;
+  offersApproved: number;
+  medianDaysShortlistToOffer: number | null;
+}
+
+export interface FunnelStep {
+  stage: string;
+  label: string;
+  count: number;
+  conversionRate: number | null;
+  dropOff: number;
+}
+
+export interface StageWait {
+  stage: string;
+  label: string;
+  medianDays: number | null;
+  p90Days: number | null;
+}
+
+export interface InterviewerStat {
+  userId: string;
+  fullName: string;
+  role: string;
+  interviewsDone: number;
+  medianHoursToFeedback: number | null;
+  meanRating: number | null;
+  strongHireCount: number;
+  hireCount: number;
+  noHireCount: number;
+  strongNoHireCount: number;
 }
 
 export interface AnalyticsOverview {
   from: string;
   to: string;
   totals: AnalyticsTotals;
-  weeks: { weekStart: string; sessionsCreated: number; resumesScored: number; shortlisted: number }[];
-  scoreBands: { label: string; count: number }[];
+  priorTotals?: AnalyticsPriorTotals | null;
+  funnel?: FunnelStep[];
+  stageWaits?: StageWait[];
+  weeks: {
+    weekStart: string;
+    sessionsCreated: number;
+    resumesScored: number;
+    shortlisted: number;
+    interviewsCompleted?: number;
+    offersApproved?: number;
+  }[];
+  scoreBands: {
+    label: string;
+    count: number;
+    shortlistRate?: number | null;
+    hireRate?: number | null;
+    interviewed?: number;
+  }[];
+  interviewers?: InterviewerStat[];
   recruiters: {
     userId: string;
     fullName: string;
@@ -261,5 +479,8 @@ export interface AnalyticsOverview {
     resumesScored: number;
     shortlisted: number;
     medianHoursToRanked: number | null;
+    contacted?: number;
+    offers?: number;
+    shortlistToOfferRate?: number | null;
   }[];
 }

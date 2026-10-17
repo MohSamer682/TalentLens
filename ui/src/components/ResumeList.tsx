@@ -63,7 +63,7 @@ export function ResumeList({
   if (total === 0 && !error) return null;
 
   return (
-    <details open={open} className="group rounded-lg border border-line bg-surface">
+    <details open={open} className="group plate">
       <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
         <ChevronDown className="size-4 text-ink-muted transition-transform group-open:rotate-180" aria-hidden="true" />
         <span className={status === 'FAILED' ? 'text-danger' : undefined}>{title(total)}</span>

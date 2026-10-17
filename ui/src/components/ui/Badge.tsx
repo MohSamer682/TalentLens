@@ -32,8 +32,39 @@ export function StatusBadge({ status, className }: { status: Status; className?:
 export function Tag({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
   return (
     <span
-      className={cn('inline-flex items-center rounded-md border border-line bg-ground px-2 py-0.5 text-[13px] text-ink', className)}
+      className={cn('inline-flex items-center rounded-full border border-line bg-ground px-2.5 py-0.5 text-[12px] font-semibold text-ink', className)}
       {...props}
     />
   );
 }
+
+export type BadgeTone = 'neutral' | 'mark' | 'success' | 'warn' | 'danger' | 'info';
+
+const TONES: Record<BadgeTone, string> = {
+  neutral: 'bg-sunken text-ink-muted',
+  mark: 'bg-mark-soft text-mark-text',
+  success: 'bg-success-soft text-success',
+  warn: 'bg-warn-soft text-warn',
+  danger: 'bg-danger-soft text-danger',
+  info: 'bg-info-soft text-info',
+};
+
+export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+  tone?: BadgeTone;
+}
+
+export function Badge({ tone = 'neutral', className, children, ...props }: BadgeProps) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-semibold',
+        TONES[tone] || TONES.neutral,
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </span>
+  );
+}
+

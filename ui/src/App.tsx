@@ -1,16 +1,26 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { refreshCurrentUser } from '@/api/client';
-import { PermissionRoute, ProtectedRoute } from '@/components/ProtectedRoute';
+import { PermissionRoute, ProtectedRoute, SessionsRoute } from '@/components/ProtectedRoute';
+import { useAuthStore } from '@/store/authStore';
+import { homePath } from '@/lib/permissions';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import Dashboard from '@/pages/Dashboard';
 import NewSession from '@/pages/NewSession';
 import SessionDetail from '@/pages/SessionDetail';
 import CandidateDetail from '@/pages/CandidateDetail';
+import Pipeline from '@/pages/Pipeline';
+import MyInterviews from '@/pages/MyInterviews';
+import InterviewFeedback from '@/pages/InterviewFeedback';
 import AdminUsers from '@/pages/AdminUsers';
 import AdminRoles from '@/pages/AdminRoles';
 import Analytics from '@/pages/Analytics';
+
+function RootRedirect() {
+  const user = useAuthStore((s) => s.user);
+  return <Navigate to={user ? homePath(user) : '/login'} replace />;
+}
 
 export default function App() {
   // Permissions stored at sign-in go stale when an admin edits a role; refresh them once per load.
@@ -25,9 +35,9 @@ export default function App() {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <SessionsRoute>
             <Dashboard />
-          </ProtectedRoute>
+          </SessionsRoute>
         }
       />
       <Route
@@ -41,17 +51,49 @@ export default function App() {
       <Route
         path="/sessions/:id"
         element={
-          <ProtectedRoute>
+          <SessionsRoute>
             <SessionDetail />
-          </ProtectedRoute>
+          </SessionsRoute>
         }
       />
       <Route
         path="/sessions/:sessionId/candidate/:candidateId"
         element={
-          <ProtectedRoute>
+          <SessionsRoute>
             <CandidateDetail />
+          </SessionsRoute>
+        }
+      />
+      <Route
+        path="/sessions/:sessionId/candidates/:candidateId"
+        element={
+          <SessionsRoute>
+            <CandidateDetail />
+          </SessionsRoute>
+        }
+      />
+      <Route
+        path="/pipeline"
+        element={
+          <ProtectedRoute>
+            <Pipeline />
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/interviews"
+        element={
+          <PermissionRoute permission="INTERVIEW_FEEDBACK">
+            <MyInterviews />
+          </PermissionRoute>
+        }
+      />
+      <Route
+        path="/interviews/:interviewId/feedback"
+        element={
+          <PermissionRoute permission="INTERVIEW_FEEDBACK">
+            <InterviewFeedback />
+          </PermissionRoute>
         }
       />
       <Route
@@ -78,8 +120,8 @@ export default function App() {
           </PermissionRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<RootRedirect />} />
+      <Route path="*" element={<RootRedirect />} />
     </Routes>
   );
 }

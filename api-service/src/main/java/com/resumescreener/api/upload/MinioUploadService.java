@@ -202,6 +202,21 @@ public class MinioUploadService {
         }
     }
 
+    public String uploadOfferFile(String sessionId, String candidateId, String fileName, byte[] bytes) {
+        String key = "offers/" + sessionId + "/" + candidateId + "/" + UUID.randomUUID() + "-" + fileName;
+        try {
+            minioClient.putObject(PutObjectArgs.builder()
+                    .bucket(bucket)
+                    .object(key)
+                    .stream(new ByteArrayInputStream(bytes), bytes.length, -1)
+                    .contentType("application/pdf")
+                    .build());
+            return key;
+        } catch (Exception e) {
+            throw storageFailure("Failed to upload offer to object storage", e);
+        }
+    }
+
     public String getPresignedUrl(String key) {
         try {
             return presignClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
