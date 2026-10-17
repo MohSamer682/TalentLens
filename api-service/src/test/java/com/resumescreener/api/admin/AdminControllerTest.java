@@ -15,6 +15,8 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -39,5 +41,25 @@ class AdminControllerTest {
                         .content("{\"role\":\"HR_CHIEF\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.role").value("HR_CHIEF"));
+    }
+
+    @Test
+    void cannotDemoteLastAdmin() throws Exception {
+        UserRepository users = mock(UserRepository.class);
+        when(users.findByEmailIgnoreCase("hr@example.com"))
+                .thenReturn(Optional.of(User.builder().id("hr").email("hr@example.com").role(Role.HR_CHIEF).build()));
+        when(users.findById("admin")).thenReturn(Optional.of(User.builder().id("admin").role(Role.ADMIN).build()));
+        when(users.countByRole(Role.ADMIN)).thenReturn(1L);
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new AdminController(users, mock(AuditService.class), null))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        mvc.perform(patch("/api/admin/users/admin/role")
+                        .principal(new TestingAuthenticationToken("hr@example.com", null))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"RECRUITER\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("At least one admin must remain"));
+        verify(users, never()).save(any(User.class));
     }
 }

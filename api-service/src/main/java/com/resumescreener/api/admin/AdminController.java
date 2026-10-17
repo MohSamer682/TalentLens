@@ -59,6 +59,10 @@ public class AdminController {
                         "No user exists for id " + id));
 
         Role oldRole = user.getRole();
+        if (oldRole == Role.ADMIN && request.getRole() != Role.ADMIN && userRepository.countByRole(Role.ADMIN) <= 1) {
+            throw ApiException.validation("At least one admin must remain",
+                    "User " + id + " is the only admin");
+        }
         user.setRole(request.getRole());
         userRepository.save(user);
 

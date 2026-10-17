@@ -1,5 +1,7 @@
 package com.resumescreener.api.auth;
 
+import com.resumescreener.api.admin.RoleController;
+import com.resumescreener.api.admin.RoleService;
 import com.resumescreener.api.analytics.AnalyticsController;
 import com.resumescreener.api.analytics.AnalyticsService;
 import com.resumescreener.api.audit.AuditService;
@@ -50,6 +52,7 @@ class PermissionEnforcementTest {
         }
         @Bean UploadController uploadController() { return new UploadController(mock(MinioUploadService.class), mock(AuditService.class)); }
         @Bean CandidateController candidateController() { return new CandidateController(mock(CandidateService.class)); }
+        @Bean RoleController roleController() { return new RoleController(mock(RoleService.class)); }
         @Bean AnalyticsController analyticsController() { return new AnalyticsController(mock(AnalyticsService.class), mock(AuditService.class)); }
     }
 
@@ -58,6 +61,7 @@ class PermissionEnforcementTest {
     @Autowired UploadController uploads;
     @Autowired CandidateController candidates;
     @Autowired AnalyticsController analytics;
+    @Autowired RoleController roles;
 
     @AfterEach
     void clear() {
@@ -95,6 +99,13 @@ class PermissionEnforcementTest {
         signIn("ROLE_HR_CHIEF", "SESSION_RUN", "SESSION_VIEW_ALL");
 
         assertThrows(AccessDeniedException.class, () -> analytics.overview("90"));
+    }
+
+    @Test
+    void hrChiefCannotManageRolesEvenWithEveryOtherPermission() {
+        signIn("ROLE_HR_CHIEF", "SESSION_RUN", "SESSION_VIEW_ALL", "CANDIDATE_REVIEW", "ANALYTICS_VIEW");
+
+        assertThrows(AccessDeniedException.class, () -> roles.list());
     }
 
     private static Authentication signIn(String... authorities) {
