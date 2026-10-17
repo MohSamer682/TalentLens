@@ -40,10 +40,12 @@ public class BatchController {
 
     @PostMapping("/{id}/start")
     public ResponseEntity<ApiResponse<SessionActionResponse>> startBatch(
-            @PathVariable String id, Authentication auth) {
+            @PathVariable String id,
+            @RequestParam(defaultValue = "UNSCORED") ScoringScope scope,
+            Authentication auth) {
         sessionService.getSession(id, auth.getName());
-        batchTriggerService.triggerBatch(id);
-        auditService.record("BATCH_TRIGGER", "session", id, "success");
+        batchTriggerService.triggerBatch(id, scope);
+        auditService.record("BATCH_TRIGGER", "session", id, "success", "scope " + scope);
 
         SessionActionResponse data =
                 new SessionActionResponse(id, SessionStatus.RUNNING, "Screening started");
