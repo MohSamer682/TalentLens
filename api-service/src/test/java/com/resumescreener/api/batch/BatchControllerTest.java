@@ -54,6 +54,7 @@ class BatchControllerTest {
 
         ResponseEntity<ApiResponse<Page<CandidateResultDto>>> response = controller.getCandidates(
                 "session-1",
+                null,
                 PageRequest.of(0, 20),
                 new TestingAuthenticationToken("recruiter@example.com", null)
         );
@@ -127,6 +128,11 @@ class BatchControllerTest {
         @Override
         public ScreeningSession getSession(String id, String userEmail) {
             return ScreeningSession.builder().id(id).build();
+        }
+
+        @Override
+        public ScreeningSession getOwnedSession(String id, String userEmail) {
+            return getSession(id, userEmail);
         }
     }
 }

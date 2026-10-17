@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,6 +25,7 @@ public class UploadController {
     private final AuditService auditService;
 
     @PostMapping("/{id}/jd")
+    @PreAuthorize("hasAuthority('SESSION_RUN')")
     public ResponseEntity<ApiResponse<UploadJdResponse>> uploadJd(
             @PathVariable String id,
             @RequestParam("file") MultipartFile file,
@@ -38,6 +40,7 @@ public class UploadController {
     }
 
     @PostMapping("/{id}/resumes")
+    @PreAuthorize("hasAuthority('SESSION_RUN')")
     public ResponseEntity<ApiResponse<UploadResumesResponse>> uploadResumes(
             @PathVariable String id,
             @RequestParam("files") MultipartFile[] files,
@@ -55,6 +58,7 @@ public class UploadController {
     }
 
     @DeleteMapping("/{id}/candidates/{candidateId}")
+    @PreAuthorize("hasAuthority('SESSION_RUN')")
     public ResponseEntity<ApiResponse<Void>> removeResume(
             @PathVariable String id,
             @PathVariable String candidateId,

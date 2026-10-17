@@ -27,7 +27,7 @@ class CandidateServiceTest {
 
     private final SessionService sessions = mock(SessionService.class);
     private final CandidateRepository candidates = mock(CandidateRepository.class);
-    private final CandidateService service = new CandidateService(sessions, candidates);
+    private final CandidateService service = new CandidateService(sessions, candidates, null, null, null);
     private final PageRequest page = PageRequest.of(0, 50);
 
     @Test

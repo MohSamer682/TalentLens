@@ -14,6 +14,8 @@ public interface CandidateRepository extends JpaRepository<Candidate, String> {
     List<Candidate> findBySessionId(String sessionId);
     long countBySessionId(String sessionId);
     long countBySessionIdAndStatus(String sessionId, CandidateStatus status);
+    long countBySessionIdAndReviewStatus(String sessionId, ReviewStatus reviewStatus);
+    List<Candidate> findByIdInAndSessionId(Collection<String> ids, String sessionId);
 
     void deleteBySessionId(String sessionId);
 

@@ -20,4 +20,5 @@ public class CandidateResultDto {
     private double softSkills;
     private double cultureFit;
     private double compositeScore;
+    private ReviewStatus reviewStatus;
 }

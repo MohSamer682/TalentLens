@@ -10,6 +10,7 @@ import { Segmented } from '@/components/ui/Segmented';
 import { Panel } from '@/components/ui/Card';
 import { MainLayout, PageHeader } from '@/layouts/MainLayout';
 import { cn } from '@/lib/utils';
+import { useCan } from '@/lib/permissions';
 
 type Filter = 'ALL' | ScreeningSession['status'];
 
@@ -27,19 +28,22 @@ export default function Dashboard() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('ALL');
+  const canRun = useCan('SESSION_RUN');
+  const canViewAll = useCan('SESSION_VIEW_ALL');
+  const [everyone, setEveryone] = useState(false);
 
   const loadSessions = useCallback(async () => {
     setLoadError(null);
     try {
       // shortcut: search/filter run client-side over the first 500 sessions; move them server-side past that.
-      const res = await sessionsApi.list(0, 500);
+      const res = await sessionsApi.list(0, 500, everyone);
       setSessions(res.data.content || []);
     } catch (err) {
       setLoadError(apiErrorMessage(err, 'Could not load sessions'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [everyone]);
 
   useEffect(() => {
     loadSessions();
@@ -62,10 +66,28 @@ export default function Dashboard() {
         title="Screening sessions"
         meta={!loading && !loadError && <span>One session per opening: a job description, its resumes, and a ranked shortlist.</span>}
         actions={
-          <Link to="/sessions/new" className={buttonVariants()}>
-            <Plus />
-            New session
-          </Link>
+          <>
+            {canViewAll && (
+              <Segmented
+                label="Whose sessions"
+                value={everyone ? 'EVERYONE' : 'MINE'}
+                onChange={(v) => {
+                  setLoading(true);
+                  setEveryone(v === 'EVERYONE');
+                }}
+                options={[
+                  { value: 'MINE', label: 'Mine' },
+                  { value: 'EVERYONE', label: 'All recruiters' },
+                ]}
+              />
+            )}
+            {canRun && (
+              <Link to="/sessions/new" className={buttonVariants()}>
+                <Plus />
+                New session
+              </Link>
+            )}
+          </>
         }
       />
 
@@ -90,15 +112,18 @@ export default function Dashboard() {
         </Alert>
       ) : sessions.length === 0 ? (
         <Panel className="px-6 py-14 text-center">
-          <h2 className="text-lg font-semibold">No sessions yet</h2>
+          <h2 className="text-lg font-semibold">{everyone ? 'No recruiter has a session yet' : 'No sessions yet'}</h2>
           <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">
-            Create a session for an opening, upload the job description and the resumes, set what this role values, and
-            the candidates come back ranked.
+            {canRun
+              ? 'Create a session for an opening, upload the job description and the resumes, set what this role values, and the candidates come back ranked.'
+              : 'Your role can review sessions but not create them. Ask an admin if you need to run screenings yourself.'}
           </p>
-          <Link to="/sessions/new" className={cn(buttonVariants(), 'mt-5')}>
-            <Plus />
-            New session
-          </Link>
+          {canRun && (
+            <Link to="/sessions/new" className={cn(buttonVariants(), 'mt-5')}>
+              <Plus />
+              New session
+            </Link>
+          )}
         </Panel>
       ) : (
         <Panel>

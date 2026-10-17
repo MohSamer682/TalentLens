@@ -30,11 +30,11 @@ Rule: if something is saffron, it made the cut. Never use `mark` for decoration,
 
 ## Signature: the call
 
-`.marker` is a saffron chip on every shortlisted rank (standings and candidate page). Shortlisted rows get a faint `mark-soft` wash. A saffron rule with the label "The call: top N shortlisted" is drawn under the last shortlisted row.
+`.marker` is a saffron chip on every shortlisted rank (standings and candidate page). Shortlisted rows get a faint `mark-soft` wash. The shortlist is saved per candidate on the server, so it need not be contiguous and there is no cut-off rule. Selecting rows raises an inverted (`ink` on `ground`) bar at the bottom of the standings whose one saffron button is "Shortlist"; Escape clears the selection.
 
 ## Shape and motion
 
-Radii 4 / 6 / 8px. Panels have a hairline border and almost no shadow. Rows enter with a short leftward slide (360ms, exponential ease-out) staggered per row. Score bars and the call line grow once. Live progress stripes remain. All loops drop under `prefers-reduced-motion`.
+Radii 4 / 6 / 8px. Panels have a hairline border and almost no shadow. Rows enter with a short leftward slide (360ms, exponential ease-out) staggered per row. Score bars grow once. Live progress stripes remain. All loops drop under `prefers-reduced-motion`.
 
 ## Not yet done
 

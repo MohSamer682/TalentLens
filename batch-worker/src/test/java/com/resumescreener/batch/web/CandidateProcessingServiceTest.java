@@ -9,6 +9,7 @@ import com.resumescreener.common.session.BatchJob;
 import com.resumescreener.common.session.Candidate;
 import com.resumescreener.common.session.ScoringWeights;
 import com.resumescreener.common.session.CandidateStatus;
+import com.resumescreener.common.session.ReviewStatus;
 import com.resumescreener.common.session.BatchJobRepository;
 import com.resumescreener.common.session.CandidateRepository;
 import com.resumescreener.common.session.CandidateScoreRepository;
@@ -87,9 +88,10 @@ class CandidateProcessingServiceTest {
     }
 
     @Test
-    void successfulRescoreClearsFailureReason() throws Exception {
+    void rescoreClearsFailureReasonAndKeepsReviewStatus() throws Exception {
         Candidate candidate = Candidate.builder().id("c1").resumeFileKey("resumes/c1.pdf")
-                .status(CandidateStatus.FAILED).failureReason("Could not read text").build();
+                .status(CandidateStatus.FAILED).failureReason("Could not read text")
+                .reviewStatus(ReviewStatus.SHORTLISTED).build();
         CandidateProcessingService service = new CandidateProcessingService(
                 repositoryProxy(CandidateRepository.class, new SaveTracker()),
                 repositoryProxy(CandidateScoreRepository.class, new SaveTracker()),
@@ -102,6 +104,7 @@ class CandidateProcessingServiceTest {
 
         assertEquals(CandidateStatus.SCORED, candidate.getStatus());
         assertEquals(null, candidate.getFailureReason());
+        assertEquals(ReviewStatus.SHORTLISTED, candidate.getReviewStatus());
     }
 
     @SuppressWarnings("unchecked")

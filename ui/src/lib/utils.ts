@@ -1,6 +1,8 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import type { Weights } from '@/types';
+import type { Role, Weights } from '@/types';
+
+export const ROLE_LABEL: Record<Role, string> = { ADMIN: 'Admin', HR_CHIEF: 'HR chief', RECRUITER: 'Recruiter' };
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -56,21 +58,3 @@ export const DEFAULT_WEIGHTS: Weights = {
   cultureFit: 10,
 };
 
-/** The shortlist line is a per-session, per-browser reading aid; it never changes the ranking. */
-export function readShortlistSize(sessionId: string, fallback: number) {
-  try {
-    const raw = localStorage.getItem(`shortlist:${sessionId}`);
-    const n = raw === null ? NaN : Number(raw);
-    return Number.isInteger(n) && n >= 0 ? n : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-export function writeShortlistSize(sessionId: string, n: number) {
-  try {
-    localStorage.setItem(`shortlist:${sessionId}`, String(n));
-  } catch {
-    // storage unavailable (private mode); the line just resets next visit
-  }
-}
