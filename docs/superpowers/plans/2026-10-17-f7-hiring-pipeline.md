@@ -12,11 +12,11 @@
 
 ## Global Constraints
 
-- Branch `feat/hiring-pipeline` from `feat/candidate-notes`. One PR. Migration `V9__hiring_pipeline.sql`.
+- Branch `feat/hiring-pipeline` from `feat/candidate-notes`. One PR. Migration `V10__hiring_pipeline.sql`.
 - `enum ReviewStatus` in this order: `NONE, SHORTLISTED, CONTACTED, INTERVIEW_SCHEDULED, INTERVIEWED, OFFER, OFFER_APPROVED`. UI labels: Screened, Shortlisted, Contacted, Interviewing, Interviewed, Offer, Offer approved.
 - `enum Role` adds `TECHNICAL_INTERVIEWER` ("Technical interviewer") and `HR_INTERVIEWER` ("HR interviewer").
 - `enum Permission` adds (non admin-only):
-  - `PIPELINE_MANAGE` "Contact candidates, schedule interviews and prepare offers" — seeded for ADMIN, HR_CHIEF, RECRUITER
+  - `PIPELINE_MANAGE` "Contact candidates, schedule interviews and prepare offers" — seeded for ADMIN, RECRUITER (the HR chief oversees and approves; see F5 Task 5)
   - `OFFER_APPROVE` "Approve job offers" — ADMIN, HR_CHIEF
   - `INTERVIEW_FEEDBACK` "Give feedback on interviews assigned to them" — ADMIN, TECHNICAL_INTERVIEWER, HR_INTERVIEWER
 - `enum InterviewKind { TECHNICAL, HR }`; a `TECHNICAL` interview needs a `TECHNICAL_INTERVIEWER`, an `HR` interview an `HR_INTERVIEWER`. Error: "Choose a technical interviewer for a technical interview" (and the HR twin).
@@ -41,7 +41,7 @@
 ### Task 1: Stages, roles, permissions and schema
 
 **Files:**
-- Create: `common/src/main/resources/db/migration/V9__hiring_pipeline.sql`, `common/src/main/java/com/resumescreener/common/pipeline/{InterviewKind,Recommendation,Interview,InterviewRepository,Offer,OfferRepository,StageEvent,StageEventRepository}.java`
+- Create: `common/src/main/resources/db/migration/V10__hiring_pipeline.sql`, `common/src/main/java/com/resumescreener/common/pipeline/{InterviewKind,Recommendation,Interview,InterviewRepository,Offer,OfferRepository,StageEvent,StageEventRepository}.java`
 - Modify: `common/.../session/ReviewStatus.java`, `common/.../user/Role.java`, `common/.../user/Permission.java`, `common/.../session/CandidateRepository.java`, `api-service/.../candidate/CandidateService.java:50-103`, `api-service/.../session/SessionController.java:106`, `api-service/.../batch/BatchController.java:77-92`, `api-service/.../analytics/AnalyticsRepository.java:57,76,119`
 - Test: `api-service/src/test/java/com/resumescreener/api/candidate/CandidateReviewTest.java` (extend), `api-service/src/test/java/com/resumescreener/api/pipeline/PipelineSchemaDatabaseTest.java`, `api-service/src/test/java/com/resumescreener/api/auth/PermissionEnforcementTest.java` (extend)
 
@@ -49,7 +49,7 @@
 - Produces:
   - `ReviewStatus.SHORTLISTED_OR_LATER: Set<ReviewStatus>` (every value except `NONE`) and `boolean isAtLeast(ReviewStatus other)` (ordinal compare).
   - `CandidateRepository.countBySessionIdAndReviewStatusIn(String sessionId, Collection<ReviewStatus> statuses): long`; `@Lock(PESSIMISTIC_WRITE) Optional<Candidate> findForUpdateById(String id)`.
-  - SQL (V9): `interviews(id PK, candidate_id FK candidates ON DELETE CASCADE, kind VARCHAR(20), interviewer_id FK users, scheduled_at TIMESTAMPTZ, duration_minutes INT, location VARCHAR(500), note_to_interviewer TEXT, scheduled_by FK users, created_at TIMESTAMPTZ, recommendation VARCHAR(20), rating SMALLINT CHECK (rating BETWEEN 1 AND 5), assessment TEXT, feedback_submitted_at TIMESTAMPTZ)`, indexes `(interviewer_id, scheduled_at)`, `(candidate_id)`; `offers(candidate_id PK FK candidates ON DELETE CASCADE, file_key, original_file_name, uploaded_by FK users, uploaded_at, approved_by FK users, approved_at)`; `candidate_stage_events(id BIGSERIAL PK, candidate_id FK candidates ON DELETE CASCADE, stage VARCHAR(30), changed_by FK users ON DELETE SET NULL, changed_at TIMESTAMPTZ)`, indexes `(candidate_id, changed_at)`, `(stage, changed_at)`; widen `candidates.review_status` to `VARCHAR(30)`; seed the permission rows from Global Constraints; backfill one `SHORTLISTED` event per currently shortlisted candidate from `reviewed_at, reviewed_by`.
+  - SQL (V10): `interviews(id PK, candidate_id FK candidates ON DELETE CASCADE, kind VARCHAR(20), interviewer_id FK users, scheduled_at TIMESTAMPTZ, duration_minutes INT, location VARCHAR(500), note_to_interviewer TEXT, scheduled_by FK users, created_at TIMESTAMPTZ, recommendation VARCHAR(20), rating SMALLINT CHECK (rating BETWEEN 1 AND 5), assessment TEXT, feedback_submitted_at TIMESTAMPTZ)`, indexes `(interviewer_id, scheduled_at)`, `(candidate_id)`; `offers(candidate_id PK FK candidates ON DELETE CASCADE, file_key, original_file_name, uploaded_by FK users, uploaded_at, approved_by FK users, approved_at)`; `candidate_stage_events(id BIGSERIAL PK, candidate_id FK candidates ON DELETE CASCADE, stage VARCHAR(30), changed_by FK users ON DELETE SET NULL, changed_at TIMESTAMPTZ)`, indexes `(candidate_id, changed_at)`, `(stage, changed_at)`; widen `candidates.review_status` to `VARCHAR(30)`; seed the permission rows from Global Constraints; backfill one `SHORTLISTED` event per currently shortlisted candidate from `reviewed_at, reviewed_by`.
   - Entities map those columns one to one; `Interview.hasFeedback()` is `feedbackSubmittedAt != null`.
 
 - [ ] **Step 1: Write the failing tests.**
@@ -63,7 +63,7 @@
 // PermissionEnforcementTest
 @Test void interviewerCannotOpenSessions()             // TECHNICAL_INTERVIEWER: GET /api/sessions/{id} -> 403, GET /api/sessions/{id}/candidates/{cid} -> 403
 @Test void pipelinePermissionsSeeded()                 // RECRUITER has PIPELINE_MANAGE, not OFFER_APPROVE; HR_INTERVIEWER has only INTERVIEW_FEEDBACK
-// PipelineSchemaDatabaseTest (Testcontainers): V1..V9 apply on an empty DB and on a DB holding one shortlisted candidate,
+// PipelineSchemaDatabaseTest (Testcontainers): V1..V10 apply on an empty DB and on a DB holding one shortlisted candidate,
 // which ends with exactly one SHORTLISTED stage event; rating 6 violates the check constraint.
 ```
 

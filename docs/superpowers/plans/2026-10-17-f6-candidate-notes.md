@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Branch `feat/candidate-notes` from `feat/talentlens-materials`. One PR. Migration `V8__candidate_notes.sql`.
+- Branch `feat/candidate-notes` from `feat/talentlens-materials`. One PR. Migration `V9__candidate_notes.sql`.
 - Note body: 1 to 4,000 characters after trimming. Error copy: "Write something before adding the note" and "Notes can be up to 4,000 characters".
 - Read and add: anyone `SessionService.getSession` lets in (owner or `SESSION_VIEW_ALL`). Delete: the author, or `Role.ADMIN`.
 - Audit actions: `CANDIDATE_NOTE_ADD`, `CANDIDATE_NOTE_DELETE` (target type `candidate`, target id the candidate id).
@@ -32,7 +32,7 @@
 ### Task 1: Notes API
 
 **Files:**
-- Create: `common/src/main/resources/db/migration/V8__candidate_notes.sql`, `common/src/main/java/com/resumescreener/common/session/CandidateNote.java`, `.../common/session/CandidateNoteRepository.java`, `api-service/src/main/java/com/resumescreener/api/candidate/NoteService.java`, `.../candidate/dto/NoteDto.java`, `.../candidate/dto/NoteRequest.java`
+- Create: `common/src/main/resources/db/migration/V9__candidate_notes.sql`, `common/src/main/java/com/resumescreener/common/session/CandidateNote.java`, `.../common/session/CandidateNoteRepository.java`, `api-service/src/main/java/com/resumescreener/api/candidate/NoteService.java`, `.../candidate/dto/NoteDto.java`, `.../candidate/dto/NoteRequest.java`
 - Modify: `api-service/src/main/java/com/resumescreener/api/candidate/CandidateController.java` (three endpoints)
 - Test: `api-service/src/test/java/com/resumescreener/api/candidate/NoteServiceTest.java`, `.../candidate/NoteCascadeDatabaseTest.java`
 

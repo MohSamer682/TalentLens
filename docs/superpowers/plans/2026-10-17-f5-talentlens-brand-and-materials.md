@@ -1,8 +1,8 @@
-# F5 TalentLens Name, Icon and Lens Materials Implementation Plan
+# F5 TalentLens Name, Icon, Lens Materials and HR Chief View Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship the app as TalentLens with its own icon, and move every screen to softer "Lens" materials (radii, depth tiers, glass shell, one motion curve) without changing colours or layouts.
+**Goal:** Ship the app as TalentLens with its own icon, move every screen to softer "Lens" materials, give the light theme a proper design of its own, and open the HR chief straight onto all sessions as a viewer.
 
 **Architecture:** Almost all of it is tokens. Radii, shadows and easing live in `tailwind.config.ts`; changing their values restyles every component that already uses `rounded-*` and `shadow-*`. Three material utilities in `index.css` (`.plate`, `.lift`, `.glass`) replace the ad hoc panel classes in shared components. The icon is one SVG used as favicon and as a `<BrandMark>` component.
 
@@ -12,10 +12,11 @@
 
 ## Global Constraints
 
-- Branch `feat/talentlens-materials` from `feat/roles-and-permissions`. One PR. No backend logic changes.
+- Branch `feat/talentlens-materials` from `feat/roles-and-permissions`. One PR. The only backend change is migration `V8__hr_chief_view_only.sql` (Task 5).
+- The PR body carries the project thread link and the Claude Code session link (see the brief).
 - Product name in user-visible text: `TalentLens` (one word, capital T and L). Never "Talent Lens" or "Talentlens".
 - Do not rename Maven modules, Java packages, `resume-screener-ui` package name, Docker services or database names.
-- Colour tokens are unchanged except one new token `--surface-raised` (dark `24 33 31` #18211F, light `255 255 255`).
+- Dark colour tokens are unchanged except one new token `--surface-raised` (dark `24 33 31` #18211F, light `255 255 255`). Light tokens change as listed in Task 4.
 - Radius scale: `DEFAULT 6px`, `md 10px`, `lg 14px`, `xl 20px`, `full` for pills.
 - Easing: `cubic-bezier(0.22, 1, 0.36, 1)`; durations 160 ms (state, the Tailwind default), 240 ms (enter), 320 ms (panels).
 - Saffron (`mark`) still means only "shortlisted or further". The icon's saffron bar is the one sanctioned brand use.
@@ -27,7 +28,9 @@
 2. **Light theme shadows on white panels**: panels must still separate from the mist ground at 360 px. Test: Task 3 light screenshots of Dashboard and Session.
 3. **Pills with long labels at 360 px** (segmented control "Shortlisted 128", status chips): no overflow or horizontal page scroll. Test: Task 3 360 px screenshots, `document.documentElement.scrollWidth <= 360` assertion in the screenshot script.
 4. **Reduced motion**: hover lift and enter animations drop travel. Test: Task 2 CSS rule under `prefers-reduced-motion`.
-5. **Old name left behind** in titles, aria-labels or docs. Test: Task 1 `grep -ri "resume screener" ui/src ui/index.html README.md PRODUCT.md` returns nothing.
+5. **HR chief with no sessions of their own** opens the app: lands on All sessions, never on an empty "No sessions yet" page or a "New session" button that 403s. Test: Task 5 `defaultScopeIsEveryoneForViewers`, `hrChiefCannotCreateSessions`.
+6. **Light theme contrast** on chips, muted text and table heads: 4.5:1 or better. Test: Task 4 `lightTokensMeetContrast`.
+7. **Old name left behind** in titles, aria-labels or docs. Test: Task 1 `grep -ri "resume screener" ui/src ui/index.html README.md PRODUCT.md` returns nothing.
 
 ---
 
@@ -116,3 +119,52 @@ it('renders the lens mark with the saffron bar and no accessible name of its own
 - [ ] **Step 3: Screenshot pass.** Start the stack (`docker compose up`, stub LLM `maintenance/fake_llm_server.py`), run `node maintenance/screenshots.mjs` for Login, Dashboard, Session, Candidate, Analytics, Admin roles at 360 and 1280, dark and light. The script asserts `document.documentElement.scrollWidth <= innerWidth` on each page and exits non-zero otherwise. Then run once with `--no-backdrop` (injects `.glass{backdrop-filter:none!important;background:rgb(var(--pitch))!important}`) for the navbar.
   Expected: exit 0; navbar text readable over scrolled content in every shot.
 - [ ] **Step 4: Commit** `feat(ui): lens materials across shared components`
+
+---
+
+### Task 4: Light theme, reworked
+
+**Files:**
+- Modify: `ui/src/index.css` (`[data-theme='light']` block), `ui/src/components/Navbar.tsx` (light glass in light theme), `ui/src/index.css` `.glass` (light variant), `ui/index.html` (`theme-color` follows the theme), `ui/DESIGN.md` (light section)
+- Create: `ui/src/lib/contrast.ts`, `ui/src/lib/contrast.test.ts`
+
+**Interfaces:**
+- Produces: `contrastRatio(fg: string, bg: string): number` (WCAG relative luminance, hex in).
+
+- [ ] **Step 1: Write the failing test** `lightTokensMeetContrast`: parse the light block of `index.css` (read the file in the test with `fs`), and assert `contrastRatio(ink, ground) >= 4.5`, `contrastRatio(inkMuted, surface) >= 4.5`, `contrastRatio(inkMuted, sunken) >= 4.5`, `contrastRatio(accentText, surface) >= 4.5`, `contrastRatio(markText, markSoft) >= 4.5`, and for each status tint pair (`success`/`success-soft`, `info`/`info-soft`, `warn`/`warn-soft`, `danger`/`danger-soft`) `>= 4.5`.
+- [ ] **Step 2: Run** `cd ui && npx vitest run src/lib/contrast.test.ts` — expect FAIL.
+- [ ] **Step 3: Set the light tokens** (RGB triplets in the file, hex here): `ground #F5F7F6`, `surface #FFFFFF`, `surface-raised #FFFFFF`, `sunken #F0F3F2`, `line #DDE4E1`, `line-strong #B4C2BC`, `ink #0E1614`, `ink-muted #4F5F59`, `accent-text #1E5FC8`, `accent-bar #3478DC`, `shadow #0E1614`; status pairs keep their hues with text darkened until the test passes. Light shadows: `plate` = `0 1px 2px rgb(var(--shadow) / 0.05), 0 4px 12px -4px rgb(var(--shadow) / 0.08)`, `lift` = `0 2px 4px rgb(var(--shadow) / 0.06), 0 16px 32px -12px rgb(var(--shadow) / 0.18)` (no inset highlight in light). Light `.glass`: `rgb(255 255 255 / 0.8)` with the same blur, a `line` bottom hairline, ink text; nav links `ink-muted`, active `ink` with the saffron underline. Drop the "shell stays dark" rule from DESIGN.md; the brand tile stays dark.
+- [ ] **Step 4: Run** `cd ui && npx vitest run && npm run build` — expect PASS. Re-run the Task 3 screenshot script for the light shots.
+- [ ] **Step 5: Commit** `feat(ui): reworked light theme with light glass shell`
+
+---
+
+### Task 5: HR chief opens on all sessions, view only
+
+**Files:**
+- Create: `common/src/main/resources/db/migration/V8__hr_chief_view_only.sql` (`DELETE FROM role_permissions WHERE role = 'HR_CHIEF' AND permission = 'SESSION_RUN';`)
+- Modify: `ui/src/lib/permissions.ts`, `ui/src/lib/permissions.test.ts`, `ui/src/pages/Dashboard.tsx:32-80`, `ui/src/components/SessionRow.tsx` and `SessionCard.tsx` (show `ownerName`, which the API already fills when `everyone=true`), `api-service/src/test/java/com/resumescreener/api/auth/PermissionEnforcementTest.java`
+
+**Interfaces:**
+- Produces: `defaultScope(user: User | null): 'MINE' | 'EVERYONE'` — `EVERYONE` when the user has `SESSION_VIEW_ALL` and not `SESSION_RUN`; `canSwitchScope(user)` — has both.
+
+- [ ] **Step 1: Write the failing tests.**
+
+```ts
+it('defaultScopeIsEveryoneForViewers', () => {
+  expect(defaultScope(user('HR_CHIEF', ['SESSION_VIEW_ALL', 'ANALYTICS_VIEW']))).toBe('EVERYONE');
+  expect(canSwitchScope(user('HR_CHIEF', ['SESSION_VIEW_ALL', 'ANALYTICS_VIEW']))).toBe(false);
+  expect(defaultScope(user('ADMIN', ALL))).toBe('MINE');
+  expect(canSwitchScope(user('ADMIN', ALL))).toBe(true);
+  expect(defaultScope(user('RECRUITER', ['SESSION_RUN', 'CANDIDATE_REVIEW']))).toBe('MINE');
+});
+```
+
+```java
+@Test void hrChiefCannotCreateSessions()   // after V8 seed: HR_CHIEF POST /api/sessions -> 403; GET /api/sessions?everyone=true -> 200
+```
+
+- [ ] **Step 2: Run** `cd ui && npx vitest run src/lib/permissions.test.ts` and `mvn -pl api-service -am test -Dtest=PermissionEnforcementTest` — expect FAIL.
+- [ ] **Step 3: Implement.** Dashboard initialises `everyone` from `defaultScope(me)`; when `!canSwitchScope(me)` it hides the Mine / All recruiters control, titles the page "All sessions", subtitle "Every recruiter's sessions. You can open them; recruiters run them." and shows the owner on each row. "New session" already hides without `SESSION_RUN`; check the empty state also drops its "Start a session" button. Mockup: TalentLens designs, "Dashboard, HR chief, light".
+- [ ] **Step 4: Run** both test commands, then `mvn -q verify` and `cd ui && npm run build` — expect PASS.
+- [ ] **Step 5: Commit** `feat(auth): HR chief opens on all sessions and no longer runs them`

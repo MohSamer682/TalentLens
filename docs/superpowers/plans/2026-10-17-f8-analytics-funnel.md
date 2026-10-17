@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Branch `feat/analytics-funnel` from `feat/hiring-pipeline`. One PR. `V10__analytics_pipeline_indexes.sql` only if `EXPLAIN` on a 50k-candidate seed shows a sequential scan on `interviews` or `candidate_stage_events` (indexes from V9 may be enough).
+- Branch `feat/analytics-funnel` from `feat/hiring-pipeline`. One PR. `V11__analytics_pipeline_indexes.sql` only if `EXPLAIN` on a 50k-candidate seed shows a sequential scan on `interviews` or `candidate_stage_events` (indexes from V10 may be enough).
 - Cohort rule everywhere: candidates whose session was created in `[from, to)`. The page says so under the title: "Candidates from sessions created in this period".
 - Previous period: same length, ending where this one starts.
 - Funnel steps and their rule (stage counted as "reached" by `review_status` ordinal, interviews by feedback):

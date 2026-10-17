@@ -4,12 +4,14 @@ Requested by Muhammed on 2026-10-17. This is the spec the four plans below argue
 
 | # | Feature | Plan | Asked for |
 |---|---|---|---|
-| F5 | TalentLens name, icon and "Lens" materials | [f5](2026-10-17-f5-talentlens-brand-and-materials.md) | items 3 and 4 |
+| F5 | TalentLens name, icon, "Lens" materials, a better light mode, HR chief sees all sessions | [f5](2026-10-17-f5-talentlens-brand-and-materials.md) | items 3 and 4, follow-ups 1 and 2 |
 | F6 | Notes on each candidate | [f6](2026-10-17-f6-candidate-notes.md) | item 2 |
 | F7 | Hiring pipeline: contact, interviews, offer, approval; interviewer roles | [f7](2026-10-17-f7-hiring-pipeline.md) | items 5 and 6 |
 | F8 | Analytics dashboard for the whole funnel | [f8](2026-10-17-f8-analytics-funnel.md) | item 1 |
 
 Order: F5 first so every new screen is built on the new materials; F8 last because it reports on the stages F7 creates. One branch and one PR per feature, each stacked on the previous one. The cycle stays: plan approval, implementation, tests, UAT, smoke test, PR.
+
+Every PR body links back to where the work happened: the project thread link (already in the attribution line) **and the Claude Code session link** (`https://claude.ai/code/session_…` of the session that built it), on its own line before the closing "Built by Mohamed Samer with Claude Code". F1 to F4's ready-made bodies in `feature-branches/PULL-REQUESTS.md` get the same line when they are opened.
 
 Mockups for every new and changed screen: [TalentLens designs](https://claude.ai/artifact/PSLJQvTKcKs4zHHnbSprTH) (brand and materials, analytics, candidate page, pipeline, my interviews, interview feedback).
 
@@ -21,7 +23,14 @@ Mockups for every new and changed screen: [TalentLens designs](https://claude.ai
   - Shapes: radius scale 6 / 10 / 14 / 20 px plus full pills for chips, status and segmented controls (was 4 / 6 / 8).
   - Materials, three tiers: **plate** (panels: surface, hairline, 1px top highlight in dark, soft 2-layer shadow in light), **lift** (things you can pick up: hoverable cards, menus, the selection bar: stronger shadow, `surface-raised` fill), **glass** (navbar and sticky bars only: 78% pitch with 16px blur, solid fallback when `backdrop-filter` is unsupported or `prefers-reduced-transparency`).
   - Motion: one ease `cubic-bezier(0.22, 1, 0.36, 1)`; 160 ms for state, 240 ms for enter, 320 ms for panels. Interactive cards rise 1px on hover. Everything still drops travel under `prefers-reduced-motion`.
+  - Light mode, reworked: the light theme gets its own light glass navbar (white at 80% with blur, ink text, saffron underline) instead of the dark bar; a quieter ground `#F5F7F6`; hairlines `#DDE4E1`; two-layer soft shadows so white panels lift off the ground; chips as light tints with dark text (all 4.5:1 or better); muted text `#4F5F59`; table heads `#F0F3F2`. The brand tile stays dark in both themes.
   - Rules kept: saffron only means "made the cut"; blue only for links, focus and data; monochrome ink primary buttons; WCAG AA in both themes.
+
+### HR chief sees all sessions (follow-up 1)
+
+- The HR chief oversees sessions and does not run them: `HR_CHIEF` loses `SESSION_RUN` by default (an admin can grant it back on the Roles page). Sessions an HR chief already created stay viewable; only their owner-side actions go.
+- Anyone who can see all sessions but cannot run them lands on **All sessions**: the dashboard opens on every recruiter's sessions, titled "All sessions", with each session's owner shown, no "Mine / All recruiters" switch and no "New session" button.
+- Users who can do both (admins, or an HR chief granted `SESSION_RUN`) keep the switch, starting on "Mine".
 
 ## F6. Notes on each candidate
 
@@ -52,7 +61,7 @@ Stages a candidate moves through, in order. The existing `review_status` column 
 - Offer: once at `OFFER`, the recruiter uploads one PDF (up to 10 MB). Uploading again replaces it until it is approved. Recruiters, HR chiefs and admins who can open the session see and download it.
 - Approval needs `OFFER_APPROVE` (default: HR chief and admin). Whoever uploaded the offer cannot approve it. Approval moves the candidate to `OFFER_APPROVED` and is final.
 - Every stage change is recorded with who and when (`candidate_stage_events`) and shown as a timeline on the candidate page. HR chiefs and recruiters follow candidates on a **Pipeline** page: every candidate past the shortlist, grouped by stage, filterable to "Offers awaiting approval".
-- New permissions: `PIPELINE_MANAGE` "Contact candidates, schedule interviews and prepare offers" (default: admin, HR chief, recruiter), `OFFER_APPROVE` "Approve job offers" (default: admin, HR chief), `INTERVIEW_FEEDBACK` "Give feedback on interviews assigned to them" (default: both interviewer roles). Interviewer roles get nothing else by default.
+- New permissions: `PIPELINE_MANAGE` "Contact candidates, schedule interviews and prepare offers" (default: admin, recruiter), `OFFER_APPROVE` "Approve job offers" (default: admin, HR chief), `INTERVIEW_FEEDBACK` "Give feedback on interviews assigned to them" (default: both interviewer roles). Interviewer roles get nothing else by default.
 
 ## F8. Analytics for the whole funnel
 
