@@ -1,167 +1,212 @@
-# TalentLens: Enterprise Resume Screening Platform
+# TalentLens: Enterprise Resume Screening & Hiring Platform
 
-**TalentLens** is a recruitment intelligence platform that helps hiring teams evaluate large applicant pools quickly, consistently and transparently. Recruiters open a screening session for a role, upload the job description and the incoming resumes, and the platform scores every candidate against the role's own weighted criteria. The result is a ranked shortlist with a clear, explainable breakdown for each person, ready for human review and export.
+**TalentLens** is a comprehensive recruitment intelligence platform that helps hiring teams evaluate large applicant pools quickly, consistently and transparently. Beyond AI-driven resume screening, TalentLens orchestrates the complete hiring journey: from intake and weighted criteria scoring, to shortlist curation, interview planning, multi-stage approval chains, offer management, and joining tracking.
 
-It is built for high-volume hiring, where a single opening can attract hundreds of applications and reviewers need the same yardstick applied to every one of them.
+It is built for modern talent acquisition teams where recruiters, interviewers, hiring managers, and executives collaborate under role-based permissions with a unified candidate pipeline.
 
-**Stack:** Java 21 · Spring Boot 3 · React + TypeScript · PostgreSQL · MinIO (S3-compatible storage) · Docker. The scoring engine is provider-neutral and works with any OpenAI-compatible LLM (OpenAI, Gemini, DeepSeek, OpenRouter, Qwen, Kimi, Grok, ...).
+**Stack:** Java 21 · Spring Boot 3.3 · React 18 + TypeScript + Vite + Tailwind CSS · PostgreSQL 16 · MinIO (S3-compatible storage) · Docker Compose. The scoring engine is provider-neutral and compatible with any OpenAI-compatible LLM endpoint (OpenAI, Gemini, DeepSeek, OpenRouter, Qwen, Kimi, Grok, etc.).
 
-## Key capabilities
+---
+
+## 🚀 Key Capabilities
 
 | Capability | What it gives the recruiting team |
 |---|---|
-| **Role-specific weighted scoring** | Each session defines how much technical skills, experience, education, soft skills and culture fit matter (totalling 100), so the ranking reflects the role, not a generic template. |
-| **Explainable results** | Every candidate gets five criterion scores, an overall score, a written justification, strengths, gaps and extracted skills. Reviewers see why someone ranked where they did. |
-| **High-volume batch processing** | Resumes are processed asynchronously by a dedicated worker with live progress, cancellation and per-candidate failure isolation. |
-| **Resilient AI integration** | Rate-limit aware, with automatic retries for provider throttling and malformed output, and request timeouts. One bad response never fails a whole batch. |
-| **Provider independence** | Switch LLM vendor or model through configuration. No vendor lock-in. |
-| **Reporting** | Ranked Excel export of every session for sharing with hiring managers. |
-| **Access control and audit** | JWT authentication, recruiter and admin roles, user management, and an audit trail of sensitive actions with request tracing. |
-| **Secure document handling** | Resumes and job descriptions live in object storage and are served through short-lived presigned links. |
-| **Operable by design** | Versioned database migrations, structured JSON logging, health endpoints, containerized services and CI on every pull request. |
+| **Role-Specific Weighted Scoring** | Each screening session defines weighted criteria: technical skills, experience, education, soft skills, and culture fit (totalling 100), ensuring rankings reflect specific role requirements. |
+| **Explainable AI Evaluations** | Every candidate receives five criterion scores, a composite score, strengths, gaps, extracted skills, and an explainable justification. |
+| **High-Volume Batch Processing** | Resumes are processed asynchronously by a dedicated worker with live progress, cancellation, and per-candidate failure isolation. |
+| **End-to-End Hiring Pipeline** | Visual Kanban board tracking candidates through every hiring milestone: `Sourced` ➔ `Screening` ➔ `Interviewing` ➔ `Interviewed` ➔ `Offer` ➔ `Joining`. |
+| **Interview Places & Modes** | Multi-mode interview logistics: Onsite (office location, room code), Online (video conference link, passcode), and Phone screen. |
+| **Interviewer Scorecards & Feedback** | Dedicated feedback portal for technical and HR interviewers with structured recommendations (`Strong Hire`, `Hire`, `No Hire`, `Strong No Hire`), criteria scoring, and qualitative notes. |
+| **Offer Approval Chain & Lifecycle** | Complete job offer lifecycle: drafting offers, multi-level authorization workflows (`OFFER_APPROVE`), signed document uploads, sending offers, and candidate acceptance/decline tracking. |
+| **Joining & Onboarding Tracking** | Candidate onboarding management recording accepted start dates, documentation status, and joining confirmations. |
+| **Candidate Review & Saved Shortlists** | Quick review status toggles (`Shortlisted`, `Rejected`, `Maybe`), bulk candidate reviews, and instant top-N auto-shortlisting. |
+| **Candidate Notes & Activity Timeline** | Chronological audit trail of all candidate interactions, stage transitions, and private team notes. |
+| **Dynamic Roles & Granular Permissions** | Admin-managed role permission matrix (`/admin/roles`) and user administration (`/admin/users`) with 8 distinct organizational roles. |
+| **Recruiting Analytics Dashboard** | Historical metrics, pipeline throughput, conversion funnels, score distributions, and recruiter velocity across 30, 90, or 365 days. |
+| **Reporting & Exports** | Ranked Excel export of every screening session with complete score breakdowns for hiring managers. |
+| **Resilient AI Integration** | Rate-limit aware backoff, automatic retries for provider throttling (HTTP 429) and malformed output, request timeouts, and provider status probes. |
+| **Secure Document Handling** | Resumes, job descriptions, and offer letters live in object storage served through short-lived presigned URLs. |
 
-## How it works
+---
 
-```
- Browser ── React UI (nginx :3000)
-              │  REST + JWT
+## 🏛️ Architecture & System Flow
+
+```text
+ Browser ── React 18 UI (Vite + nginx :3000)
+              │  REST API + JWT
               ▼
-        api-service :8080 ──HTTP + shared secret──▶ batch-worker :8081
+         api-service :8080 ──HTTP + shared secret──▶ batch-worker :8081
               │                                          │
-              └────────── PostgreSQL + MinIO ◀───────────┘
+              └────────── PostgreSQL 16 + MinIO ◀────────┘
 ```
 
-1. A recruiter creates a **session** with five scoring weights that total 100: technical skills, experience, education, soft skills, culture fit.
-2. They upload the **job description** and the **resume PDFs**. Files go to MinIO.
-3. Starting the session tells the **batch worker** to process candidates one by one: extract the PDF text, ask the LLM for five 0-100 scores plus a justification, strengths and gaps, then compute the weighted composite score.
-4. When all candidates are done, the worker ranks them and writes an **Excel report**. The UI shows progress while this runs.
+1. **Intake & Setup:** A recruiter creates a session, customizes scoring weights, and uploads the Job Description (PDF) and candidate resumes (individual PDFs or ZIP archives up to 1000 files).
+2. **Batch Processing:** The batch worker extracts PDF text, prompts the configured LLM for scores and justifications, enforces rate limits, computes composite scores, and generates an Excel report.
+3. **Review & Shortlisting:** Recruiters review ranked candidates on the standings table with interactive radar charts and shortlist the top applicants.
+4. **Pipeline & Interviews:** Candidates move to the hiring pipeline. Recruiters schedule onsite, online, or phone interviews with assigned interviewers.
+5. **Feedback & Decision:** Interviewers submit evaluations and recommendations directly via the *My Interviews* portal.
+6. **Offer & Joining:** HR drafts the offer, runs it through the required approval chain, marks it sent, records candidate acceptance, and confirms joining details.
 
-The worker retries rate limits (HTTP 429) and malformed model output, waits behind a configurable requests-per-minute limit, and marks a single candidate as failed instead of failing the whole session.
+---
 
-## Modules
+## 📦 Project Modules
 
 | Module | Stack | Purpose |
 |---|---|---|
-| `common/` | Java 21, JPA, Flyway | Entities, repositories, DTOs and the database migrations. Shared by both services. |
-| `api-service/` | Spring Boot 3.3, Spring Security, JWT | REST API: auth, sessions, uploads, results, admin, audit log. |
-| `batch-worker/` | Spring Boot 3.3, Resilience4j, PDFBox, Apache POI | PDF parsing, LLM scoring, ranking, Excel report. |
-| `ui/` | React, TypeScript, Vite, Tailwind | Recruiter web app. |
+| `common/` | Java 21, Spring Data JPA, Flyway | Shared domain entities, repositories, DTOs, and database schema migrations. |
+| `api-service/` | Spring Boot 3.3, Spring Security, JWT | Core REST API: authentication, sessions, candidate reviews, pipeline, interviews, offers, analytics, and admin. |
+| `batch-worker/` | Spring Boot 3.3, Resilience4j, PDFBox, Apache POI | Asynchronous resume text extraction, LLM scoring orchestration, rate limiting, and Excel generation. |
+| `ui/` | React 18, TypeScript, Vite, Tailwind CSS | Single-page application with dark/light theme support and role-tailored views. |
 
-Design decisions and known gaps: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/adr](docs/adr). UI mockups: [docs/design/screens](docs/design/screens).
+- **UI Screens & Documentation:** [docs/design/screens](docs/design/screens) *(organized by role)*
+- **Architecture Decisions:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/adr](docs/adr)
 
-## Quick start (Docker)
+---
 
-You need Docker with Compose and an API key for an OpenAI-compatible LLM provider.
+## ⚡ Quick Start (Docker)
+
+### Prerequisites
+- Docker and Docker Compose
+- API Key from any OpenAI-compatible LLM provider (OpenAI, OpenRouter, Google Gemini, DeepSeek, etc.)
 
 ```bash
-cp .env.example .env     # then edit .env
+cp .env.example .env     # configure credentials and LLM settings
 docker compose up -d --build
 ```
 
-Set at least these in `.env`:
+### Essential `.env` Variables
 
-| Variable | What to put |
+| Variable | Description |
 |---|---|
-| `LLM_API_KEY` | Your provider key |
-| `LLM_BASE_URL` / `LLM_MODEL` | Provider endpoint and model (examples in `.env.example`) |
-| `LLM_RATE_LIMIT_RPM` | Requests per minute your plan allows (free tiers are often 10-20) |
-| `JWT_SECRET` | A long random base64 string |
-| `BATCH_WORKER_SHARED_SECRET` | A long random string; the API and worker must share it |
-| `POSTGRES_PASSWORD`, `MINIO_ROOT_PASSWORD` | Change from the example values |
+| `LLM_API_KEY` | Provider API key |
+| `LLM_BASE_URL` | Provider endpoint (e.g. `https://openrouter.ai/api/v1` or `https://generativelanguage.googleapis.com/v1beta/openai`) |
+| `LLM_MODEL` | Target model identifier |
+| `LLM_RATE_LIMIT_RPM` | Maximum requests per minute supported by your plan (default: 60) |
+| `JWT_SECRET` | 256-bit base64-encoded secret key for JWT signing |
+| `BATCH_WORKER_SHARED_SECRET` | Shared secret for inter-service communication between API and Worker |
+| `POSTGRES_PASSWORD`, `MINIO_ROOT_PASSWORD` | Infrastructure passwords |
 
-Then open:
+### Running Services
 
-| Service | URL |
-|---|---|
-| Web app | http://localhost:3000 |
-| API | http://localhost:8080 |
-| MinIO console | http://localhost:9001 |
-| Adminer (DB browser) | http://localhost:8085 |
+| Service | Endpoint | Description |
+|---|---|---|
+| **Web UI** | `http://localhost:3000` | Recruiter and management portal |
+| **REST API** | `http://localhost:8080` | Backend API & Swagger/Actuator endpoints |
+| **MinIO Console** | `http://localhost:9001` | S3 Object storage browser |
+| **Adminer** | `http://localhost:8085` | PostgreSQL database administration |
 
-The **first account you register becomes the admin**; later accounts are recruiters. Admins assign roles on the Admin screen and choose what each role can do under Roles and permissions. By default an HR chief runs sessions, opens any recruiter's sessions read-only and sees the Analytics page (sessions, scored and shortlisted resumes, score bands and per-recruiter throughput for the last 30, 90 or 365 days); recruiters run and review their own sessions. Managing users, roles and the audit log always stays with admins. To try the flow, use the fictional files in [`samples/`](samples) (`JD.pdf`, `Resume.pdf`).
+> **First Login:** The initial account registered via `/register` automatically receives the `ADMIN` role. Subsequent accounts register as `RECRUITER` by default and can be assigned roles by the administrator. Default test credentials: password `12345678`.
 
-## Local development
+---
 
-Run only the infrastructure in Docker and the apps on your machine:
+## 👥 Role-Based Access Control (RBAC)
+
+TalentLens features an admin-managed dynamic permission matrix (`/admin/roles`) covering 8 specialized roles:
+
+| Role | Primary Purpose | Key Permissions |
+|---|---|---|
+| **Admin** | Full system control & configuration | `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_VIEW`, `SESSION_RUN`, `SESSION_VIEW_ALL`, `PIPELINE_MANAGE`, `OFFER_APPROVE`, `ANALYTICS_VIEW` |
+| **HR Chief** | Departmental oversight & analytics | `SESSION_RUN`, `SESSION_VIEW_ALL`, `CANDIDATE_REVIEW`, `PIPELINE_MANAGE`, `OFFER_APPROVE`, `ANALYTICS_VIEW` |
+| **Recruiter** | Screening session owner & candidate manager | `SESSION_RUN`, `CANDIDATE_REVIEW`, `PIPELINE_MANAGE` |
+| **HR Interviewer** | Behavioral interview evaluation | `INTERVIEW_FEEDBACK` |
+| **Technical Interviewer** | Code and technical interview evaluation | `INTERVIEW_FEEDBACK` |
+| **Department Director** | Department candidate review & offer approval | `PIPELINE_MANAGE`, `OFFER_APPROVE`, `INTERVIEW_FEEDBACK` |
+| **Chairman** | Executive review & offer authorization | `OFFER_APPROVE`, `ANALYTICS_VIEW`, `INTERVIEW_FEEDBACK` |
+| **CEC / CEO** | Executive review & offer authorization | `OFFER_APPROVE`, `ANALYTICS_VIEW`, `INTERVIEW_FEEDBACK` |
+
+---
+
+## 📡 API Overview
+
+All secured endpoints require `Authorization: Bearer <token>`. Responses conform to a uniform envelope: `{ "success": true, "message": "...", "data": ... }`.
+
+### Authentication & Self
+- `POST /api/auth/register` — Create a new account
+- `POST /api/auth/login` — Sign in and receive JWT token
+- `GET /api/auth/me` — Current user profile, role, and granted permissions
+
+### Screening Sessions & Resumes
+- `POST, GET /api/sessions` — Create and list screening sessions (`?everyone=true` for oversight roles)
+- `GET, PATCH, DELETE /api/sessions/{id}` — Session detail, weight updates, and deletion
+- `POST /api/sessions/{id}/jd` — Upload job description PDF
+- `POST /api/sessions/{id}/resumes` — Upload candidate resume PDFs or ZIP archives
+- `GET /api/sessions/{id}/resumes` — List session resumes with processing status and failure reasons
+- `POST /api/sessions/{id}/start?scope=UNSCORED|ALL` — Start LLM scoring batch
+- `POST /api/sessions/{id}/cancel` — Cancel ongoing scoring batch
+- `GET /api/sessions/{id}/progress` — Live scoring progress and candidate status
+- `GET /api/sessions/{id}/candidates` — Ranked candidates with composite scores and criteria breakdown
+- `GET /api/sessions/{id}/export` — Download ranked Excel report
+
+### Candidate Review & Shortlisting
+- `PATCH /api/sessions/{id}/candidates/{candidateId}/review` — Update review status (`SHORTLISTED`, `REJECTED`, `MAYBE`, `NONE`)
+- `POST /api/sessions/{id}/candidates/review` — Bulk candidate review update
+- `POST /api/sessions/{id}/shortlist/top` — Automatically shortlist top N candidates
+- `GET, POST, DELETE /api/sessions/{id}/candidates/{candidateId}/notes` — Candidate notes management
+
+### Hiring Pipeline & Interview Places
+- `GET /api/pipeline` — Load candidates on the multi-stage pipeline board
+- `POST /api/sessions/{id}/candidates/{candidateId}/contact` — Transition candidate to *Contacted* stage
+- `GET, PUT /api/sessions/{id}/candidates/{candidateId}/interview-plan` — Set interview stages (e.g. HR, Technical, Culture)
+- `POST /api/sessions/{id}/candidates/{candidateId}/interviews` — Schedule interview (Onsite place, Online video link, or Phone)
+- `PATCH, DELETE /api/sessions/{id}/candidates/{candidateId}/interviews/{interviewId}` — Reschedule or cancel interview
+- `GET /api/interviewers` — List available interviewers by evaluation domain
+
+### Interviewer Feedback Portal
+- `GET /api/my-interviews` — List interviews assigned to the current interviewer
+- `GET /api/interviews/{interviewId}` — Detailed interview view with candidate profile and scores
+- `POST /api/interviews/{interviewId}/feedback` — Submit recommendation (`STRONG_HIRE`, `HIRE`, `NO_HIRE`), score, and notes
+
+### Offer Approval Chain & Joining
+- `POST /api/sessions/{id}/candidates/{candidateId}/move-to-offer` — Advance candidate to *Offer* stage
+- `POST /api/sessions/{id}/candidates/{candidateId}/offer` — Upload offer letter and set approval requirements
+- `GET, GET /download /api/sessions/{id}/candidates/{candidateId}/offer` — View offer details and presigned download URL
+- `POST /api/sessions/{id}/candidates/{candidateId}/offer/approve` — Approve offer in approval chain
+- `POST /api/sessions/{id}/candidates/{candidateId}/offer/reject` — Reject offer with reasons
+- `POST /api/sessions/{id}/candidates/{candidateId}/offer/sent` — Mark approved offer as sent to candidate
+- `POST /api/sessions/{id}/candidates/{candidateId}/offer/answer` — Record candidate answer (`ACCEPTED` or `DECLINED`)
+- `PUT /api/sessions/{id}/candidates/{candidateId}/joining` — Save onboarding and joining start date details
+
+### Analytics & Administration
+- `GET /api/analytics/overview?days=30|90|365` — Recruiting funnel throughput and score bands
+- `GET, PATCH /api/admin/users`, `/api/admin/users/{id}/role` — Manage users and assign roles
+- `GET, PUT /api/admin/roles`, `/api/admin/roles/{role}/permissions` — View and edit role permission matrix
+- `GET /api/admin/audit` — Security and administrative audit trail
+
+---
+
+## 🛠️ Local Development
 
 ```bash
+# 1. Start Postgres and MinIO containers
 docker compose up -d postgres minio
-# load .env into your shell (Windows: set the same variables), then:
 
-mvn clean verify                              # build and test all Java modules
-mvn -pl api-service spring-boot:run           # terminal 1
-mvn -pl batch-worker spring-boot:run          # terminal 2
-cd ui && npm install && npm run dev           # terminal 3
+# 2. Build and verify backend modules
+mvn clean verify
+
+# 3. Launch Spring Boot API Service (Terminal 1)
+mvn -pl api-service spring-boot:run
+
+# 4. Launch Spring Boot Batch Worker (Terminal 2)
+mvn -pl batch-worker spring-boot:run
+
+# 5. Launch React UI Development Server (Terminal 3)
+cd ui
+npm install
+npm run dev
 ```
 
-`application.yml` defaults already point the database, MinIO and worker URL at `localhost`. Secrets (`JWT_SECRET`, `SPRING_DATASOURCE_PASSWORD`, `MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY`, `BATCH_WORKER_SHARED_SECRET`, `LLM_*`) have no defaults and must be set.
+---
 
-Tests: `mvn verify` for the backend, `cd ui && npm test` for the frontend. CI builds both on every pull request.
+## 🔒 Security & Compliance
 
-## API overview
+- **Zero Committed Secrets:** All credentials, tokens, and storage keys are managed strictly through environment variables.
+- **Access Control:** Every API endpoint verifies fine-grained permissions via Spring Security `@PreAuthorize`.
+- **Short-Lived Documents:** Sensitive resumes and offer documents are protected behind private S3 buckets and accessed solely via time-limited presigned URLs.
+- **Audit Logging:** Administrative actions, role modifications, and scoring runs are recorded to the database with user attribution and timestamps.
 
-All endpoints except register and login need `Authorization: Bearer <token>`. Responses use one envelope with typed error codes.
+---
 
-| Method | Path | Purpose |
-|---|---|---|
-| POST | `/api/auth/register`, `/api/auth/login` | Create an account, get a JWT |
-| POST, GET, PATCH, DELETE | `/api/sessions`, `/api/sessions/{id}` | Manage sessions and weights; the detail response includes the LLM status. `GET /api/sessions?everyone=true` lists every recruiter's sessions for roles that may open any session |
-| POST | `/api/sessions/{id}/jd`, `/api/sessions/{id}/resumes` | Upload the job description; add resumes (PDFs or a ZIP of PDFs, up to 1000 per session). Duplicates are skipped and bad files reported per file |
-| GET, DELETE | `/api/sessions/{id}/resumes?status=`, `/api/sessions/{id}/candidates/{candidateId}` | List a session's resumes with processing status and failure reason; remove one |
-| POST | `/api/sessions/{id}/start?scope=UNSCORED\|ALL`, `/api/sessions/{id}/cancel` | Score unscored resumes (default) or re-score all; cancel scoring |
-| GET | `/api/sessions/{id}/progress` | Live progress |
-| GET | `/api/sessions/{id}/candidates`, `.../candidates/{candidateId}` | Ranked results and detail |
-| GET | `/api/sessions/{id}/export` | Excel report |
-| GET | `/api/auth/me` | The signed-in user with their current role and permissions |
-| GET, PATCH | `/api/admin/users`, `/api/admin/users/{id}/role` | User management (admin only) |
-| GET, PUT | `/api/admin/roles`, `/api/admin/roles/{role}/permissions` | What each role can do (admin only) |
-| GET | `/api/admin/audit` | Audit log (admin only) |
-| GET | `/api/analytics/overview?days=30\|90\|365` | Recruiting analytics (needs Analytics permission) |
+## 📄 License
 
-The worker's `/internal/**` endpoints require the shared secret and are not for clients.
-
-## Switching LLM provider
-
-Only the base URL, model and key change:
-
-| Provider | `LLM_BASE_URL` | Example `LLM_MODEL` |
-|---|---|---|
-| OpenAI | `https://api.openai.com/v1` | `gpt-4o` |
-| OpenRouter | `https://openrouter.ai/api/v1` | any model id from their catalog |
-| Gemini (compatible API) | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-3.5-flash` |
-| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
-
-The model must be able to return JSON. The worker asks for `json_object` output and also extracts JSON from free-form replies, but a very small model can still produce unusable scores. The session page shows whether the configured model is reachable.
-
-## Security notes
-
-- No secrets are committed. `.env` is git-ignored and the apps refuse to start without their secrets.
-- Passwords are hashed, every endpoint checks a permission granted to the caller's role, resumes are served through presigned URLs, and sensitive actions are written to an audit log.
-- Postgres, MinIO and Adminer ports are published for local development. Do not expose them on a public host: remove their `ports:` entries or firewall them.
-- `docker-compose.yml` uses `bitnamilegacy/minio` because the official MinIO images are no longer pullable from Docker Hub. It gets no security updates, so use a maintained S3-compatible store in production.
-- Resumes contain personal data. Before real use, decide how long to keep files and scores and check your obligations (for example GDPR).
-
-## Roadmap
-
-Planned work, not yet implemented:
-
-- Durable job queue so scoring scales across several worker instances
-- Multi-tenant organizations with per-team data isolation
-- Single sign-on (SAML / OIDC) and fine-grained permissions
-- Integration with applicant tracking systems and email intake
-- DOCX and image-based resume support
-- Bias and fairness reporting for scored cohorts
-
-## Known limitations
-
-- Scoring jobs run in memory inside one worker instance. A worker restart marks running sessions as failed so they can be started again. A durable job queue is the next step for scaling out.
-- Only PDF resumes are supported.
-- LLM scores support a human reviewer; they are not a hiring decision. Models can be inconsistent and can reflect bias, so always read the justification.
-
-## Contributing
-
-Issues and pull requests are welcome. Open an issue first for larger changes, keep pull requests focused, and make sure `mvn verify` and `npm run build` pass. Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/).
-
-## License
-
-[MIT](LICENSE)
+This project is licensed under the [MIT License](LICENSE).
