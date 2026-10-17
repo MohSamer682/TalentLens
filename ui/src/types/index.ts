@@ -34,6 +34,19 @@ export interface UploadResumesResponse {
   sessionId: string;
   uploadedCount: number;
   candidateIds: string[];
+  duplicateCount: number;
+  rejected: { fileName: string; reason: string }[];
+}
+
+export type ScoringScope = 'UNSCORED' | 'ALL';
+
+export interface ResumeFile {
+  id: string;
+  name: string;
+  originalFileName: string | null;
+  status: 'PENDING' | 'SCORED' | 'FAILED';
+  failureReason: string | null;
+  createdAt: string;
 }
 
 export interface SessionActionResponse {

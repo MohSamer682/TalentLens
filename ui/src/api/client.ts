@@ -13,6 +13,8 @@ import type {
   ProgressResponse,
   RegisterRequest,
   ResumeDownloadResponse,
+  ResumeFile,
+  ScoringScope,
   ScreeningSession,
   SessionActionResponse,
   UploadJdResponse,
@@ -151,7 +153,12 @@ export const sessionsApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
-  start: (id: string) => api.post<SessionActionResponse>(`/sessions/${id}/start`),
+  start: (id: string, scope: ScoringScope = 'UNSCORED') =>
+    api.post<SessionActionResponse>(`/sessions/${id}/start`, null, { params: { scope } }),
+  resumes: (id: string, status?: ResumeFile['status'], page = 0, size = 50) =>
+    api.get<Page<ResumeFile>>(`/sessions/${id}/resumes`, { params: { status, page, size } }),
+  removeResume: (id: string, candidateId: string) =>
+    api.delete<void>(`/sessions/${id}/candidates/${candidateId}`),
   cancel: (id: string) => api.post<SessionActionResponse>(`/sessions/${id}/cancel`),
   progress: (id: string) => api.get<ProgressResponse>(`/sessions/${id}/progress`),
   candidates: (id: string, page = 0, size = 20) =>
