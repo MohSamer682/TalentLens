@@ -76,12 +76,14 @@ public class BatchController {
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Page<CandidateResultDto>>> getCandidates(
             @PathVariable String id,
+            @RequestParam(required = false) ReviewStatus review,
             Pageable pageable,
             Authentication auth) {
         sessionService.getSession(id, auth.getName());
 
-        Page<CandidateScore> scores =
-                candidateScoreRepository.findByCandidateSessionIdOrderByRankAsc(id, pageable);
+        Page<CandidateScore> scores = review == null
+                ? candidateScoreRepository.findByCandidateSessionIdOrderByRankAsc(id, pageable)
+                : candidateScoreRepository.findByCandidateSessionIdAndCandidateReviewStatusOrderByRankAsc(id, review, pageable);
         Page<CandidateResultDto> dtos = scores.map(BatchController::toCandidateResultDto);
 
         return ResponseEntity.ok(ApiResponse.success("Candidates loaded", dtos));
@@ -122,7 +124,8 @@ public class BatchController {
                 score.getGaps(),
                 c.getName(),
                 c.getEmail(),
-                toWeightsDto(session.getWeights())
+                toWeightsDto(session.getWeights()),
+                c.getReviewStatus()
         );
 
         return ResponseEntity.ok(ApiResponse.success("Candidate loaded", dto));
@@ -188,7 +191,8 @@ public class BatchController {
                 valueOrZero(score.getEducation()),
                 valueOrZero(score.getSoftSkills()),
                 valueOrZero(score.getCultureFit()),
-                valueOrZero(score.getCompositeScore())
+                valueOrZero(score.getCompositeScore()),
+                candidate.getReviewStatus()
         );
     }
 

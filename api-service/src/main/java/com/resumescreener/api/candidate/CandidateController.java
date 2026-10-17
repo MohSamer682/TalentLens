@@ -1,6 +1,12 @@
 package com.resumescreener.api.candidate;
 
+import com.resumescreener.api.candidate.dto.BulkReviewRequest;
 import com.resumescreener.api.candidate.dto.ResumeFileDto;
+import com.resumescreener.api.candidate.dto.ReviewRequest;
+import com.resumescreener.api.candidate.dto.ReviewResult;
+import com.resumescreener.api.candidate.dto.TopShortlistRequest;
+import jakarta.validation.Valid;
+import java.util.List;
 import com.resumescreener.api.common.ApiResponse;
 import com.resumescreener.common.session.CandidateStatus;
 import lombok.RequiredArgsConstructor;
@@ -26,5 +32,33 @@ public class CandidateController {
             Authentication auth) {
         return ResponseEntity.ok(ApiResponse.success("Resumes loaded",
                 candidateService.listResumes(id, status, pageable, auth.getName())));
+    }
+
+    @PatchMapping("/{id}/candidates/{candidateId}/review")
+    public ResponseEntity<ApiResponse<ReviewResult>> review(
+            @PathVariable String id,
+            @PathVariable String candidateId,
+            @Valid @RequestBody ReviewRequest request,
+            Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.success("Review saved",
+                candidateService.review(id, List.of(candidateId), request.status(), auth.getName())));
+    }
+
+    @PostMapping("/{id}/candidates/review")
+    public ResponseEntity<ApiResponse<ReviewResult>> reviewMany(
+            @PathVariable String id,
+            @Valid @RequestBody BulkReviewRequest request,
+            Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.success("Reviews saved",
+                candidateService.review(id, request.candidateIds(), request.status(), auth.getName())));
+    }
+
+    @PostMapping("/{id}/shortlist/top")
+    public ResponseEntity<ApiResponse<ReviewResult>> shortlistTop(
+            @PathVariable String id,
+            @Valid @RequestBody TopShortlistRequest request,
+            Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.success("Shortlist saved",
+                candidateService.shortlistTop(id, request.count(), auth.getName())));
     }
 }

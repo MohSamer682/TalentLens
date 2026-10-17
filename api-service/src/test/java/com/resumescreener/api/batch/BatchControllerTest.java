@@ -54,6 +54,7 @@ class BatchControllerTest {
 
         ResponseEntity<ApiResponse<Page<CandidateResultDto>>> response = controller.getCandidates(
                 "session-1",
+                null,
                 PageRequest.of(0, 20),
                 new TestingAuthenticationToken("recruiter@example.com", null)
         );

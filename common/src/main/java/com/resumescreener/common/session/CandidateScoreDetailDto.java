@@ -27,4 +27,5 @@ public class CandidateScoreDetailDto {
     private String name;
     private String email;
     private WeightsDto weights;
+    private ReviewStatus reviewStatus;
 }

@@ -43,6 +43,14 @@ public class Candidate {
     @Column(nullable = false)
     private java.time.Instant createdAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private ReviewStatus reviewStatus = ReviewStatus.NONE;
+    private java.time.Instant reviewedAt;
+    /** Id of the user who made the current review decision */
+    private String reviewedBy;
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {
