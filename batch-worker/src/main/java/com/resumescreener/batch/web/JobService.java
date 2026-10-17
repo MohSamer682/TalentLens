@@ -2,17 +2,21 @@ package com.resumescreener.batch.web;
 
 import com.resumescreener.batch.excel.ExcelReportGenerator;
 import com.resumescreener.batch.storage.MinioStorageService;
-import com.resumescreener.common.dto.LlmScoreDto;
-import com.resumescreener.common.entity.*;
-import com.resumescreener.common.enums.CandidateStatus;
-import com.resumescreener.common.enums.SessionStatus;
-import com.resumescreener.common.repository.*;
+import com.resumescreener.common.llm.LlmScoreDto;
+import com.resumescreener.common.audit.*;
+import com.resumescreener.common.session.*;
+import com.resumescreener.common.user.*;
+import com.resumescreener.common.session.CandidateStatus;
+import com.resumescreener.common.session.SessionStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,6 +33,30 @@ public class JobService {
     private final MinioStorageService minioStorageService;
     private final ExcelReportGenerator excelReportGenerator;
     private final CandidateProcessingService candidateProcessingService;
+    private final TransactionTemplate transactionTemplate;
+
+    private boolean isNoLongerRunning(String sessionId) {
+        return sessionRepository.findById(sessionId)
+                .map(s -> s.getStatus() != SessionStatus.RUNNING).orElse(true);
+    }
+
+    /**
+     * Jobs run on in-memory threads, so after a restart any RUNNING session has no worker behind it.
+     * shortcut: assumes a single worker instance, revisit with a claim table before scaling out.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void failStrandedSessions() {
+        List<ScreeningSession> stranded = sessionRepository.findByStatus(SessionStatus.RUNNING);
+        for (ScreeningSession s : stranded) {
+            s.setStatus(SessionStatus.FAILED);
+            s.setLastErrorMessage("Worker restarted while scoring; start the screening again");
+            s.setCompletedAt(java.time.Instant.now());
+        }
+        sessionRepository.saveAll(stranded);
+        if (!stranded.isEmpty()) {
+            log.warn("Marked {} stranded RUNNING sessions as FAILED", stranded.size());
+        }
+    }
 
     @Async
     public void processCandidates(String sessionId) {
@@ -82,6 +110,10 @@ public class JobService {
         }
 
         for (Candidate candidate : candidates) {
+            if (isNoLongerRunning(sessionId)) {
+                log.info("Session cancelled or reset, stopping before candidate {}", candidate.getId());
+                return;
+            }
             try {
                 candidateProcessingService.processSingleCandidate(candidate, jdText, weights, job);
             } catch (Exception e) {
@@ -91,10 +123,24 @@ public class JobService {
             }
         }
 
+        if (isNoLongerRunning(sessionId)) {
+            log.info("Session cancelled or reset, skipping ranking and report");
+            return;
+        }
+
         try {
-            rankCandidates(sessionId);
-            generateExcelReport(sessionId);
-            finalizeSession(sessionId, job);
+            // These are calls within this bean, so their @Transactional is bypassed by the proxy; run each
+            // in an explicit transaction so lazy Candidate/score associations can load (open-in-view is off)
+            final BatchJob finishedJob = job;
+            transactionTemplate.executeWithoutResult(tx -> rankCandidates(sessionId));
+            transactionTemplate.executeWithoutResult(tx -> {
+                try {
+                    generateExcelReport(sessionId);
+                } catch (Exception e) {
+                    throw new IllegalStateException("Report generation failed: " + e.getMessage(), e);
+                }
+            });
+            transactionTemplate.executeWithoutResult(tx -> finalizeSession(sessionId, finishedJob));
             log.info("Batch completed, processed={}, failed={}", 
                     batchJobRepository.findById(job.getId()).map(BatchJob::getProcessed).orElse(0),
                     batchJobRepository.findById(job.getId()).map(BatchJob::getFailed).orElse(0));

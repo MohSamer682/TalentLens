@@ -1,9 +1,9 @@
 package com.resumescreener.api.auth;
 
 import com.resumescreener.api.auth.dto.*;
-import com.resumescreener.common.entity.User;
-import com.resumescreener.common.enums.Role;
-import com.resumescreener.common.repository.UserRepository;
+import com.resumescreener.common.user.User;
+import com.resumescreener.common.user.Role;
+import com.resumescreener.common.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -20,7 +20,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
             throw new EmailTakenException("Email already registered");
         }
 
@@ -51,7 +51,7 @@ public class AuthService {
             throw new BadCredentialsException("Invalid email or password");
         }
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(request.getEmail())
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
 
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());

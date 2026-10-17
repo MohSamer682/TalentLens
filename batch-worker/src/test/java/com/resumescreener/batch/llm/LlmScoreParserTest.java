@@ -1,6 +1,6 @@
 package com.resumescreener.batch.llm;
 
-import com.resumescreener.common.dto.LlmScoreDto;
+import com.resumescreener.common.llm.LlmScoreDto;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -99,5 +99,26 @@ class LlmScoreParserTest {
         assertThat(score.getJustification()).isEqualTo("No justification provided by LLM.");
         assertThat(score.getStrengths()).isEqualTo("No strengths provided by LLM.");
         assertThat(score.getGaps()).isEqualTo("No gaps provided by LLM.");
+    }
+
+    @Test
+    void toleratesThinkBlockUnknownKeysAndSingleStringSkills() {
+        String content = """
+                <think>draft {not json}</think>
+                {"technical_skills": 80.0, "experience": 70, "education": 60, "soft_skills": 50,
+                 "culture_fit": 40, "skills": "Java", "confidence": 0.9,
+                 "justification": "ok", "strengths": "s", "gaps": "g"}
+                """;
+
+        LlmScoreDto score = parser.parseContent(content);
+
+        assertThat(score.getTechnicalSkills()).isEqualTo(80);
+        assertThat(score.getSkills()).containsExactly("Java");
+    }
+
+    @Test
+    void malformedOutputIsRetryable() {
+        assertThatThrownBy(() -> parser.parseContent("sorry, no json"))
+                .isInstanceOf(LlmRetryableException.class);
     }
 }

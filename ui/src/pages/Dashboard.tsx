@@ -126,7 +126,7 @@ export default function Dashboard() {
 
           <div
             aria-hidden="true"
-            className="condensed hidden grid-cols-[minmax(0,1fr)_120px_90px_110px_minmax(150px,200px)_88px] gap-x-4 border-b border-line bg-sunken px-5 py-2 text-[13px] font-semibold uppercase tracking-wide text-ink-muted md:grid"
+            className="hidden grid-cols-[minmax(0,1fr)_120px_90px_110px_minmax(150px,200px)_88px] gap-x-4 border-b border-line bg-sunken px-5 py-2 text-[13px] font-medium text-ink-muted md:grid"
           >
             <span>Session</span>
             <span>Status</span>

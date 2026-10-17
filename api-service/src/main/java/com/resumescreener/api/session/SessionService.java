@@ -1,9 +1,10 @@
 package com.resumescreener.api.session;
 
 import com.resumescreener.api.common.ApiException;
-import com.resumescreener.common.entity.*;
-import com.resumescreener.common.enums.SessionStatus;
-import com.resumescreener.common.repository.*;
+import com.resumescreener.common.audit.*;
+import com.resumescreener.common.session.*;
+import com.resumescreener.common.user.*;
+import com.resumescreener.common.session.SessionStatus;
 import com.resumescreener.api.session.dto.*;
 import com.resumescreener.api.upload.MinioUploadService;
 import lombok.RequiredArgsConstructor;
@@ -24,9 +25,25 @@ public class SessionService {
     private final UserRepository userRepository;
     private final MinioUploadService minioUploadService;
 
+    /** Composite scores are weighted sums, so weights that do not total 100 push scores outside 0-100. */
+    private static void requireWeightsTotal100(WeightsDto w) {
+        double total = 0;
+        for (Double d : new Double[]{w.getTechnicalSkills(), w.getExperience(), w.getEducation(),
+                w.getSoftSkills(), w.getCultureFit()}) {
+            if (d == null) {
+                throw ApiException.validation("Weights are incomplete", "All five weights are required");
+            }
+            total += d;
+        }
+        if (Math.abs(total - 100.0) > 0.01) {
+            throw ApiException.validation("Weights must total 100", "Weights total " + total);
+        }
+    }
+
     @Transactional
     public ScreeningSession createSession(CreateSessionRequest request, String userEmail) {
-        User user = userRepository.findByEmail(userEmail)
+        if (request.getWeights() != null) requireWeightsTotal100(request.getWeights());
+        User user = userRepository.findByEmailIgnoreCase(userEmail)
                 .orElseThrow(() -> ApiException.notFound("User not found",
                         "No user exists for email " + userEmail));
 
@@ -56,6 +73,7 @@ public class SessionService {
 
     @Transactional
     public ScreeningSession updateSession(String id, CreateSessionRequest request, String userEmail) {
+        if (request.getWeights() != null) requireWeightsTotal100(request.getWeights());
         ScreeningSession session = getSession(id, userEmail);
         
         if (request.getTitle() != null) session.setTitle(request.getTitle());
@@ -79,14 +97,14 @@ public class SessionService {
     }
 
     public Page<ScreeningSession> getSessions(String userEmail, Pageable pageable) {
-        User user = userRepository.findByEmail(userEmail)
+        User user = userRepository.findByEmailIgnoreCase(userEmail)
                 .orElseThrow(() -> ApiException.notFound("User not found",
                         "No user exists for email " + userEmail));
         return sessionRepository.findByUserId(user.getId(), pageable);
     }
 
     public ScreeningSession getSession(String id, String userEmail) {
-        User user = userRepository.findByEmail(userEmail)
+        User user = userRepository.findByEmailIgnoreCase(userEmail)
                 .orElseThrow(() -> ApiException.notFound("User not found",
                         "No user exists for email " + userEmail));
         

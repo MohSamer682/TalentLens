@@ -103,15 +103,15 @@ export default function CandidateDetail() {
       <div className="mb-6 flex flex-wrap items-center gap-4">
         <span
           className={cn(
-            'condensed num flex size-14 shrink-0 items-center justify-center rounded-lg text-2xl font-bold',
-            inZone ? 'bg-accent text-accent-ink' : 'bg-sunken text-ink'
+            'display flex h-14 min-w-14 shrink-0 items-center justify-center px-2 text-[34px] font-bold',
+            inZone ? 'marker' : 'rounded-lg bg-sunken text-ink'
           )}
           aria-label={`Rank ${score.rank}`}
         >
           {score.rank}
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="break-words text-2xl font-bold tracking-tight sm:text-[28px]">{score.name || 'Name not found'}</h1>
+          <h1 className="break-words text-[26px] font-bold leading-tight sm:text-[32px]">{score.name || 'Name not found'}</h1>
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-muted">
             {score.email ? (
               <a href={`mailto:${score.email}`} className="inline-flex items-center gap-1.5 hover:text-ink">
@@ -121,13 +121,13 @@ export default function CandidateDetail() {
             ) : (
               <span>No email found in resume</span>
             )}
-            <span className={inZone ? 'font-semibold text-accent-text' : undefined}>
+            <span className={inZone ? 'font-semibold text-mark-text' : undefined}>
               {inZone ? `Inside the shortlist (top ${shortlist})` : `Below the shortlist line (top ${shortlist})`}
             </span>
           </p>
         </div>
         <div className="text-right">
-          <p className="num text-[32px] font-bold leading-none">{composite.toFixed(1)}</p>
+          <p className="display text-[40px] font-bold leading-none">{composite.toFixed(1)}</p>
           <p className="text-[13px] text-ink-muted">weighted score of 100</p>
         </div>
       </div>
@@ -141,7 +141,7 @@ export default function CandidateDetail() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b border-line bg-sunken">
-                  <tr className="condensed text-[13px] font-semibold uppercase tracking-wide text-ink-muted">
+                  <tr className="text-[13px] font-medium text-ink-muted">
                     <th scope="col" className="px-4 py-2 text-left sm:pl-5">Dimension</th>
                     <th scope="col" className="px-3 py-2 text-left">Score</th>
                     <th scope="col" className="px-3 py-2 text-right">Weight</th>
@@ -227,12 +227,12 @@ export default function CandidateDetail() {
 function ReasonList({ title, items, tone, empty }: { title: string; items: string[]; tone: 'accent' | 'danger'; empty: string }) {
   return (
     <div>
-      <h3 className="condensed mb-2 text-[13px] font-bold uppercase tracking-wide text-ink-muted">{title}</h3>
+      <h3 className="mb-2 text-sm font-semibold text-ink">{title}</h3>
       {items.length ? (
         <ul className="space-y-2 text-sm">
           {items.map((item, i) => (
             <li key={i} className="flex gap-2.5">
-              <span aria-hidden="true" className={cn('mt-[7px] size-1.5 shrink-0 rounded-full', tone === 'accent' ? 'bg-accent-bar' : 'bg-danger')} />
+              <span aria-hidden="true" className={cn('mt-[7px] size-1.5 shrink-0 rounded-full', tone === 'accent' ? 'bg-success' : 'bg-danger')} />
               <span>{item}</span>
             </li>
           ))}

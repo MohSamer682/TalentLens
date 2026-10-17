@@ -170,7 +170,7 @@ export default function NewSession() {
               key={label}
               aria-current={step === n ? 'step' : undefined}
               className={cn(
-                'condensed flex items-center gap-2 border-t-[3px] pt-2 text-[15px] font-semibold uppercase tracking-wide transition-colors duration-300',
+                'flex items-center gap-2 border-t-[3px] pt-2 text-sm font-semibold transition-colors duration-300',
                 step === n ? 'border-accent text-ink' : done ? 'border-accent/40 text-ink-muted' : 'border-line text-ink-muted'
               )}
             >
@@ -281,7 +281,7 @@ export default function NewSession() {
 
 const StepHeading = forwardRef<HTMLHeadingElement, { title: string; children: React.ReactNode }>(({ title, children }, ref) => (
   <div className="space-y-1">
-    <h1 ref={ref} tabIndex={-1} className="text-xl font-bold tracking-tight focus:outline-none">
+    <h1 ref={ref} tabIndex={-1} className="text-2xl font-bold leading-tight focus:outline-none">
       {title}
     </h1>
     <p className="text-sm text-ink-muted">{children}</p>

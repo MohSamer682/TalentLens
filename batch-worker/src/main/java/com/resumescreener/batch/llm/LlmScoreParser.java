@@ -1,7 +1,8 @@
 package com.resumescreener.batch.llm;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.resumescreener.common.dto.LlmScoreDto;
+import com.resumescreener.common.llm.LlmScoreDto;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -9,17 +10,22 @@ import java.util.ArrayList;
 @Component
 public class LlmScoreParser {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    // Models add extra keys or return a lone string for a list; neither should fail the candidate
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
 
     public LlmScoreDto parseContent(String content) {
         if (content == null || content.isBlank()) {
             throw new LlmException("LLM response content is empty");
         }
 
+        // Reasoning models prepend <think>...</think>, which may itself contain braces
+        content = content.replaceAll("(?s)<think>.*?</think>", "");
         int start = content.indexOf('{');
         int end = content.lastIndexOf('}');
         if (start == -1 || end == -1 || end <= start) {
-            throw new LlmException("No JSON object found in LLM response");
+            throw new LlmRetryableException("No JSON object found in LLM response");
         }
 
         String json = content.substring(start, end + 1);
@@ -27,7 +33,7 @@ public class LlmScoreParser {
         try {
             score = objectMapper.readValue(json, LlmScoreDto.class);
         } catch (Exception e) {
-            throw new LlmException("Failed to parse LLM JSON: " + e.getMessage(), e);
+            throw new LlmRetryableException("Failed to parse LLM JSON: " + e.getMessage(), e);
         }
 
         validateRange("technical_skills", score.getTechnicalSkills());
@@ -54,10 +60,10 @@ public class LlmScoreParser {
 
     private void validateRange(String field, Integer value) {
         if (value == null) {
-            throw new LlmException("Missing required LLM score field: " + field);
+            throw new LlmRetryableException("Missing required LLM score field: " + field);
         }
         if (value < 0 || value > 100) {
-            throw new LlmException("LLM score field out of range 0-100: " + field + "=" + value);
+            throw new LlmRetryableException("LLM score field out of range 0-100: " + field + "=" + value);
         }
     }
 

@@ -2,12 +2,12 @@ package com.resumescreener.api.admin;
 
 import com.resumescreener.api.common.ApiException;
 import com.resumescreener.api.common.ApiResponse;
-import com.resumescreener.api.config.AuditService;
-import com.resumescreener.common.entity.AuditEvent;
-import com.resumescreener.common.entity.User;
-import com.resumescreener.common.enums.Role;
-import com.resumescreener.common.repository.AuditEventRepository;
-import com.resumescreener.common.repository.UserRepository;
+import com.resumescreener.api.audit.AuditService;
+import com.resumescreener.common.audit.AuditEvent;
+import com.resumescreener.common.user.User;
+import com.resumescreener.common.user.Role;
+import com.resumescreener.common.audit.AuditEventRepository;
+import com.resumescreener.common.user.UserRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -45,7 +45,7 @@ public class AdminController {
             throw ApiException.validation("Role is required", "Request body had no role value");
         }
 
-        User caller = userRepository.findByEmail(auth.getName())
+        User caller = userRepository.findByEmailIgnoreCase(auth.getName())
                 .orElseThrow(() -> ApiException.notFound("Caller not found",
                         "No user exists for email " + auth.getName()));
 

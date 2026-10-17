@@ -1,41 +1,92 @@
-/* Self-hosted so no request leaves the company network for a font. Width axis drives the condensed table voice. */
-@import '@fontsource-variable/archivo/wdth.css';
+/* Self-hosted so no request leaves the company network for a font.
+   Schibsted Grotesk carries all reading; Geist Mono sets ranks and scores so figures align and weight can carry data. */
+@import '@fontsource-variable/schibsted-grotesk/index.css';
+@import '@fontsource-variable/geist-mono/index.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /* Results Night. Dark is the base; [data-theme='light'] is its mist-green twin. See DESIGN.md. */
   :root {
-    /* Shell: near-black with a green undertone */
-    --pitch: 11 20 18;          /* #0B1412 */
-    --pitch-raised: 27 40 36;   /* #1B2824 */
-    --pitch-ink: 157 184 174;   /* #9DB8AE, secondary text on pitch */
+    /* Shell and ground: graphite with a teal cast, separated by hairline seams rather than shadow */
+    --pitch: 8 12 11;           /* #080C0B shell */
+    --pitch-raised: 22 31 29;   /* #161F1D */
+    --pitch-ink: 139 155 150;   /* #8B9B96 */
 
-    --ground: 245 247 246;      /* #F5F7F6 page */
+    --ground: 12 17 16;         /* #0C1110 page */
+    --surface: 18 25 24;        /* #121918 panels */
+    --sunken: 9 13 12;          /* #090D0C table head, chips */
+    --line: 36 48 46;           /* #24302E hairline */
+    --line-strong: 62 78 75;    /* #3E4E4B */
+
+    --ink: 232 238 235;         /* #E8EEEB */
+    --ink-muted: 139 155 150;   /* #8B9B96, 6.4:1 on surface */
+
+    /* Actions are monochrome ink fills; blue is only for links, focus and data bars. */
+    --accent: 232 238 235;
+    --accent-strong: 255 255 255;
+    --accent-ink: 12 17 16;
+    --accent-text: 124 183 255; /* #7CB7FF links and focus */
+    --accent-bar: 124 183 255;  /* data bars */
+    --accent-soft: 21 33 49;
+
+    /* The call: saffron means shortlisted, nothing else. Dark text on the fill. */
+    --mark: 255 184 28;         /* #FFB81C */
+    --mark-soft: 40 31 8;       /* #281F08 */
+    --mark-ink: 28 20 0;
+    --mark-text: 255 200 70;
+
+    --success: 74 201 128;      /* ranked */
+    --success-soft: 15 42 28;
+    --info: 45 212 191;         /* scoring */
+    --info-soft: 10 42 40;
+    --warn: 240 140 64;
+    --warn-soft: 48 30 12;
+    --danger: 255 107 99;       /* failed */
+    --danger-soft: 52 20 20;
+
+    --shadow: 0 0 0;
+    color-scheme: dark;
+  }
+
+  [data-theme='light'] {
+    --pitch: 14 22 20;          /* #0E1614 shell stays dark: the board sits under a fixed bar */
+    --pitch-raised: 34 48 44;
+    --pitch-ink: 170 186 180;
+
+    --ground: 238 242 240;      /* #EEF2F0 mist */
     --surface: 255 255 255;
-    --sunken: 237 241 239;      /* #EDF1EF table head, chips */
-    --line: 223 229 226;        /* #DFE5E2 */
-    --line-strong: 194 203 199; /* #C2CBC7 */
+    --sunken: 228 234 231;
+    --line: 211 220 216;
+    --line-strong: 160 176 169;
 
-    --ink: 17 25 22;            /* #111916 */
-    --ink-muted: 94 107 102;    /* #5E6B66, 5.6:1 on white */
+    --ink: 14 22 20;
+    --ink-muted: 84 100 94;     /* 6.4:1 on white */
 
-    /* Mint emerald. Fills carry dark text; green text on light uses accent-text. */
-    --accent: 34 195 138;       /* #22C38A */
-    --accent-strong: 27 174 122;/* #1BAE7A */
-    --accent-ink: 4 36 27;      /* #04241B, 7.3:1 on accent */
-    --accent-text: 3 105 76;    /* #03694C, 6.7:1 on white */
-    --accent-bar: 21 154 107;   /* #159A6B */
-    --accent-soft: 227 248 238; /* #E3F8EE */
+    --accent: 14 22 20;
+    --accent-strong: 40 54 50;
+    --accent-ink: 255 255 255;
+    --accent-text: 30 95 200;   /* 6:1 on white */
+    --accent-bar: 52 120 220;
+    --accent-soft: 228 238 252;
 
-    --info: 29 95 168;          /* scoring */
-    --info-soft: 232 240 251;
-    --warn: 138 75 0;
-    --warn-soft: 251 241 222;
-    --danger: 180 35 24;
-    --danger-soft: 253 237 235;
+    --mark: 255 184 28;
+    --mark-soft: 255 240 200;
+    --mark-ink: 28 20 0;
+    --mark-text: 130 85 0;
 
+    --success: 22 120 70;
+    --success-soft: 223 243 231;
+    --info: 10 120 110;
+    --info-soft: 218 242 239;
+    --warn: 150 70 0;
+    --warn-soft: 251 238 220;
+    --danger: 190 35 30;
+    --danger-soft: 253 233 231;
+
+    --shadow: 14 22 20;
     color-scheme: light;
   }
 
@@ -50,7 +101,7 @@
   }
 
   ::selection {
-    background: rgb(var(--accent) / 0.3);
+    background: rgb(var(--mark) / 0.7);
     color: rgb(var(--ink));
   }
 
@@ -70,6 +121,16 @@
 
   h1, h2, h3 {
     text-wrap: balance;
+  }
+
+  h1 {
+    @apply font-display;
+    letter-spacing: -0.025em;
+  }
+
+  /* Browser surfaces themed from the palette */
+  * {
+    scrollbar-color: rgb(var(--line-strong)) transparent;
   }
 
   table {
@@ -101,9 +162,19 @@
 }
 
 @layer utilities {
-  /* The league-table voice: condensed, used for column heads, positions, nav and status. */
-  .condensed {
-    font-stretch: 72%;
+  /* Ranks and scores are set in mono so columns align and weight can encode the value. */
+  .display {
+    @apply font-mono;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  /* The call: a saffron chip on every shortlisted rank, so yellow always means "made the cut". */
+  .marker {
+    background: rgb(var(--mark));
+    border-radius: 4px;
+    color: rgb(var(--mark-ink));
+    box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.16);
   }
 
   .num {

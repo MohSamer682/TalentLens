@@ -3,23 +3,25 @@ package com.resumescreener.api.batch;
 import com.resumescreener.api.batch.dto.ExportResponse;
 import com.resumescreener.api.batch.dto.ProgressResponse;
 import com.resumescreener.api.batch.dto.ResumeDownloadResponse;
-import com.resumescreener.api.batch.dto.SessionActionResponse;
+import com.resumescreener.api.session.dto.SessionActionResponse;
 import com.resumescreener.api.common.ApiException;
 import com.resumescreener.api.common.ApiResponse;
 import com.resumescreener.api.session.SessionService;
 import com.resumescreener.api.upload.MinioUploadService;
-import com.resumescreener.common.dto.CandidateResultDto;
-import com.resumescreener.common.dto.CandidateScoreDetailDto;
-import com.resumescreener.common.dto.WeightsDto;
-import com.resumescreener.common.entity.*;
-import com.resumescreener.common.enums.CandidateStatus;
-import com.resumescreener.common.enums.SessionStatus;
-import com.resumescreener.common.repository.*;
+import com.resumescreener.common.session.CandidateResultDto;
+import com.resumescreener.common.session.CandidateScoreDetailDto;
+import com.resumescreener.common.session.WeightsDto;
+import com.resumescreener.common.audit.*;
+import com.resumescreener.common.session.*;
+import com.resumescreener.common.user.*;
+import com.resumescreener.common.session.CandidateStatus;
+import com.resumescreener.common.session.SessionStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -34,7 +36,7 @@ public class BatchController {
     private final CandidateRepository candidateRepository;
     private final CandidateScoreRepository candidateScoreRepository;
     private final MinioUploadService minioUploadService;
-    private final com.resumescreener.api.config.AuditService auditService;
+    private final com.resumescreener.api.audit.AuditService auditService;
 
     @PostMapping("/{id}/start")
     public ResponseEntity<ApiResponse<SessionActionResponse>> startBatch(
@@ -69,6 +71,7 @@ public class BatchController {
     }
 
     @GetMapping("/{id}/candidates")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Page<CandidateResultDto>>> getCandidates(
             @PathVariable String id,
             Pageable pageable,
@@ -83,6 +86,7 @@ public class BatchController {
     }
 
     @GetMapping("/{sessionId}/candidates/{candidateId}")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<CandidateScoreDetailDto>> getCandidateDetail(
             @PathVariable String sessionId,
             @PathVariable String candidateId,
@@ -94,6 +98,11 @@ public class BatchController {
                         "No score exists for candidate " + candidateId));
 
         Candidate c = score.getCandidate();
+        // The session check above only proves the caller owns sessionId, not that this candidate belongs to it
+        if (c.getSession() == null || !sessionId.equals(c.getSession().getId())) {
+            throw ApiException.notFound("Candidate score not found",
+                    "No score exists for candidate " + candidateId);
+        }
 
         CandidateScoreDetailDto dto = new CandidateScoreDetailDto(
                 score.getId(),

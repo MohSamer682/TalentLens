@@ -91,6 +91,26 @@ export interface ScreeningSession {
   candidateCount: number;
   reportFileKey?: string;
   lastErrorMessage?: string;
+  /** Present on the session detail response only */
+  llm?: LlmStatus;
+}
+
+export type LlmState =
+  | 'AVAILABLE'
+  | 'REACHABLE'
+  | 'MODEL_NOT_FOUND'
+  | 'AUTH_FAILED'
+  | 'UNREACHABLE'
+  | 'NOT_CONFIGURED'
+  | 'UNKNOWN';
+
+export interface LlmStatus {
+  model?: string;
+  provider?: string;
+  state: LlmState;
+  available: boolean;
+  message?: string;
+  checkedAt?: string;
 }
 
 export interface Candidate {

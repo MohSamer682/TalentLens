@@ -1,6 +1,6 @@
 package com.resumescreener.batch.llm;
 
-import com.resumescreener.common.dto.LlmScoreDto;
+import com.resumescreener.common.llm.LlmScoreDto;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -64,6 +65,9 @@ public class LlmClient {
         } catch (ResourceAccessException e) {
             log.warn("LLM connection failed: {}", e.getMessage());
             throw e;
+        } catch (HttpClientErrorException.TooManyRequests e) {
+            log.warn("LLM rate limited by provider (HTTP 429)");
+            throw new LlmRetryableException("LLM provider rate limit (HTTP 429)", e);
         } catch (RestClientResponseException e) {
             log.error("LLM provider error: HTTP {}", e.getStatusCode().value(), e);
             throw new LlmException("LLM provider error: HTTP " + e.getStatusCode().value(), e);
@@ -101,12 +105,12 @@ public class LlmClient {
 
     private String extractContent(LlmChatCompletionResponse response) {
         if (response == null || response.choices == null || response.choices.isEmpty()) {
-            throw new LlmException("No choices in LLM response");
+            throw new LlmRetryableException("No choices in LLM response");
         }
 
         Choice firstChoice = response.choices.get(0);
         if (firstChoice == null || firstChoice.message == null || isBlank(firstChoice.message.content)) {
-            throw new LlmException("No content in LLM response choice");
+            throw new LlmRetryableException("No content in LLM response choice");
         }
 
         return firstChoice.message.content;

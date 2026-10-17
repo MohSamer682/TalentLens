@@ -2,7 +2,7 @@ package com.resumescreener.batch.llm;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.resumescreener.common.dto.LlmScoreDto;
+import com.resumescreener.common.llm.LlmScoreDto;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;

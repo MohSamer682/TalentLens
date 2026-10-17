@@ -1,13 +1,14 @@
 package com.resumescreener.api.batch;
 
+import com.resumescreener.api.common.ApiException;
 import com.resumescreener.api.common.ApiResponse;
 import com.resumescreener.api.session.SessionService;
-import com.resumescreener.common.dto.CandidateResultDto;
-import com.resumescreener.common.entity.Candidate;
-import com.resumescreener.common.entity.CandidateScore;
-import com.resumescreener.common.entity.ScreeningSession;
-import com.resumescreener.common.repository.CandidateRepository;
-import com.resumescreener.common.repository.CandidateScoreRepository;
+import com.resumescreener.common.session.CandidateResultDto;
+import com.resumescreener.common.session.Candidate;
+import com.resumescreener.common.session.CandidateScore;
+import com.resumescreener.common.session.ScreeningSession;
+import com.resumescreener.common.session.CandidateRepository;
+import com.resumescreener.common.session.CandidateScoreRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -19,6 +20,7 @@ import java.lang.reflect.Proxy;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BatchControllerTest {
@@ -71,6 +73,24 @@ class BatchControllerTest {
         assertEquals(64.0, dto.getSoftSkills());
         assertEquals(55.0, dto.getCultureFit());
         assertEquals(78.25, dto.getCompositeScore());
+    }
+
+    @Test
+    void candidateDetailRejectsCandidateFromAnotherSession() {
+        Candidate foreign = Candidate.builder()
+                .id("candidate-9")
+                .session(ScreeningSession.builder().id("someone-elses-session").build())
+                .build();
+        CandidateScore score = CandidateScore.builder().id("score-9").candidate(foreign).build();
+        CandidateScoreRepository scores = (CandidateScoreRepository) Proxy.newProxyInstance(
+                CandidateScoreRepository.class.getClassLoader(),
+                new Class<?>[]{CandidateScoreRepository.class},
+                (proxy, method, args) -> "findByCandidateId".equals(method.getName()) ? List.of(score) : null);
+        BatchController controller = new BatchController(
+                null, new AuthorizingSessionService(), null, scores, null, null);
+
+        assertThrows(ApiException.class, () -> controller.getCandidateDetail(
+                "session-1", "candidate-9", new TestingAuthenticationToken("recruiter@example.com", null)));
     }
 
     private static CandidateRepository candidateRepositoryThatMustNotServeScores() {

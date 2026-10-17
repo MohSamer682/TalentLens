@@ -2,7 +2,7 @@ package com.resumescreener.api.auth;
 
 import com.resumescreener.api.auth.dto.*;
 import com.resumescreener.api.common.ApiResponse;
-import com.resumescreener.api.config.AuditService;
+import com.resumescreener.api.audit.AuditService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

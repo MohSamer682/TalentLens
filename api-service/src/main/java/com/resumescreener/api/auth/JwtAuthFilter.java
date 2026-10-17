@@ -1,6 +1,6 @@
 package com.resumescreener.api.auth;
 
-import com.resumescreener.api.config.RequestIdFilter;
+import com.resumescreener.api.common.RequestIdFilter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
