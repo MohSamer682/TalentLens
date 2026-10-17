@@ -11,7 +11,7 @@ Requested by Muhammed on 2026-10-17. This is the spec the four plans below argue
 
 Order: F5 first so every new screen is built on the new materials; F8 last because it reports on the stages F7 creates. One branch and one PR per feature, each stacked on the previous one. The cycle stays: plan approval, implementation, tests, UAT, smoke test, PR.
 
-Every PR body links back to where the work happened: the project thread link (already in the attribution line) **and the Claude Code session link** (`https://claude.ai/code/session_…` of the session that built it), on its own line before the closing "Built by Mohamed Samer with Claude Code". F1 to F4's ready-made bodies in `feature-branches/PULL-REQUESTS.md` get the same line when they are opened.
+Every PR body links back to where the work happened: the project thread link (already in the attribution line) **and the Claude Code session link** as a labelled link, `[Claude Code session](https://claude.ai/code/session_…)` for the session that built it, on its own line before the closing "Built by Mohamed Samer with Claude Code". F1 to F4's ready-made bodies in `feature-branches/PULL-REQUESTS.md` end with the session URL as bare text; it becomes the same labelled link when they are opened.
 
 Mockups for every new and changed screen: [TalentLens designs](https://claude.ai/artifact/PSLJQvTKcKs4zHHnbSprTH) (brand and materials, analytics, candidate page, pipeline, my interviews, interview feedback).
 
