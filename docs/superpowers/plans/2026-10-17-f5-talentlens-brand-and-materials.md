@@ -14,7 +14,7 @@
 
 - **Design spec is binding:** before coding any screen, analyse its artboard in the TalentLens designs (canvas or PDF) against [2026-10-17-talentlens-design-spec.md](2026-10-17-talentlens-design-spec.md), and finish with that spec's section 5 acceptance checklist in the PR. A screen that does not match its design is not done.
 - Branch `feat/talentlens-materials` from `feat/roles-and-permissions`. One PR. The only backend change is migration `V8__hr_chief_view_only.sql` (Task 5).
-- The PR body carries the project thread link and the Claude Code session link (see the brief).
+- The PR body carries no Claude Code session link or anything tied to the session (see the brief).
 - Product name in user-visible text: `TalentLens` (one word, capital T and L). Never "Talent Lens" or "Talentlens".
 - Do not rename Maven modules, Java packages, `resume-screener-ui` package name, Docker services or database names.
 - Dark colour tokens are unchanged except one new token `--surface-raised` (dark `24 33 31` #18211F, light `255 255 255`). Light tokens change as listed in Task 4.
