@@ -88,8 +88,11 @@ public class SessionController {
             weightsDto.setCultureFit(weights.getCultureFit());
         }
         int count = (int) candidateRepository.countBySessionId(session.getId());
-        return new SessionResponse(session.getId(), session.getTitle(), session.getDescription(),
+        SessionResponse response = new SessionResponse(session.getId(), session.getTitle(), session.getDescription(),
                 session.getStatus(), session.getJdFileKey(), session.getCreatedAt(), session.getCompletedAt(),
                 weightsDto, count, session.getLastErrorMessage(), session.getReportFileKey());
+        response.setShortlistedCount((int) candidateRepository.countBySessionIdAndReviewStatus(
+                session.getId(), ReviewStatus.SHORTLISTED));
+        return response;
     }
 }

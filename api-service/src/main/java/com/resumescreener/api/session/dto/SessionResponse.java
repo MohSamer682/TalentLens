@@ -19,6 +19,7 @@ public class SessionResponse {
     private Integer candidateCount;
     private String lastErrorMessage;
     private String reportFileKey;
+    private Integer shortlistedCount;
     /** Model the batch worker scores with and whether it is reachable; set on the session detail only */
     private LlmStatusDto llm;
 
