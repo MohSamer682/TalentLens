@@ -78,7 +78,7 @@ Then open:
 | MinIO console | http://localhost:9001 |
 | Adminer (DB browser) | http://localhost:8085 |
 
-The **first account you register becomes the admin**; later accounts are recruiters. Admins manage roles from the Admin screen. To try the flow, use the fictional files in [`samples/`](samples) (`JD.pdf`, `Resume.pdf`).
+The **first account you register becomes the admin**; later accounts are recruiters. Admins manage roles from the Users screen and can make someone an HR chief, who sees the Analytics page (sessions, scored and shortlisted resumes, score bands and per-recruiter throughput for the last 30, 90 or 365 days) but cannot manage users. To try the flow, use the fictional files in [`samples/`](samples) (`JD.pdf`, `Resume.pdf`).
 
 ## Local development
 
@@ -114,6 +114,7 @@ All endpoints except register and login need `Authorization: Bearer <token>`. Re
 | GET | `/api/sessions/{id}/export` | Excel report |
 | GET, PATCH | `/api/admin/users`, `/api/admin/users/{id}/role` | User management (admin only) |
 | GET | `/api/admin/audit` | Audit log (admin only) |
+| GET | `/api/analytics/overview?days=30\|90\|365` | Recruiting analytics (admin and HR chief) |
 
 The worker's `/internal/**` endpoints require the shared secret and are not for clients.
 

@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ProtectedRoute, AdminRoute } from '@/components/ProtectedRoute';
+import { ProtectedRoute, RoleRoute } from '@/components/ProtectedRoute';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import Dashboard from '@/pages/Dashboard';
@@ -7,6 +7,7 @@ import NewSession from '@/pages/NewSession';
 import SessionDetail from '@/pages/SessionDetail';
 import CandidateDetail from '@/pages/CandidateDetail';
 import AdminUsers from '@/pages/AdminUsers';
+import Analytics from '@/pages/Analytics';
 
 export default function App() {
   return (
@@ -48,9 +49,17 @@ export default function App() {
       <Route
         path="/admin/users"
         element={
-          <AdminRoute>
+          <RoleRoute roles={['ADMIN']}>
             <AdminUsers />
-          </AdminRoute>
+          </RoleRoute>
+        }
+      />
+      <Route
+        path="/analytics"
+        element={
+          <RoleRoute roles={['ADMIN', 'HR_CHIEF']}>
+            <Analytics />
+          </RoleRoute>
         }
       />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

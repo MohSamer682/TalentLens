@@ -76,11 +76,13 @@ export interface Page<T> {
   size: number;
 }
 
+export type Role = 'ADMIN' | 'HR_CHIEF' | 'RECRUITER';
+
 export interface User {
   id: string;
   email: string;
   fullName: string;
-  role: 'ADMIN' | 'RECRUITER';
+  role: Role;
   createdAt: string;
 }
 
@@ -207,4 +209,31 @@ export interface CreateSessionRequest {
   title: string;
   description?: string;
   weights: Weights;
+}
+
+export interface AnalyticsTotals {
+  sessions: number;
+  sessionsByStatus: Record<ScreeningSession['status'], number>;
+  resumesUploaded: number;
+  resumesScored: number;
+  resumesUnreadable: number;
+  shortlisted: number;
+  shortlistRate: number | null;
+  medianHoursToRanked: number | null;
+}
+
+export interface AnalyticsOverview {
+  from: string;
+  to: string;
+  totals: AnalyticsTotals;
+  weeks: { weekStart: string; sessionsCreated: number; resumesScored: number; shortlisted: number }[];
+  scoreBands: { label: string; count: number }[];
+  recruiters: {
+    userId: string;
+    fullName: string;
+    sessions: number;
+    resumesScored: number;
+    shortlisted: number;
+    medianHoursToRanked: number | null;
+  }[];
 }

@@ -7,7 +7,7 @@ import { Alert, SkeletonRows } from '@/components/ui/Feedback';
 import { Pagination } from '@/components/ui/Pagination';
 import { Button } from '@/components/ui/Button';
 import { MainLayout, PageHeader } from '@/layouts/MainLayout';
-import { formatDate, formatRelativeDate, getInitials } from '@/lib/utils';
+import { ROLE_LABEL, formatDate, formatRelativeDate, getInitials } from '@/lib/utils';
 import { stagger } from '@/lib/motion';
 
 const PAGE_SIZE = 20;
@@ -115,8 +115,11 @@ export default function AdminUsers() {
                           onChange={(e) => handleRoleChange(user.id, e.target.value as User['role'])}
                           className="h-8 rounded-md border border-line-strong bg-surface px-2 text-sm font-semibold focus:border-accent-text focus:outline-none focus:ring-4 focus:ring-accent/25 disabled:bg-sunken disabled:text-ink-muted"
                         >
-                          <option value="RECRUITER">Recruiter</option>
-                          <option value="ADMIN">Admin</option>
+                          {(Object.keys(ROLE_LABEL) as User['role'][]).map((r) => (
+                            <option key={r} value={r}>
+                              {ROLE_LABEL[r]}
+                            </option>
+                          ))}
                         </select>
                       </td>
                     </tr>

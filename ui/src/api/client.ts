@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import type {
+  AnalyticsOverview,
   ApiError,
   ApiResponse,
   AuthResponse,
@@ -16,6 +17,7 @@ import type {
   ResumeFile,
   ReviewResult,
   ReviewStatus,
+  Role,
   ScoringScope,
   ScreeningSession,
   SessionActionResponse,
@@ -185,10 +187,14 @@ export const candidatesApi = {
     api.post<ReviewResult>(`/sessions/${sessionId}/shortlist/top`, { count }),
 };
 
+export const analyticsApi = {
+  overview: (days: 30 | 90 | 365) => api.get<AnalyticsOverview>('/analytics/overview', { params: { days } }),
+};
+
 export const adminApi = {
   listUsers: (page = 0, size = 20) =>
     api.get<Page<User>>('/admin/users', { params: { page, size } }),
-  updateRole: (userId: string, role: 'ADMIN' | 'RECRUITER') =>
+  updateRole: (userId: string, role: Role) =>
     api.patch<User>(`/admin/users/${userId}/role`, { role }),
 };
 

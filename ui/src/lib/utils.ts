@@ -1,6 +1,8 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import type { Weights } from '@/types';
+import type { Role, Weights } from '@/types';
+
+export const ROLE_LABEL: Record<Role, string> = { ADMIN: 'Admin', HR_CHIEF: 'HR chief', RECRUITER: 'Recruiter' };
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

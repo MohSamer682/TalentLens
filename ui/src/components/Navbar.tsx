@@ -2,7 +2,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { ListOrdered, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { cn } from '@/lib/utils';
+import { ROLE_LABEL, cn } from '@/lib/utils';
 
 export function Navbar() {
   const { user, logout } = useAuthStore();
@@ -28,6 +28,7 @@ export function Navbar() {
 
   const links = [
     { to: '/dashboard', label: 'Sessions', match: ['/dashboard', '/sessions'] },
+    ...(user?.role === 'ADMIN' || user?.role === 'HR_CHIEF' ? [{ to: '/analytics', label: 'Analytics', match: ['/analytics'] }] : []),
     ...(user?.role === 'ADMIN' ? [{ to: '/admin/users', label: 'Users', match: ['/admin'] }] : []),
   ];
 
@@ -63,7 +64,7 @@ export function Navbar() {
           {user && (
             <div className="hidden text-right leading-tight sm:block">
               <p className="text-sm font-semibold">{user.fullName}</p>
-              <p className="text-xs text-pitch-ink">{user.role === 'ADMIN' ? 'Admin' : 'Recruiter'}</p>
+              <p className="text-xs text-pitch-ink">{ROLE_LABEL[user.role]}</p>
             </div>
           )}
           <button

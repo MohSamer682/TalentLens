@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import type { Role } from '@/types';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
@@ -12,11 +13,11 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export function AdminRoute({ children }: { children: React.ReactNode }) {
+export function RoleRoute({ roles, children }: { roles: Role[]; children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const location = useLocation();
 
-  if (user?.role !== 'ADMIN') {
+  if (!user || !roles.includes(user.role)) {
     return <Navigate to="/dashboard" state={{ from: location }} replace />;
   }
 
