@@ -95,13 +95,13 @@ public class MinioUploadService {
         List<RejectedFile> rejected = new ArrayList<>(intake.rejected());
         List<String> candidateIds = new ArrayList<>();
         Set<String> seenInRequest = new HashSet<>();
-        int duplicates = 0;
+        List<String> duplicates = new ArrayList<>();
         long room = MAX_RESUMES_PER_SESSION - candidateRepository.countBySessionId(sessionId);
 
         for (IncomingResume resume : intake.accepted()) {
             if (!seenInRequest.add(resume.sha256())
                     || candidateRepository.existsBySessionIdAndContentHash(sessionId, resume.sha256())) {
-                duplicates++;
+                duplicates.add(resume.fileName());
                 continue;
             }
             if (candidateIds.size() >= room) {
@@ -135,7 +135,7 @@ public class MinioUploadService {
             } catch (DataIntegrityViolationException e) {
                 // A concurrent upload stored the same file first; the unique index caught it
                 removeObjectQuietly(key);
-                duplicates++;
+                duplicates.add(resume.fileName());
                 continue;
             }
             candidateIds.add(candidate.getId());

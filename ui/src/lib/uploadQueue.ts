@@ -31,8 +31,8 @@ export type OnUpdate = (fileName: string, outcome: FileOutcome, reason?: string)
 
 /**
  * Sends files chunk by chunk. A failed request marks its chunk `failed` and moves on, so one bad
- * request never loses the rest of the batch. The server reports duplicates only as a count, and
- * rejected ZIP entries under their own names, which the caller may not have queued.
+ * request never loses the rest of the batch. The server reports rejected ZIP entries under their
+ * own names, which the caller may not have queued.
  */
 export async function uploadInChunks(
   sessionId: string,
@@ -45,10 +45,11 @@ export async function uploadInChunks(
     try {
       const { data } = await sessionsApi.uploadResumes(sessionId, chunk);
       summary.added += data.uploadedCount;
-      summary.duplicates += data.duplicateCount;
+      summary.duplicates += data.duplicates.length;
       const rejected = new Map(data.rejected.map((r) => [r.fileName, r.reason]));
+      const duplicates = new Set(data.duplicates);
       chunk.forEach((f) => {
-        if (!rejected.has(f.name)) onUpdate(f.name, 'added');
+        if (!rejected.has(f.name)) onUpdate(f.name, duplicates.has(f.name) ? 'duplicate' : 'added');
       });
       rejected.forEach((reason, name) => onUpdate(name, 'rejected', reason));
     } catch (error) {

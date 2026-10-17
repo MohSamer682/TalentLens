@@ -21,7 +21,7 @@ describe('uploadInChunks', () => {
     const upload = vi.mocked(sessionsApi.uploadResumes);
     upload
       .mockResolvedValueOnce({
-        data: { sessionId: 's1', uploadedCount: 24, candidateIds: [], duplicateCount: 0,
+        data: { sessionId: 's1', uploadedCount: 23, candidateIds: [], duplicates: ['r1.pdf'],
           rejected: [{ fileName: 'r3.pdf', reason: 'Not a PDF' }, { fileName: 'notes.txt', reason: 'Not a PDF' }] },
       } as never)
       .mockRejectedValueOnce(new Error('Cannot reach the server'));
@@ -29,7 +29,8 @@ describe('uploadInChunks', () => {
 
     const summary = await uploadInChunks('s1', make(30, 1), (name, outcome) => seen.set(name, outcome));
 
-    expect(summary.added).toBe(24);
+    expect(summary).toEqual({ added: 23, duplicates: 1 });
+    expect(seen.get('r1.pdf')).toBe('duplicate');
     expect(seen.get('r3.pdf')).toBe('rejected');
     expect(seen.get('notes.txt')).toBe('rejected');
     expect(seen.get('r0.pdf')).toBe('added');

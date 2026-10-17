@@ -15,7 +15,7 @@ public class UploadResumesResponse {
     private String sessionId;
     private int uploadedCount;
     private List<String> candidateIds;
-    /** Files skipped because the same file is already in the session */
-    private int duplicateCount;
+    /** Names of files skipped because the same file is already in the session */
+    private List<String> duplicates;
     private List<RejectedFile> rejected;
 }

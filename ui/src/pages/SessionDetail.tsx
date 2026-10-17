@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Download, Minus, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import { Download, FilePlus2, Minus, Pencil, Play, Plus, RefreshCw, RotateCcw, Trash2, X } from 'lucide-react';
 import { apiErrorMessage, sessionsApi } from '@/api/client';
 import type { CandidateResultDto, LlmState, LlmStatus, ProgressResponse, ScreeningSession } from '@/types';
 import { Button, buttonVariants } from '@/components/ui/Button';
@@ -10,6 +10,7 @@ import { Alert, ConfirmButton, SkeletonRows } from '@/components/ui/Feedback';
 import { useCountUp } from '@/lib/motion';
 import { Pagination } from '@/components/ui/Pagination';
 import { StandingsTable } from '@/components/StandingsTable';
+import { ResumeList } from '@/components/ResumeList';
 import { MainLayout, PageHeader } from '@/layouts/MainLayout';
 import { DIMENSIONS, formatDate, readShortlistSize, writeShortlistSize } from '@/lib/utils';
 
@@ -78,7 +79,8 @@ export default function SessionDetail() {
       active = false;
       clearInterval(timer);
     };
-  }, [id, session?.status, loadData]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Keyed on the session object so every reload (after scoring, adding or removing resumes) refreshes counts
+  }, [id, session, loadData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const act = async (action: () => Promise<void>, fallback: string) => {
     setActionError(null);
@@ -141,6 +143,10 @@ export default function SessionDetail() {
 
   const failed = progress?.failed ?? 0;
   const remaining = progress ? Math.max(0, progress.total - progress.processed - progress.failed) : 0;
+  const unscored = progress ? Math.max(0, progress.total - progress.processed) : 0;
+  const finished = session.status === 'DONE' || session.status === 'FAILED';
+  const score = (scope: 'UNSCORED' | 'ALL') =>
+    act(async () => { await sessionsApi.start(session.id, scope); await loadData(); }, 'Could not start scoring');
 
   return (
     <MainLayout>
@@ -178,6 +184,21 @@ export default function SessionDetail() {
                 onConfirm={() => act(async () => { await sessionsApi.cancel(session.id); await loadData(); }, 'Could not stop scoring')}
               />
             )}
+            {finished && (
+              <Link to={`/sessions/new/${session.id}?step=2`} className={buttonVariants({ variant: 'secondary' })}>
+                <FilePlus2 />
+                Add resumes
+              </Link>
+            )}
+            {finished && (progress?.total ?? 0) > 0 && (
+              <ConfirmButton
+                label="Re-score all"
+                confirmLabel={`Re-score all ${progress?.total} resumes`}
+                icon={<RefreshCw />}
+                disabled={busy}
+                onConfirm={() => score('ALL')}
+              />
+            )}
             <ConfirmButton
               label="Delete"
               confirmLabel="Delete session"
@@ -185,8 +206,14 @@ export default function SessionDetail() {
               disabled={busy}
               onConfirm={() => act(async () => { await sessionsApi.delete(session.id); navigate('/dashboard'); }, 'Could not delete the session')}
             />
+            {session.status === 'DONE' && unscored > 0 && (
+              <Button onClick={() => score('UNSCORED')} disabled={busy}>
+                <Play />
+                Score {unscored} unscored resume{unscored === 1 ? '' : 's'}
+              </Button>
+            )}
             {session.status === 'DONE' && (
-              <Button onClick={handleExport} disabled={busy || !session.reportFileKey} title={session.reportFileKey ? undefined : 'The report is still being generated'}>
+              <Button variant={unscored > 0 ? 'secondary' : 'primary'} onClick={handleExport} disabled={busy || !session.reportFileKey} title={session.reportFileKey ? undefined : 'The report is still being generated'}>
                 <Download />
                 Download Excel report
               </Button>
@@ -243,7 +270,7 @@ export default function SessionDetail() {
                 variant="secondary"
                 size="sm"
                 disabled={busy}
-                onClick={() => act(async () => { await sessionsApi.start(session.id); await loadData(); }, 'Could not restart scoring')}
+                onClick={() => score('UNSCORED')}
               >
                 <RotateCcw />
                 Retry
@@ -313,10 +340,23 @@ export default function SessionDetail() {
             </>
           ) : (
             <p className="px-5 py-12 text-center text-sm text-ink-muted">
-              No resume could be scored in this session. Check that the files are text-based PDFs, then edit the session and re-upload.
+              No resume could be scored in this session. Check that the files are text-based PDFs, then remove them and add new ones.
             </p>
           )}
         </Panel>
+      )}
+
+      {finished && failed > 0 && (
+        <div className="mt-4">
+          <ResumeList
+            sessionId={session.id}
+            status="FAILED"
+            title={(n) => `${n} resume${n === 1 ? '' : 's'} could not be read`}
+            canRemove
+            refreshKey={session}
+            onRemoved={loadData}
+          />
+        </div>
       )}
     </MainLayout>
   );

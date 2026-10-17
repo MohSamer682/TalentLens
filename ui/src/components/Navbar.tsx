@@ -34,14 +34,14 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-pitch text-white">
       <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-2 px-4 sm:gap-6 sm:px-6">
-        <Link to="/dashboard" className="flex shrink-0 items-center gap-2 rounded-md">
+        <Link to="/dashboard" aria-label="Resume Screener, all sessions" className="flex shrink-0 items-center gap-2 rounded-md">
           <span className="flex size-7 items-center justify-center rounded bg-mark text-mark-ink" aria-hidden="true">
             <ListOrdered className="size-4" />
           </span>
-          <span className="whitespace-nowrap font-display text-base font-bold tracking-tight sm:text-[17px]">Resume Screener</span>
+          <span className="hidden whitespace-nowrap font-display text-[17px] font-bold tracking-tight sm:inline">Resume Screener</span>
         </Link>
 
-        <nav aria-label="Main" className="flex items-center self-stretch sm:gap-1">
+        <nav aria-label="Main" className="flex min-w-0 items-center self-stretch overflow-x-auto [scrollbar-width:none] sm:gap-1">
           {links.map((l) => (
             <NavLink
               key={l.to}
@@ -49,7 +49,7 @@ export function Navbar() {
               className={({ isActive }) => {
                 const active = isActive || l.match.some((m) => pathname.startsWith(m));
                 return cn(
-                  'relative flex h-14 items-center px-2.5 text-[15px] font-semibold transition-colors after:absolute after:inset-x-2.5 after:bottom-0 after:h-[3px] after:rounded-t-sm after:transition-colors sm:px-3',
+                  'relative flex h-14 shrink-0 items-center px-2.5 text-[15px] font-semibold transition-colors after:absolute after:inset-x-2.5 after:bottom-0 after:h-[3px] after:rounded-t-sm after:transition-colors sm:px-3',
                   active ? 'text-white after:bg-mark' : 'text-pitch-ink after:bg-transparent hover:text-white'
                 );
               }}
@@ -59,7 +59,7 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
           {user && (
             <div className="hidden text-right leading-tight sm:block">
               <p className="text-sm font-semibold">{user.fullName}</p>
@@ -77,7 +77,7 @@ export function Navbar() {
           <button
             type="button"
             onClick={handleLogout}
-            className="flex h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold text-pitch-ink transition-colors hover:bg-pitch-raised hover:text-white"
+            className="flex h-9 min-w-9 items-center justify-center gap-2 rounded-md px-2 text-sm sm:px-3 font-semibold text-pitch-ink transition-colors hover:bg-pitch-raised hover:text-white"
           >
             <LogOut className="size-4" aria-hidden="true" />
             <span className="hidden sm:inline">Sign out</span>

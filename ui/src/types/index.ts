@@ -34,7 +34,7 @@ export interface UploadResumesResponse {
   sessionId: string;
   uploadedCount: number;
   candidateIds: string[];
-  duplicateCount: number;
+  duplicates: string[];
   rejected: { fileName: string; reason: string }[];
 }
 

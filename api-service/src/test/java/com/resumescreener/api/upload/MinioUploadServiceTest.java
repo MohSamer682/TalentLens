@@ -75,7 +75,7 @@ class MinioUploadServiceTest {
                 "recruiter@example.com");
 
         assertEquals(1, result.getUploadedCount());
-        assertEquals(2, result.getDuplicateCount());
+        assertEquals(java.util.List.of("old.pdf", "new-copy.pdf"), result.getDuplicates());
     }
 
     @Test

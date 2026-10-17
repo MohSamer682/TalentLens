@@ -49,7 +49,7 @@ public class UploadController {
         // Type and size are checked per file inside the service, so one bad file never sinks the batch
         UploadResumesResponse data = uploadService.uploadResumes(id, files, auth.getName());
         auditService.record("RESUME_UPLOAD", "session", id, "success",
-                data.getUploadedCount() + " added, " + data.getDuplicateCount() + " duplicates, "
+                data.getUploadedCount() + " added, " + data.getDuplicates().size() + " duplicates, "
                         + data.getRejected().size() + " rejected");
         return ResponseEntity.ok(ApiResponse.success("Resumes uploaded", data));
     }
