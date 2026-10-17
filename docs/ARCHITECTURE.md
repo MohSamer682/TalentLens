@@ -108,11 +108,11 @@ Adding features:
 |---|---|---|
 | New scoring criteria | Yes | A column in `ScoringWeights`/`CandidateScore`, prompt and parser line, UI slider; blocked by gap 6 for safe schema change |
 | Another LLM provider | Yes | Config only if OpenAI-compatible; otherwise a second `LlmClient` behind a small interface |
-| New file types (DOCX) | Yes | Extend `PdfTextExtractor` and the upload check (use magic bytes, not `Content-Type`) |
+| New file types (DOCX) | Yes | Extend `PdfTextExtractor` and `ResumeIntake` (it checks magic bytes, not `Content-Type`) |
 | Bigger batches or parallel sessions | No | Gaps 4, 5 |
 | Multi-tenant / teams | No | Ownership is per user today; needs an org model and gap 1 fixed everywhere |
 | Email or webhook on completion | Partly | Add after gap 4 so "done" is trustworthy |
-| Candidate re-screen with new JD | Partly | Upload replaces and deletes data today; needs versioned runs |
+| Candidate re-screen with new JD | Partly | Uploads append and "Re-score all" exists; a new JD still overwrites scores, so versioned runs are needed to keep history |
 
 ## Suggested order
 

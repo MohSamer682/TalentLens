@@ -106,8 +106,9 @@ All endpoints except register and login need `Authorization: Bearer <token>`. Re
 |---|---|---|
 | POST | `/api/auth/register`, `/api/auth/login` | Create an account, get a JWT |
 | POST, GET, PATCH, DELETE | `/api/sessions`, `/api/sessions/{id}` | Manage sessions and weights; the detail response includes the LLM status |
-| POST | `/api/sessions/{id}/jd`, `/api/sessions/{id}/resumes` | Upload the job description and resumes (PDF) |
-| POST | `/api/sessions/{id}/start`, `/api/sessions/{id}/cancel` | Start or cancel scoring |
+| POST | `/api/sessions/{id}/jd`, `/api/sessions/{id}/resumes` | Upload the job description; add resumes (PDFs or a ZIP of PDFs, up to 1000 per session). Duplicates are skipped and bad files reported per file |
+| GET, DELETE | `/api/sessions/{id}/resumes?status=`, `/api/sessions/{id}/candidates/{candidateId}` | List a session's resumes with processing status and failure reason; remove one |
+| POST | `/api/sessions/{id}/start?scope=UNSCORED\|ALL`, `/api/sessions/{id}/cancel` | Score unscored resumes (default) or re-score all; cancel scoring |
 | GET | `/api/sessions/{id}/progress` | Live progress |
 | GET | `/api/sessions/{id}/candidates`, `.../candidates/{candidateId}` | Ranked results and detail |
 | GET | `/api/sessions/{id}/export` | Excel report |
