@@ -384,14 +384,70 @@ export interface AnalyticsTotals {
   shortlisted: number;
   shortlistRate: number | null;
   medianHoursToRanked: number | null;
+  interviewsCompleted?: number;
+  offersApproved?: number;
+  medianDaysShortlistToOffer?: number | null;
+}
+
+export interface AnalyticsPriorTotals {
+  resumesScored: number;
+  shortlistRate: number | null;
+  interviewsCompleted: number;
+  offersApproved: number;
+  medianDaysShortlistToOffer: number | null;
+}
+
+export interface FunnelStep {
+  stage: string;
+  label: string;
+  count: number;
+  conversionRate: number | null;
+  dropOff: number;
+}
+
+export interface StageWait {
+  stage: string;
+  label: string;
+  medianDays: number | null;
+  p90Days: number | null;
+}
+
+export interface InterviewerStat {
+  userId: string;
+  fullName: string;
+  role: string;
+  interviewsDone: number;
+  medianHoursToFeedback: number | null;
+  meanRating: number | null;
+  strongHireCount: number;
+  hireCount: number;
+  noHireCount: number;
+  strongNoHireCount: number;
 }
 
 export interface AnalyticsOverview {
   from: string;
   to: string;
   totals: AnalyticsTotals;
-  weeks: { weekStart: string; sessionsCreated: number; resumesScored: number; shortlisted: number }[];
-  scoreBands: { label: string; count: number }[];
+  priorTotals?: AnalyticsPriorTotals | null;
+  funnel?: FunnelStep[];
+  stageWaits?: StageWait[];
+  weeks: {
+    weekStart: string;
+    sessionsCreated: number;
+    resumesScored: number;
+    shortlisted: number;
+    interviewsCompleted?: number;
+    offersApproved?: number;
+  }[];
+  scoreBands: {
+    label: string;
+    count: number;
+    shortlistRate?: number | null;
+    hireRate?: number | null;
+    interviewed?: number;
+  }[];
+  interviewers?: InterviewerStat[];
   recruiters: {
     userId: string;
     fullName: string;
@@ -399,5 +455,8 @@ export interface AnalyticsOverview {
     resumesScored: number;
     shortlisted: number;
     medianHoursToRanked: number | null;
+    contacted?: number;
+    offers?: number;
+    shortlistToOfferRate?: number | null;
   }[];
 }
