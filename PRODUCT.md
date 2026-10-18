@@ -7,7 +7,7 @@
 web
 
 ## Users
-Recruiters screening batches of resumes on desktop, plus admins who manage users and the LLM setup, and HR chiefs who read recruiting analytics and open any recruiter's sessions without managing users. Admins decide what each role may do. Mixed audience; hiring managers may drop in to review shortlists. (Inferred from README and user answer "Mixed, incl. admins".)
+Recruiters screening batches of resumes on desktop, plus admins who manage users and the LLM setup, HR chiefs who oversee every recruiter's sessions, approve offers and read recruiting analytics without managing users, and technical and HR interviewers who see only the candidates assigned to them. Admins decide what each role may do. Mixed audience; hiring managers may drop in to review shortlists. (Inferred from README and user answer "Mixed, incl. admins".)
 
 ## Product Purpose
 AI-assisted resume screening. Upload a job description and a batch of resumes; an LLM scores each candidate against weighted criteria; recruiters review a ranked standings table, a shortlist cut-off, and per-criterion breakdowns for each candidate.
