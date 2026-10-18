@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Panel, PanelHeader } from '@/components/ui/Card';
 import { Alert, Loader } from '@/components/ui/Feedback';
 import { CandidateNotes } from '@/components/CandidateNotes';
+import { HiringPipeline } from '@/components/HiringPipeline';
 import { MainLayout } from '@/layouts/MainLayout';
 import { useCountUp } from '@/lib/motion';
 import { DEFAULT_WEIGHTS, DIMENSIONS, cn, formatScore } from '@/lib/utils';
@@ -209,8 +210,16 @@ export default function CandidateDetail() {
       <div className="flex flex-wrap gap-6 items-start">
         {/* Main Column */}
         <div className="flex-[999_1_560px] min-w-0 space-y-6">
+          {/* 1. Hiring Pipeline Plate */}
+          <HiringPipeline
+            sessionId={sessionId!}
+            candidateId={candidateId!}
+            candidateName={score.name || 'Candidate'}
+            currentStage={score.reviewStatus}
+            onStageChange={(newStage) => setScore((s) => s && { ...s, reviewStatus: newStage })}
+          />
 
-          {/* Strengths and Gaps Plate */}
+          {/* 2. Strengths and Gaps Plate */}
           <Panel className="animate-fade-up">
             <PanelHeader title="Strengths and gaps" />
             <div className="space-y-5 p-5">

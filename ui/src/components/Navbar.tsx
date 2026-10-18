@@ -30,8 +30,18 @@ export function Navbar() {
     navigate('/login');
   };
 
+  const canSeeSessions = can(user, 'SESSION_RUN') || can(user, 'SESSION_VIEW_ALL');
+  const isInterviewerOnly = can(user, 'INTERVIEW_FEEDBACK') && !canSeeSessions;
+  const homePath = isInterviewerOnly ? '/interviews' : '/dashboard';
+
   const links = [
-    { to: '/dashboard', label: 'Sessions', match: ['/dashboard', '/sessions'] },
+    ...(canSeeSessions ? [{ to: '/dashboard', label: 'Sessions', match: ['/dashboard', '/sessions'] }] : []),
+    ...((can(user, 'PIPELINE_MANAGE') || can(user, 'OFFER_APPROVE'))
+      ? [{ to: '/pipeline', label: 'Pipeline', match: ['/pipeline'] }]
+      : []),
+    ...(can(user, 'INTERVIEW_FEEDBACK')
+      ? [{ to: '/interviews', label: 'My interviews', match: ['/interviews'] }]
+      : []),
     ...(can(user, 'ANALYTICS_VIEW')
       ? [{ to: '/analytics', label: 'Analytics', match: ['/analytics'] }]
       : []),
@@ -43,7 +53,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-line glass text-ink">
       <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-2 px-4 sm:gap-6 sm:px-6">
-        <Link to="/dashboard" aria-label="TalentLens, home" className="flex shrink-0 items-center gap-2 rounded-md">
+        <Link to={homePath} aria-label="TalentLens, home" className="flex shrink-0 items-center gap-2 rounded-md">
           <BrandMark size={28} />
           <span className="hidden whitespace-nowrap font-display text-[17px] font-bold tracking-tight text-ink sm:inline">TalentLens</span>
         </Link>

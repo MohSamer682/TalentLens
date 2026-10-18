@@ -48,7 +48,8 @@ class CandidateReviewTest {
     private final UserRepository users = mock(UserRepository.class);
     private final AuditService audit = mock(AuditService.class);
     private final com.resumescreener.common.session.CandidateNoteRepository notes = mock(com.resumescreener.common.session.CandidateNoteRepository.class);
-    private final CandidateService service = new CandidateService(sessions, candidates, scores, users, audit, notes);
+    private final com.resumescreener.common.session.CandidateStageEventRepository events = mock(com.resumescreener.common.session.CandidateStageEventRepository.class);
+    private final CandidateService service = new CandidateService(sessions, candidates, scores, users, audit, notes, events);
     private final ScreeningSession session = ScreeningSession.builder().id("s1").status(SessionStatus.DONE).build();
 
     @BeforeEach
@@ -61,7 +62,7 @@ class CandidateReviewTest {
     void shortlistsOneScoredCandidate() {
         Candidate c = scored("c1");
         when(candidates.findByIdInAndSessionId(List.of("c1"), "s1")).thenReturn(List.of(c));
-        when(candidates.countBySessionIdAndReviewStatus("s1", ReviewStatus.SHORTLISTED)).thenReturn(1L);
+        when(candidates.countBySessionIdAndReviewStatusNot("s1", ReviewStatus.NONE)).thenReturn(1L);
 
         ReviewResult result = service.review("s1", List.of("c1"), ReviewStatus.SHORTLISTED, EMAIL);
 
@@ -115,7 +116,7 @@ class CandidateReviewTest {
     void topNCapsAtScoredCount() {
         List<CandidateScore> ranked = List.of(rankedScore("c1"), rankedScore("c2"), rankedScore("c3"));
         when(scores.findTop200ByCandidateSessionIdAndRankNotNullOrderByRankAsc("s1")).thenReturn(ranked);
-        when(candidates.countBySessionIdAndReviewStatus("s1", ReviewStatus.SHORTLISTED)).thenReturn(3L);
+        when(candidates.countBySessionIdAndReviewStatusNot("s1", ReviewStatus.NONE)).thenReturn(3L);
 
         assertEquals(new ReviewResult(3, 3), service.shortlistTop("s1", 5, EMAIL));
     }
@@ -143,6 +144,41 @@ class CandidateReviewTest {
 
         assertEquals(0, service.review("s1", List.of("c1"), ReviewStatus.SHORTLISTED, EMAIL).changed());
         verify(audit, never()).record(anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void shortlistNeverMovesACandidateBackwards() {
+        Candidate offer = scored("c1");
+        offer.setReviewStatus(ReviewStatus.OFFER);
+        Candidate fresh = scored("c2");
+        when(scores.findTop200ByCandidateSessionIdAndRankNotNullOrderByRankAsc("s1"))
+                .thenReturn(List.of(CandidateScore.builder().candidate(offer).rank(1).build(),
+                        CandidateScore.builder().candidate(fresh).rank(2).build()));
+
+        assertEquals(1, service.shortlistTop("s1", 2, EMAIL).changed());
+        assertEquals(ReviewStatus.OFFER, offer.getReviewStatus());
+        assertEquals(ReviewStatus.SHORTLISTED, fresh.getReviewStatus());
+    }
+
+    @Test
+    void unshortlistRefusedPastShortlist() {
+        Candidate c = scored("c1");
+        c.setReviewStatus(ReviewStatus.INTERVIEWED);
+        when(candidates.findByIdInAndSessionId(anyCollection(), eq("s1"))).thenReturn(List.of(c));
+
+        ApiException e = assertThrows(ApiException.class,
+                () -> service.review("s1", List.of("c1"), ReviewStatus.NONE, EMAIL));
+        assertEquals("Candidates past the shortlist can't be unshortlisted", e.getMessage());
+        assertEquals(ReviewStatus.INTERVIEWED, c.getReviewStatus());
+    }
+
+    @Test
+    void shortlistWritesAStageEvent() {
+        when(candidates.findByIdInAndSessionId(List.of("c1"), "s1")).thenReturn(List.of(scored("c1")));
+
+        service.review("s1", List.of("c1"), ReviewStatus.SHORTLISTED, EMAIL);
+
+        verify(events).save(org.mockito.ArgumentMatchers.argThat(e -> "SHORTLISTED".equals(e.getStage()) && "u1".equals(e.getActorId())));
     }
 
     private static Candidate scored(String id) {

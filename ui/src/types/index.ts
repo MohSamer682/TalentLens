@@ -76,12 +76,20 @@ export interface Page<T> {
   size: number;
 }
 
-export type Role = 'ADMIN' | 'HR_CHIEF' | 'RECRUITER';
+export type Role =
+  | 'ADMIN'
+  | 'HR_CHIEF'
+  | 'RECRUITER'
+  | 'TECHNICAL_INTERVIEWER'
+  | 'HR_INTERVIEWER';
 
 export type Permission =
   | 'SESSION_RUN'
   | 'SESSION_VIEW_ALL'
   | 'CANDIDATE_REVIEW'
+  | 'PIPELINE_MANAGE'
+  | 'OFFER_APPROVE'
+  | 'INTERVIEW_FEEDBACK'
   | 'ANALYTICS_VIEW'
   | 'USER_MANAGE'
   | 'ROLE_MANAGE'
@@ -186,7 +194,126 @@ export interface CandidateScore {
   reviewStatus: ReviewStatus;
 }
 
-export type ReviewStatus = 'NONE' | 'SHORTLISTED';
+export type ReviewStatus =
+  | 'NONE'
+  | 'SHORTLISTED'
+  | 'CONTACTED'
+  | 'INTERVIEW_SCHEDULED'
+  | 'INTERVIEWED'
+  | 'OFFER'
+  | 'OFFER_APPROVED';
+
+export type InterviewKind = 'TECHNICAL' | 'HR';
+export type InterviewStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+export type InterviewRecommendation = 'STRONG_HIRE' | 'HIRE' | 'NO_HIRE' | 'STRONG_NO_HIRE';
+
+export interface CandidateInterview {
+  id: string;
+  candidateId: string;
+  kind: InterviewKind;
+  interviewerId: string;
+  interviewerName: string;
+  interviewerRole: string | null;
+  scheduledStart: string;
+  durationMinutes: number;
+  location: string | null;
+  noteToInterviewer: string | null;
+  status: InterviewStatus;
+  recommendation: InterviewRecommendation | null;
+  rating: number | null;
+  feedbackSubmittedAt: string | null;
+  feedbackAssessment: string | null;
+  createdById: string | null;
+  createdAt: string;
+}
+
+export interface CandidateOffer {
+  id: string;
+  candidateId: string;
+  fileName: string;
+  sizeBytes: number;
+  uploadedById: string | null;
+  uploadedByName: string;
+  uploadedAt: string;
+  approvedById: string | null;
+  approvedByName: string | null;
+  approvedAt: string | null;
+  isApproved: boolean;
+}
+
+export interface CandidateStageEvent {
+  id: string;
+  candidateId: string;
+  stage: string;
+  actorId: string | null;
+  actorName: string | null;
+  summary: string;
+  createdAt: string;
+}
+
+export interface PipelineCandidate {
+  id: string;
+  sessionId: string;
+  sessionTitle: string;
+  name: string;
+  email: string;
+  score: number | null;
+  stage: ReviewStatus;
+  inStageDays: number;
+  nextStep: string;
+  stageChangedAt: string;
+  offerFileName?: string;
+  offerUploaderName?: string;
+  offerUploadedById?: string;
+}
+
+export interface MyInterviewItem {
+  id: string;
+  candidateId: string;
+  candidateName: string;
+  role: string;
+  kind: InterviewKind;
+  scheduledStart: string;
+  durationMinutes: number;
+  location: string | null;
+  status: InterviewStatus;
+  recommendation: InterviewRecommendation | null;
+  rating: number | null;
+  feedbackSubmittedAt: string | null;
+}
+
+export interface MyInterviewsResponse {
+  waiting: MyInterviewItem[];
+  upcoming: MyInterviewItem[];
+  done: MyInterviewItem[];
+}
+
+export interface InterviewDetail {
+  id: string;
+  candidateId: string;
+  candidateName: string;
+  candidateEmail: string;
+  sessionId: string;
+  sessionTitle: string;
+  recruiterName: string | null;
+  kind: InterviewKind;
+  interviewerId: string;
+  interviewerName: string;
+  scheduledStart: string;
+  durationMinutes: number;
+  location: string | null;
+  noteToInterviewer: string | null;
+  status: InterviewStatus;
+  recommendation: InterviewRecommendation | null;
+  rating: number | null;
+  feedbackAssessment: string | null;
+  feedbackSubmittedAt: string | null;
+  compositeScore: number | null;
+  rank: number | null;
+  strengths: string | null;
+  gaps: string | null;
+  resumeUrl: string | null;
+}
 
 export interface ReviewResult {
   changed: number;

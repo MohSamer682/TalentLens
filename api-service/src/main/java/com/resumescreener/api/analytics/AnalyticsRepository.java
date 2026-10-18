@@ -54,7 +54,7 @@ public class AnalyticsRepository {
                 SELECT count(c.id) AS uploaded,
                        count(c.id) FILTER (WHERE c.status = 'SCORED') AS scored,
                        count(c.id) FILTER (WHERE c.status = 'FAILED') AS unreadable,
-                       count(c.id) FILTER (WHERE c.review_status = 'SHORTLISTED') AS shortlisted,
+                       count(c.id) FILTER (WHERE c.review_status <> 'NONE') AS shortlisted,
                        (SELECT %s FROM screening_sessions s
                          WHERE s.status = 'DONE' AND s.completed_at IS NOT NULL AND %s) AS median_hours
                   FROM candidates c JOIN screening_sessions s ON s.id = c.session_id
@@ -73,7 +73,7 @@ public class AnalyticsRepository {
                 SELECT w.week_start,
                        count(DISTINCT s.id) AS sessions,
                        count(c.id) FILTER (WHERE c.status = 'SCORED') AS scored,
-                       count(c.id) FILTER (WHERE c.review_status = 'SHORTLISTED') AS shortlisted
+                       count(c.id) FILTER (WHERE c.review_status <> 'NONE') AS shortlisted
                   FROM generate_series(date_trunc('week', CAST(:from AS timestamptz), 'UTC'),
                                        CAST(:to AS timestamptz) - interval '1 microsecond', interval '1 week') AS w(week_start)
                   LEFT JOIN screening_sessions s
@@ -116,7 +116,7 @@ public class AnalyticsRepository {
                 SELECT u.id, u.full_name,
                        count(DISTINCT s.id) AS sessions,
                        count(c.id) FILTER (WHERE c.status = 'SCORED') AS scored,
-                       count(c.id) FILTER (WHERE c.review_status = 'SHORTLISTED') AS shortlisted,
+                       count(c.id) FILTER (WHERE c.review_status <> 'NONE') AS shortlisted,
                        m.median_hours
                   FROM screening_sessions s
                   JOIN users u ON u.id = s.user_id
