@@ -172,6 +172,29 @@ class CandidateReviewTest {
         verify(audit, never()).record(anyString(), anyString(), anyString(), anyString());
     }
 
+    @Test
+    void shortlistNeverMovesACandidateBackwards() {
+        Candidate offer = scored("c1");
+        offer.setReviewStatus(ReviewStatus.OFFER);
+        Candidate fresh = scored("c2");
+        when(scores.findTop200ByCandidateSessionIdAndRankNotNullOrderByRankAsc("s1"))
+                .thenReturn(List.of(CandidateScore.builder().candidate(offer).rank(1).build(),
+                        CandidateScore.builder().candidate(fresh).rank(2).build()));
+
+        assertEquals(1, service.shortlistTop("s1", 2, EMAIL).changed());
+        assertEquals(ReviewStatus.OFFER, offer.getReviewStatus());
+        assertEquals(ReviewStatus.SHORTLISTED, fresh.getReviewStatus());
+    }
+
+    @Test
+    void shortlistWritesAStageEvent() {
+        when(candidates.findByIdInAndSessionId(List.of("c1"), "s1")).thenReturn(List.of(scored("c1")));
+
+        service.review("s1", List.of("c1"), ReviewStatus.SHORTLISTED, EMAIL);
+
+        verify(stageEvents).save(org.mockito.ArgumentMatchers.argThat(e -> "SHORTLISTED".equals(e.getStage()) && "u1".equals(e.getActorId())));
+    }
+
     private static Candidate scored(String id) {
         return Candidate.builder().id(id).status(CandidateStatus.SCORED).build();
     }

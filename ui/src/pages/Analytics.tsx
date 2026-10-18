@@ -77,7 +77,7 @@ export default function Analytics() {
           <Panel>
             <SkeletonRows rows={3} columns={[20, 20, 20, 20, 20]} />
           </Panel>
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
             <Panel>
               <SkeletonRows rows={5} columns={[40, 60]} />
             </Panel>
@@ -207,13 +207,13 @@ function FullFunnelReport({
       </dl>
 
       {/* 3. Two plates: Where do candidates drop out? and Where do they wait? */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <DropOutFunnel funnel={data.funnel ?? []} totalUploaded={t.resumesUploaded} />
         <TimeInStage stageWaits={data.stageWaits ?? []} />
       </div>
 
       {/* 4. Two plates: How much moved each week? and Does the AI score agree with people? */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <WeeklyThroughput weeks={data.weeks} />
         <ScoreCalibration bands={data.scoreBands} />
       </div>
@@ -317,7 +317,8 @@ function DropOutFunnel({
       biggestDropStage = s.stage;
     }
   }
-  const biggestDropPercent = Math.round((1 - minConversion) * 100);
+  const biggestDropIndex = funnel.findIndex((s) => s.stage === biggestDropStage);
+  const biggestDropLost = biggestDropIndex > 0 ? funnel[biggestDropIndex - 1].count - funnel[biggestDropIndex].count : 0;
 
   return (
     <Panel className="p-5 space-y-4">
@@ -329,12 +330,12 @@ function DropOutFunnel({
           const barWidth = Math.max(2, Math.round((step.count / max) * 100));
 
           return (
-            <div key={step.stage} className="flex items-center gap-3 text-sm">
+            <div key={step.stage} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
               <span className="w-24 shrink-0 text-xs font-medium text-ink-muted truncate">
                 {step.label}
               </span>
 
-              <div className="flex-1 h-5 rounded bg-sunken overflow-hidden relative">
+              <div className="flex-1 min-w-16 h-5 rounded bg-sunken overflow-hidden relative">
                 <div
                   className={cn(
                     'h-full rounded transition-all duration-500',
@@ -360,7 +361,7 @@ function DropOutFunnel({
 
               {isBiggestDrop && (
                 <span className="shrink-0 rounded-full bg-warn/15 px-2 py-0.5 text-[11px] font-semibold text-warn">
-                  Biggest drop · -{biggestDropPercent}%
+                  Biggest drop · {formatCount(biggestDropLost)} lost
                 </span>
               )}
             </div>
@@ -516,9 +517,9 @@ function ScoreCalibration({ bands }: { bands: AnalyticsOverview['scoreBands'] })
       <div className="space-y-3 pt-2">
         {bands.map((b) => (
           <div key={b.label} className="space-y-1">
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-x-2 text-xs">
               <span className="font-medium text-ink w-16">{b.label}</span>
-              <span className="font-mono text-ink-muted">
+              <span className="font-mono text-ink-muted min-w-0 break-words">
                 {b.count > 0 ? (
                   `${formatRate(b.shortlistRate)} shortlist · ${formatRate(b.hireRate)} hire (${b.count})`
                 ) : (
@@ -527,14 +528,16 @@ function ScoreCalibration({ bands }: { bands: AnalyticsOverview['scoreBands'] })
               </span>
             </div>
 
-            <div className="flex gap-1 h-2 w-full rounded-full bg-sunken overflow-hidden">
+            <div className="h-1.5 w-full rounded-full bg-sunken overflow-hidden">
               <div
-                className="h-full bg-accent-bar transition-all"
+                className="h-full rounded-full bg-accent-bar transition-all"
                 style={{ width: `${Math.round((b.shortlistRate || 0) * 100)}%` }}
                 title="Shortlist rate"
               />
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-sunken overflow-hidden">
               <div
-                className="h-full bg-success transition-all"
+                className="h-full rounded-full bg-success transition-all"
                 style={{ width: `${Math.round((b.hireRate || 0) * 100)}%` }}
                 title="Hire recommendation rate"
               />

@@ -5,6 +5,7 @@ import com.resumescreener.api.candidate.dto.OfferAnswerRequest;
 import com.resumescreener.api.candidate.dto.PlanInterviewsRequest;
 import com.resumescreener.api.candidate.dto.RejectOfferRequest;
 import com.resumescreener.api.candidate.dto.ScheduleInterviewRequest;
+import com.resumescreener.api.candidate.dto.SubmitFeedbackRequest;
 import com.resumescreener.api.common.ApiException;
 import com.resumescreener.api.session.SessionService;
 import com.resumescreener.api.upload.MinioUploadService;
@@ -15,6 +16,7 @@ import com.resumescreener.common.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -34,8 +36,9 @@ class PipelineServiceTest {
     private final CandidateStageEventRepository events = mock(CandidateStageEventRepository.class);
     private final ScreeningSessionRepository sessions = mock(ScreeningSessionRepository.class);
     private final UserRepository users = mock(UserRepository.class);
+    private final SessionService sessionService = mock(SessionService.class);
     private final PipelineService service = new PipelineService(candidates, mock(CandidateScoreRepository.class), interviews,
-            offers, events, mock(SessionService.class), sessions, users, mock(AuditService.class), mock(MinioUploadService.class));
+            offers, events, sessionService, sessions, users, mock(AuditService.class), mock(MinioUploadService.class));
 
     private final User recruiter = user("r1", "recruiter@x.com", Role.RECRUITER);
     private final User director = user("d1", "director@x.com", Role.DEPARTMENT_DIRECTOR);
@@ -71,6 +74,7 @@ class PipelineServiceTest {
         Candidate c = Candidate.builder().id("c1").reviewStatus(stage).interviewPlan(plan).build();
         when(candidates.findByIdAndSessionId("c1", "s1")).thenReturn(Optional.of(c));
         when(candidates.findById("c1")).thenReturn(Optional.of(c));
+        when(candidates.findForUpdateById("c1")).thenReturn(Optional.of(c));
         return c;
     }
 
@@ -206,5 +210,53 @@ class PipelineServiceTest {
         offer(false);
         candidate(ReviewStatus.OFFER_APPROVED, null);
         assertThrows(ApiException.class, () -> service.answerOffer("s1", "c1", new OfferAnswerRequest(true), "recruiter@x.com"));
+    }
+
+    // --- access ---
+
+    @Test
+    void viewerWithoutOwnershipCannotContact() {
+        Candidate c = candidate(ReviewStatus.SHORTLISTED, null);
+        when(sessionService.getOwnedSession("s1", "chief@x.com")).thenThrow(new AccessDeniedException("no"));
+
+        assertThrows(AccessDeniedException.class, () -> service.markContacted("s1", "c1", "chief@x.com"));
+        assertEquals(ReviewStatus.SHORTLISTED, c.getReviewStatus());
+    }
+
+    @Test
+    void candidateFromAnotherSessionIs404() {
+        assertThrows(ApiException.class, () -> service.getTimeline("s1", "c-elsewhere", "recruiter@x.com"));
+        assertThrows(ApiException.class, () -> service.getInterviews("s1", "c-elsewhere", "recruiter@x.com"));
+        assertThrows(ApiException.class, () -> service.getOffer("s1", "c-elsewhere", "chief@x.com"));
+    }
+
+    @Test
+    void onlyTheAssignedInterviewerGivesFeedbackAfterTheStart() {
+        User admin = user("a1", "admin@x.com", Role.ADMIN);
+        when(users.findByEmailIgnoreCase(admin.getEmail())).thenReturn(Optional.of(admin));
+        CandidateInterview later = CandidateInterview.builder().id("i9").candidateId("c1").interviewer(director)
+                .kind(InterviewKind.MANAGEMENT).status(InterviewStatus.SCHEDULED)
+                .scheduledStart(Instant.now().plusSeconds(3600)).build();
+        when(interviews.findById("i9")).thenReturn(Optional.of(later));
+
+        assertThrows(ApiException.class, () -> service.submitFeedback("i9", feedback(), "recruiter@x.com"));
+        assertThrows(ApiException.class, () -> service.submitFeedback("i9", feedback(), admin.getEmail()));
+        ApiException early = assertThrows(ApiException.class, () -> service.submitFeedback("i9", feedback(), "director@x.com"));
+        assertEquals("You can give feedback once the interview has started", early.getMessage());
+    }
+
+    @Test
+    void cancelledInterviewTakesNoFeedback() {
+        CandidateInterview cancelled = CandidateInterview.builder().id("i8").candidateId("c1").interviewer(director)
+                .kind(InterviewKind.MANAGEMENT).status(InterviewStatus.CANCELLED)
+                .scheduledStart(Instant.now().minusSeconds(3600)).build();
+        when(interviews.findById("i8")).thenReturn(Optional.of(cancelled));
+
+        ApiException e = assertThrows(ApiException.class, () -> service.submitFeedback("i8", feedback(), "director@x.com"));
+        assertEquals("This interview was cancelled", e.getMessage());
+    }
+
+    private static SubmitFeedbackRequest feedback() {
+        return new SubmitFeedbackRequest(InterviewRecommendation.HIRE, 4, "Solid answers on system design.");
     }
 }

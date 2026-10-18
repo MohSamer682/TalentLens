@@ -21,6 +21,11 @@ public interface CandidateRepository extends JpaRepository<Candidate, String> {
     List<Candidate> findByIdInAndSessionId(Collection<String> ids, String sessionId);
     java.util.Optional<Candidate> findByIdAndSessionId(String id, String sessionId);
 
+    /** Row lock so concurrent pipeline changes on one candidate run one after another. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT c FROM Candidate c WHERE c.id = :id")
+    java.util.Optional<Candidate> findForUpdateById(@org.springframework.data.repository.query.Param("id") String id);
+
     void deleteBySessionId(String sessionId);
 
     boolean existsBySessionIdAndContentHash(String sessionId, String contentHash);

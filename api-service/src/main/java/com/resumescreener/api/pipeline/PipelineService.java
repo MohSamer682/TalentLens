@@ -46,6 +46,7 @@ public class PipelineService {
     @Transactional(readOnly = true)
     public List<CandidateStageEventDto> getTimeline(String sessionId, String candidateId, String email) {
         sessionService.getSession(sessionId, email);
+        candidateInSession(sessionId, candidateId);
         return stageEventRepository.findByCandidateIdOrderByCreatedAtDesc(candidateId)
                 .stream()
                 .map(CandidateStageEventDto::from)
@@ -55,6 +56,7 @@ public class PipelineService {
     @Transactional(readOnly = true)
     public List<CandidateInterviewDto> getInterviews(String sessionId, String candidateId, String email) {
         sessionService.getSession(sessionId, email);
+        candidateInSession(sessionId, candidateId);
         return interviewRepository.findByCandidateIdOrderByScheduledStartAsc(candidateId)
                 .stream()
                 .map(CandidateInterviewDto::from)
@@ -64,14 +66,14 @@ public class PipelineService {
     @Transactional(readOnly = true)
     public Optional<CandidateOfferDto> getOffer(String sessionId, String candidateId, String email) {
         sessionForOffer(sessionId, email);
+        candidateInSession(sessionId, candidateId);
         return offerRepository.findByCandidateId(candidateId).map(CandidateOfferDto::from);
     }
 
     @Transactional
     public void markContacted(String sessionId, String candidateId, String email) {
-        sessionService.getSession(sessionId, email);
-        Candidate candidate = candidateRepository.findByIdAndSessionId(candidateId, sessionId)
-                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate with id " + candidateId));
+        sessionService.getOwnedSession(sessionId, email);
+        Candidate candidate = lockCandidate(sessionId, candidateId);
         if (candidate.getReviewStatus() != ReviewStatus.SHORTLISTED) {
             throw ApiException.validation("Candidate cannot be marked as contacted", "Must be at SHORTLISTED stage");
         }
@@ -95,9 +97,8 @@ public class PipelineService {
 
     @Transactional
     public List<InterviewKind> setInterviewPlan(String sessionId, String candidateId, PlanInterviewsRequest req, String email) {
-        sessionService.getSession(sessionId, email);
-        Candidate candidate = candidateRepository.findByIdAndSessionId(candidateId, sessionId)
-                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate with id " + candidateId));
+        sessionService.getOwnedSession(sessionId, email);
+        Candidate candidate = lockCandidate(sessionId, candidateId);
         ReviewStatus stage = candidate.getReviewStatus();
         if (stage != ReviewStatus.CONTACTED && stage != ReviewStatus.INTERVIEW_SCHEDULED && stage != ReviewStatus.INTERVIEWED) {
             throw ApiException.validation("Cannot plan interviews", "Candidate must be between CONTACTED and OFFER stages");
@@ -125,9 +126,8 @@ public class PipelineService {
 
     @Transactional
     public CandidateInterviewDto scheduleInterview(String sessionId, String candidateId, ScheduleInterviewRequest req, String email) {
-        sessionService.getSession(sessionId, email);
-        Candidate candidate = candidateRepository.findByIdAndSessionId(candidateId, sessionId)
-                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate with id " + candidateId));
+        sessionService.getOwnedSession(sessionId, email);
+        Candidate candidate = lockCandidate(sessionId, candidateId);
 
         ReviewStatus stage = candidate.getReviewStatus();
         if (stage != ReviewStatus.CONTACTED && stage != ReviewStatus.INTERVIEW_SCHEDULED && stage != ReviewStatus.INTERVIEWED) {
@@ -174,13 +174,12 @@ public class PipelineService {
 
     @Transactional
     public CandidateInterviewDto rescheduleInterview(String sessionId, String candidateId, String interviewId, RescheduleInterviewRequest req, String email) {
-        sessionService.getSession(sessionId, email);
+        sessionService.getOwnedSession(sessionId, email);
+        Candidate candidate = lockCandidate(sessionId, candidateId);
         CandidateInterview interview = interviewRepository.findById(interviewId)
+                .filter(i -> i.getCandidateId().equals(candidateId))
                 .orElseThrow(() -> ApiException.notFound("Interview not found", "No interview with id " + interviewId));
 
-        if (!interview.getCandidateId().equals(candidateId)) {
-            throw ApiException.validation("Mismatched candidate", "Interview does not belong to candidate");
-        }
         if (interview.getStatus() != InterviewStatus.SCHEDULED) {
             throw ApiException.validation("Cannot reschedule interview", "Only scheduled interviews can be rescheduled");
         }
@@ -208,13 +207,12 @@ public class PipelineService {
 
     @Transactional
     public void cancelInterview(String sessionId, String candidateId, String interviewId, String email) {
-        sessionService.getSession(sessionId, email);
+        sessionService.getOwnedSession(sessionId, email);
+        Candidate candidate = lockCandidate(sessionId, candidateId);
         CandidateInterview interview = interviewRepository.findById(interviewId)
+                .filter(i -> i.getCandidateId().equals(candidateId))
                 .orElseThrow(() -> ApiException.notFound("Interview not found", "No interview with id " + interviewId));
 
-        if (!interview.getCandidateId().equals(candidateId)) {
-            throw ApiException.validation("Mismatched candidate", "Interview does not belong to candidate");
-        }
         if (interview.getStatus() != InterviewStatus.SCHEDULED) {
             throw ApiException.validation("Cannot cancel interview", "Only scheduled interviews can be cancelled");
         }
@@ -228,7 +226,7 @@ public class PipelineService {
                 interview.getKind() + " interview cancelled by " + actor.getFullName());
         auditService.record("INTERVIEW_CANCEL", "CANDIDATE_INTERVIEW", interviewId, "SUCCESS");
 
-        candidateRepository.findById(candidateId).ifPresent(this::settleInterviewed);
+        settleInterviewed(candidate);
     }
 
     @Transactional
@@ -237,14 +235,17 @@ public class PipelineService {
                 .orElseThrow(() -> ApiException.notFound("Interview not found", "No interview with id " + interviewId));
 
         User interviewer = getUser(email);
-        if (interviewer.getRole() != Role.ADMIN && (interview.getInterviewer() == null || !interview.getInterviewer().getId().equals(interviewer.getId()))) {
+        if (interview.getInterviewer() == null || !interview.getInterviewer().getId().equals(interviewer.getId())) {
             throw ApiException.forbidden("Cannot submit feedback", "Only the assigned interviewer can submit feedback");
         }
         if (interview.getStatus() == InterviewStatus.COMPLETED) {
-            throw ApiException.validation("Feedback already submitted", "Feedback cannot be changed after submission");
+            throw ApiException.validation("Feedback was already submitted", "Feedback cannot be changed after submission");
+        }
+        if (interview.getStatus() == InterviewStatus.CANCELLED) {
+            throw ApiException.validation("This interview was cancelled", "Cancelled interviews take no feedback");
         }
         if (interview.getScheduledStart().isAfter(Instant.now())) {
-            throw ApiException.validation("Interview not yet started", "Feedback can only be submitted once the interview has started");
+            throw ApiException.validation("You can give feedback once the interview has started", "Feedback can only be submitted once the interview has started");
         }
 
         interview.setRecommendation(req.recommendation());
@@ -253,22 +254,21 @@ public class PipelineService {
         interview.setFeedbackSubmittedAt(Instant.now());
         interview.setStatus(InterviewStatus.COMPLETED);
         interview.setUpdatedAt(Instant.now());
-        interview = interviewRepository.save(interview);
+        interview = interviewRepository.saveAndFlush(interview);
 
         recordEvent(interview.getCandidateId(), "FEEDBACK_SUBMITTED", interviewer,
                 "Feedback submitted by " + interviewer.getFullName() + ": " + req.recommendation());
         auditService.record("INTERVIEW_FEEDBACK_SUBMIT", "CANDIDATE_INTERVIEW", interviewId, "SUCCESS");
 
-        candidateRepository.findById(interview.getCandidateId()).ifPresent(this::settleInterviewed);
+        candidateRepository.findForUpdateById(interview.getCandidateId()).ifPresent(this::settleInterviewed);
 
         return CandidateInterviewDto.from(interview);
     }
 
     @Transactional
     public void moveToOffer(String sessionId, String candidateId, String email) {
-        sessionService.getSession(sessionId, email);
-        Candidate candidate = candidateRepository.findByIdAndSessionId(candidateId, sessionId)
-                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate with id " + candidateId));
+        sessionService.getOwnedSession(sessionId, email);
+        Candidate candidate = lockCandidate(sessionId, candidateId);
 
         if (candidate.getReviewStatus() != ReviewStatus.INTERVIEWED) {
             throw ApiException.validation("Cannot move to offer", "Candidate must be at INTERVIEWED stage");
@@ -285,9 +285,8 @@ public class PipelineService {
 
     @Transactional
     public CandidateOfferDto uploadOffer(String sessionId, String candidateId, MultipartFile file, boolean requiresDirectorApproval, String email) {
-        sessionService.getSession(sessionId, email);
-        Candidate candidate = candidateRepository.findByIdAndSessionId(candidateId, sessionId)
-                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate with id " + candidateId));
+        sessionService.getOwnedSession(sessionId, email);
+        Candidate candidate = lockCandidate(sessionId, candidateId);
 
         if (candidate.getReviewStatus() != ReviewStatus.OFFER) {
             throw ApiException.validation("Cannot upload offer", "Candidate must be at OFFER stage");
@@ -301,10 +300,10 @@ public class PipelineService {
         }
 
         if (bytes.length > 10L * 1024 * 1024) {
-            throw ApiException.validation("Offer PDF too large", "Maximum file size is 10 MB");
+            throw ApiException.validation("Upload the offer as a PDF up to 10 MB", "File is " + bytes.length + " bytes");
         }
         if (bytes.length < 5 || !new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-")) {
-            throw ApiException.validation("File is not a valid PDF", "Uploaded file must be a PDF document");
+            throw ApiException.validation("Upload the offer as a PDF up to 10 MB", "File does not start with %PDF-");
         }
 
         String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "offer.pdf";
@@ -345,6 +344,7 @@ public class PipelineService {
     @Transactional
     public CandidateOfferDto approveOffer(String sessionId, String candidateId, String email) {
         sessionForOffer(sessionId, email);
+        Candidate candidate = lockCandidate(sessionId, candidateId);
         CandidateOffer offer = offerRepository.findByCandidateId(candidateId)
                 .orElseThrow(() -> ApiException.notFound("Offer not found", "No offer exists for this candidate"));
 
@@ -374,8 +374,6 @@ public class PipelineService {
         offer.setApprovedAt(Instant.now());
         offer = offerRepository.save(offer);
 
-        Candidate candidate = candidateRepository.findByIdAndSessionId(candidateId, sessionId)
-                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate with id " + candidateId));
         candidate.setReviewStatus(ReviewStatus.OFFER_APPROVED);
         candidate.setReviewedAt(Instant.now());
         candidateRepository.save(candidate);
@@ -390,6 +388,7 @@ public class PipelineService {
     @Transactional
     public CandidateOfferDto rejectOffer(String sessionId, String candidateId, RejectOfferRequest req, String email) {
         sessionForOffer(sessionId, email);
+        lockCandidate(sessionId, candidateId);
         CandidateOffer offer = offerRepository.findByCandidateId(candidateId)
                 .orElseThrow(() -> ApiException.notFound("Offer not found", "No offer exists for this candidate"));
         if (offer.getApprovedAt() != null) {
@@ -421,7 +420,7 @@ public class PipelineService {
 
     @Transactional
     public CandidateOfferDto markOfferSent(String sessionId, String candidateId, String email) {
-        sessionService.getSession(sessionId, email);
+        sessionService.getOwnedSession(sessionId, email);
         Candidate candidate = candidateInStage(sessionId, candidateId, ReviewStatus.OFFER_APPROVED, "Offer must be approved before it is sent");
         CandidateOffer offer = offerOf(candidateId);
 
@@ -434,7 +433,7 @@ public class PipelineService {
 
     @Transactional
     public CandidateOfferDto answerOffer(String sessionId, String candidateId, OfferAnswerRequest req, String email) {
-        sessionService.getSession(sessionId, email);
+        sessionService.getOwnedSession(sessionId, email);
         Candidate candidate = candidateInStage(sessionId, candidateId, ReviewStatus.OFFER_SENT, "The offer must be sent before the candidate can answer");
         CandidateOffer offer = offerOf(candidateId);
 
@@ -450,9 +449,8 @@ public class PipelineService {
 
     @Transactional
     public CandidateOfferDto saveJoining(String sessionId, String candidateId, JoiningRequest req, String email) {
-        sessionService.getSession(sessionId, email);
-        Candidate candidate = candidateRepository.findByIdAndSessionId(candidateId, sessionId)
-                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate with id " + candidateId));
+        sessionService.getOwnedSession(sessionId, email);
+        Candidate candidate = lockCandidate(sessionId, candidateId);
         if (candidate.getReviewStatus() != ReviewStatus.ACCEPTED && candidate.getReviewStatus() != ReviewStatus.JOINING_SET) {
             throw ApiException.validation("Cannot set a joining date", "The candidate must have accepted the offer");
         }
@@ -473,6 +471,7 @@ public class PipelineService {
     @Transactional(readOnly = true)
     public String getOfferDownloadUrl(String sessionId, String candidateId, String email) {
         sessionForOffer(sessionId, email);
+        candidateInSession(sessionId, candidateId);
         CandidateOffer offer = offerRepository.findByCandidateId(candidateId)
                 .orElseThrow(() -> ApiException.notFound("Offer not found", "No offer exists for this candidate"));
         return uploadService.getPresignedUrl(offer.getFileKey());
@@ -817,12 +816,23 @@ public class PipelineService {
     }
 
     private Candidate candidateInStage(String sessionId, String candidateId, ReviewStatus required, String message) {
-        Candidate candidate = candidateRepository.findByIdAndSessionId(candidateId, sessionId)
-                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate with id " + candidateId));
+        Candidate candidate = lockCandidate(sessionId, candidateId);
         if (candidate.getReviewStatus() != required) {
             throw ApiException.validation("Wrong stage", message);
         }
         return candidate;
+    }
+
+    private Candidate lockCandidate(String sessionId, String candidateId) {
+        candidateInSession(sessionId, candidateId);
+        return candidateRepository.findForUpdateById(candidateId)
+                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate with id " + candidateId));
+    }
+
+    private void candidateInSession(String sessionId, String candidateId) {
+        if (candidateRepository.findByIdAndSessionId(candidateId, sessionId).isEmpty()) {
+            throw ApiException.notFound("Candidate not found", "No candidate " + candidateId + " in session " + sessionId);
+        }
     }
 
     private CandidateOffer offerOf(String candidateId) {

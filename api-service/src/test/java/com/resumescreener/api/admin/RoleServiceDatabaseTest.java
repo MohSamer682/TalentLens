@@ -21,7 +21,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Against the real V7 seed: replacing grants must leave exactly the new set in the table. */
+/** Against the real V1..V10 migrations on an empty database: replacing grants must leave exactly the new set in the table. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(RoleService.class)
@@ -59,5 +59,12 @@ class RoleServiceDatabaseTest {
         assertThat(grants.findByRole(Role.CEO)).extracting(RolePermission::getPermission)
                 .containsExactly(Permission.INTERVIEW_FEEDBACK);
         assertThat(service.catalog().roles()).hasSize(Role.values().length);
+        assertThat(grants.findByRole(Role.HR_CHIEF)).extracting(RolePermission::getPermission)
+                .containsExactlyInAnyOrder(Permission.SESSION_VIEW_ALL, Permission.CANDIDATE_REVIEW,
+                        Permission.ANALYTICS_VIEW, Permission.OFFER_APPROVE);
+        assertThat(grants.findByRole(Role.HR_INTERVIEWER)).extracting(RolePermission::getPermission)
+                .containsExactly(Permission.INTERVIEW_FEEDBACK);
+        assertThat(grants.findByRole(Role.TECHNICAL_INTERVIEWER)).extracting(RolePermission::getPermission)
+                .containsExactly(Permission.INTERVIEW_FEEDBACK);
     }
 }

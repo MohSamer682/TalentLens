@@ -127,6 +127,7 @@ public class CandidateService {
     @Transactional(readOnly = true)
     public List<CandidateNoteDto> listNotes(String sessionId, String candidateId, String email) {
         sessionService.getSession(sessionId, email);
+        candidateInSession(sessionId, candidateId);
         User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> ApiException.notFound("User not found", "User not found"));
         boolean isAdmin = user.getRole() == com.resumescreener.common.user.Role.ADMIN;
@@ -139,8 +140,7 @@ public class CandidateService {
     @Transactional
     public CandidateNoteDto addNote(String sessionId, String candidateId, String content, String email) {
         sessionService.getSession(sessionId, email);
-        Candidate candidate = candidateRepository.findByIdAndSessionId(candidateId, sessionId)
-                .orElseThrow(() -> ApiException.notFound("Candidate not found in this session", "Candidate not found"));
+        Candidate candidate = candidateInSession(sessionId, candidateId);
         User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> ApiException.notFound("User not found", "User not found"));
         CandidateNote note = CandidateNote.builder()
@@ -157,11 +157,10 @@ public class CandidateService {
     @Transactional
     public void deleteNote(String sessionId, String candidateId, String noteId, String email) {
         sessionService.getSession(sessionId, email);
+        candidateInSession(sessionId, candidateId);
         CandidateNote note = candidateNoteRepository.findById(noteId)
-                .orElseThrow(() -> ApiException.notFound("Note not found", "Note with id " + noteId + " does not exist"));
-        if (!note.getCandidateId().equals(candidateId)) {
-            throw ApiException.validation("Note does not belong to this candidate", "Mismatched candidate id");
-        }
+                .filter(n -> n.getCandidateId().equals(candidateId))
+                .orElseThrow(() -> ApiException.notFound("Note not found", "No note " + noteId + " on candidate " + candidateId));
         User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> ApiException.notFound("User not found", "User not found"));
         boolean isAdmin = user.getRole() == com.resumescreener.common.user.Role.ADMIN;
@@ -170,5 +169,10 @@ public class CandidateService {
         }
         candidateNoteRepository.delete(note);
         auditService.record("CANDIDATE_NOTE_DELETE", "CANDIDATE_NOTE", noteId, "SUCCESS", "Deleted note from candidate " + candidateId);
+    }
+
+    private Candidate candidateInSession(String sessionId, String candidateId) {
+        return candidateRepository.findByIdAndSessionId(candidateId, sessionId)
+                .orElseThrow(() -> ApiException.notFound("Candidate not found in this session", "Candidate not found"));
     }
 }
