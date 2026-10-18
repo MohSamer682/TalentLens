@@ -17,6 +17,7 @@
 
     --ground: 12 17 16;         /* #0C1110 page */
     --surface: 18 25 24;        /* #121918 panels */
+    --surface-raised: 24 33 31; /* #18211F lifts, active segment */
     --sunken: 9 13 12;          /* #090D0C table head, chips */
     --line: 36 48 46;           /* #24302E hairline */
     --line-strong: 62 78 75;    /* #3E4E4B */
@@ -52,39 +53,40 @@
   }
 
   [data-theme='light'] {
-    --pitch: 14 22 20;          /* #0E1614 shell stays dark: the board sits under a fixed bar */
-    --pitch-raised: 34 48 44;
-    --pitch-ink: 170 186 180;
+    --pitch: 255 255 255;       /* white glass shell in light mode */
+    --pitch-raised: 240 243 242;
+    --pitch-ink: 79 95 89;
 
-    --ground: 238 242 240;      /* #EEF2F0 mist */
-    --surface: 255 255 255;
-    --sunken: 228 234 231;
-    --line: 211 220 216;
-    --line-strong: 160 176 169;
+    --ground: 245 247 246;         /* #F5F7F6 */
+    --surface: 255 255 255;        /* #FFFFFF */
+    --surface-raised: 255 255 255; /* #FFFFFF */
+    --sunken: 240 243 242;         /* #F0F3F2 */
+    --line: 221 228 225;           /* #DDE4E1 */
+    --line-strong: 180 194 188;    /* #B4C2BC */
 
-    --ink: 14 22 20;
-    --ink-muted: 84 100 94;     /* 6.4:1 on white */
+    --ink: 14 22 20;               /* #0E1614 */
+    --ink-muted: 79 95 89;         /* #4F5F59 */
 
-    --accent: 14 22 20;
+    --accent: 14 22 20;            /* #0E1614 */
     --accent-strong: 40 54 50;
     --accent-ink: 255 255 255;
-    --accent-text: 30 95 200;   /* 6:1 on white */
-    --accent-bar: 52 120 220;
+    --accent-text: 30 95 200;      /* #1E5FC8 */
+    --accent-bar: 52 120 220;      /* #3478DC */
     --accent-soft: 228 238 252;
 
-    --mark: 255 184 28;
-    --mark-soft: 255 240 200;
+    --mark: 255 184 28;            /* #FFB81C */
+    --mark-soft: 255 240 200;      /* #FFF0C8 */
     --mark-ink: 28 20 0;
-    --mark-text: 130 85 0;
+    --mark-text: 130 85 0;         /* #825500 */
 
-    --success: 22 120 70;
-    --success-soft: 223 243 231;
-    --info: 10 120 110;
-    --info-soft: 218 242 239;
-    --warn: 150 70 0;
-    --warn-soft: 251 238 220;
-    --danger: 190 35 30;
-    --danger-soft: 253 233 231;
+    --success: 19 101 60;          /* #13653C on #DFF3E7 */
+    --success-soft: 223 243 231;   /* #DFF3E7 */
+    --info: 8 103 94;              /* #08675E on #DAF2EF */
+    --info-soft: 218 242 239;      /* #DAF2EF */
+    --warn: 150 70 0;              /* #964600 on #FBEEDC */
+    --warn-soft: 251 238 220;      /* #FBEEDC */
+    --danger: 168 30 26;           /* #A81E1A on #FDE9E7 */
+    --danger-soft: 253 233 231;    /* #FDE9E7 */
 
     --shadow: 14 22 20;
     color-scheme: light;
@@ -139,6 +141,59 @@
 }
 
 @layer components {
+  /* Lens materials */
+  .plate {
+    @apply rounded-lg border border-line bg-surface shadow-plate;
+  }
+
+  .lift {
+    @apply rounded-lg border border-line bg-surface-raised shadow-lift transition-[transform,box-shadow] duration-200 ease-lens;
+  }
+
+  @media (hover: hover) {
+    .lift:hover {
+      transform: translateY(-1px);
+    }
+  }
+
+  .glass {
+    background: rgb(var(--pitch));
+  }
+
+  @supports (backdrop-filter: blur(1px)) {
+    .glass {
+      background: rgb(var(--pitch) / 0.78);
+      backdrop-filter: blur(16px) saturate(140%);
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .glass {
+      background: rgb(var(--pitch)) !important;
+      backdrop-filter: none !important;
+    }
+  }
+
+  [data-theme='light'] .glass {
+    background: rgb(255 255 255);
+    border-bottom-color: rgb(var(--line));
+    color: rgb(var(--ink));
+  }
+
+  @supports (backdrop-filter: blur(1px)) {
+    [data-theme='light'] .glass {
+      background: rgb(255 255 255 / 0.8);
+      backdrop-filter: blur(16px) saturate(140%);
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    [data-theme='light'] .glass {
+      background: rgb(255 255 255) !important;
+      backdrop-filter: none !important;
+    }
+  }
+
   /* Loading placeholder: a soft highlight sweeping across the shape of the content that is coming. */
   .skeleton {
     @apply animate-shimmer rounded-md;
@@ -184,6 +239,9 @@
 
 /* Reduced motion keeps every state change but drops travel, growth and loops. */
 @media (prefers-reduced-motion: reduce) {
+  .lift:hover {
+    transform: none;
+  }
   .animate-fade-up {
     animation-name: fade-in;
   }

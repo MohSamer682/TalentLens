@@ -10,27 +10,30 @@ import { Segmented } from '@/components/ui/Segmented';
 import { Panel } from '@/components/ui/Card';
 import { MainLayout, PageHeader } from '@/layouts/MainLayout';
 import { cn } from '@/lib/utils';
-import { useCan } from '@/lib/permissions';
+import { canSwitchScope, defaultScope, useCan } from '@/lib/permissions';
+import { useAuthStore } from '@/store/authStore';
 
 type Filter = 'ALL' | ScreeningSession['status'];
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'ALL', label: 'All' },
-  { value: 'RUNNING', label: 'Scoring' },
   { value: 'DONE', label: 'Ranked' },
+  { value: 'RUNNING', label: 'Scoring' },
   { value: 'PENDING', label: 'Not started' },
   { value: 'FAILED', label: 'Failed' },
 ];
 
 export default function Dashboard() {
+  const user = useAuthStore((s) => s.user);
   const [sessions, setSessions] = useState<ScreeningSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('ALL');
   const canRun = useCan('SESSION_RUN');
-  const canViewAll = useCan('SESSION_VIEW_ALL');
-  const [everyone, setEveryone] = useState(false);
+  const canSwitch = canSwitchScope(user);
+  const isViewerOnly = defaultScope(user) === 'EVERYONE';
+  const [everyone, setEveryone] = useState(() => isViewerOnly);
 
   const loadSessions = useCallback(async () => {
     setLoadError(null);
@@ -57,17 +60,28 @@ export default function Dashboard() {
 
   const query = search.trim().toLowerCase();
   const visible = sessions.filter(
-    (s) => (filter === 'ALL' || s.status === filter) && s.title.toLowerCase().includes(query)
+    (s) =>
+      (filter === 'ALL' || s.status === filter) &&
+      (s.title.toLowerCase().includes(query) || (s.ownerName && s.ownerName.toLowerCase().includes(query)))
   );
 
   return (
     <MainLayout>
       <PageHeader
-        title="Screening sessions"
-        meta={!loading && !loadError && <span>One session per opening: a job description, its resumes, and a ranked shortlist.</span>}
+        title={isViewerOnly ? 'All sessions' : 'Screening sessions'}
+        meta={
+          !loading &&
+          !loadError && (
+            <span>
+              {isViewerOnly
+                ? "Every recruiter's sessions. You can open them; recruiters run them."
+                : 'One session per opening: a job description, its resumes, and a ranked shortlist.'}
+            </span>
+          )
+        }
         actions={
           <>
-            {canViewAll && (
+            {canSwitch && (
               <Segmented
                 label="Whose sessions"
                 value={everyone ? 'EVERYONE' : 'MINE'}
@@ -142,9 +156,9 @@ export default function Dashboard() {
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by title"
-                aria-label="Search sessions by title"
-                className="h-9 w-full rounded-md border border-line-strong bg-surface pl-9 pr-3 text-sm placeholder:text-ink-muted focus:border-accent-text focus:outline-none focus:ring-4 focus:ring-accent/25 transition-shadow"
+                placeholder={!canSwitch ? 'Search by role or recruiter' : 'Search by title'}
+                aria-label={!canSwitch ? 'Search by role or recruiter' : 'Search sessions by title'}
+                className="h-9 w-full rounded-md border border-line bg-surface dark:bg-sunken pl-9 pr-3 text-sm placeholder:text-ink-muted focus:border-accent-text focus:outline-none focus:ring-2 focus:ring-accent-text/25 transition-shadow"
               />
             </div>
           </div>

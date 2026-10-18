@@ -36,3 +36,13 @@ export function diffGrants(before: Permission[], after: Permission[]) {
     removed: before.filter((p) => !after.includes(p)),
   };
 }
+
+/** Users who can see everyone's sessions but cannot create them land on all sessions. */
+export function defaultScope(user: User | null | undefined): 'MINE' | 'EVERYONE' {
+  return can(user, 'SESSION_VIEW_ALL') && !can(user, 'SESSION_RUN') ? 'EVERYONE' : 'MINE';
+}
+
+/** Only users with both rights get the Mine / All recruiters switch. */
+export function canSwitchScope(user: User | null | undefined): boolean {
+  return can(user, 'SESSION_VIEW_ALL') && can(user, 'SESSION_RUN');
+}
