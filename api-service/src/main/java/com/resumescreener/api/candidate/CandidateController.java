@@ -1,6 +1,8 @@
 package com.resumescreener.api.candidate;
 
 import com.resumescreener.api.candidate.dto.BulkReviewRequest;
+import com.resumescreener.api.candidate.dto.CandidateNoteDto;
+import com.resumescreener.api.candidate.dto.CreateNoteRequest;
 import com.resumescreener.api.candidate.dto.ResumeFileDto;
 import com.resumescreener.api.candidate.dto.ReviewRequest;
 import com.resumescreener.api.candidate.dto.ReviewResult;
@@ -64,5 +66,34 @@ public class CandidateController {
             Authentication auth) {
         return ResponseEntity.ok(ApiResponse.success("Shortlist saved",
                 candidateService.shortlistTop(id, request.count(), auth.getName())));
+    }
+
+    @GetMapping("/{id}/candidates/{candidateId}/notes")
+    public ResponseEntity<ApiResponse<List<CandidateNoteDto>>> listNotes(
+            @PathVariable String id,
+            @PathVariable String candidateId,
+            Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.success("Notes loaded",
+                candidateService.listNotes(id, candidateId, auth.getName())));
+    }
+
+    @PostMapping("/{id}/candidates/{candidateId}/notes")
+    public ResponseEntity<ApiResponse<CandidateNoteDto>> addNote(
+            @PathVariable String id,
+            @PathVariable String candidateId,
+            @Valid @RequestBody CreateNoteRequest request,
+            Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.success("Note added",
+                candidateService.addNote(id, candidateId, request.content(), auth.getName())));
+    }
+
+    @DeleteMapping("/{id}/candidates/{candidateId}/notes/{noteId}")
+    public ResponseEntity<ApiResponse<Void>> deleteNote(
+            @PathVariable String id,
+            @PathVariable String candidateId,
+            @PathVariable String noteId,
+            Authentication auth) {
+        candidateService.deleteNote(id, candidateId, noteId, auth.getName());
+        return ResponseEntity.ok(ApiResponse.success("Note deleted", null));
     }
 }

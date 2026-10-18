@@ -23,4 +23,8 @@ public class ApiException extends RuntimeException {
     public static ApiException validation(String message, String details) {
         return new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_ERROR, message, details);
     }
+
+    public static ApiException forbidden(String message, String details) {
+        return new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ACCESS_DENIED, message, details);
+    }
 }

@@ -5,6 +5,7 @@ import type {
   ApiError,
   ApiResponse,
   AuthResponse,
+  CandidateNote,
   CandidateResultDto,
   CandidateScore,
   CreateSessionRequest,
@@ -202,6 +203,12 @@ export const candidatesApi = {
     api.post<ReviewResult>(`/sessions/${sessionId}/candidates/review`, { candidateIds, status }),
   shortlistTop: (sessionId: string, count: number) =>
     api.post<ReviewResult>(`/sessions/${sessionId}/shortlist/top`, { count }),
+  notes: (sessionId: string, candidateId: string) =>
+    api.get<CandidateNote[]>(`/sessions/${sessionId}/candidates/${candidateId}/notes`),
+  addNote: (sessionId: string, candidateId: string, content: string) =>
+    api.post<CandidateNote>(`/sessions/${sessionId}/candidates/${candidateId}/notes`, { content }),
+  deleteNote: (sessionId: string, candidateId: string, noteId: string) =>
+    api.delete<void>(`/sessions/${sessionId}/candidates/${candidateId}/notes/${noteId}`),
 };
 
 export const analyticsApi = {

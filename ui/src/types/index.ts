@@ -193,6 +193,17 @@ export interface ReviewResult {
   shortlistedTotal: number;
 }
 
+export interface CandidateNote {
+  id: string;
+  candidateId: string;
+  authorId: string | null;
+  authorName: string;
+  authorRole: Role | string | null;
+  content: string;
+  createdAt: string;
+  deletable: boolean;
+}
+
 export interface ProgressResponse {
   total: number;
   processed: number;

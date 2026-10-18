@@ -16,6 +16,7 @@ public interface CandidateRepository extends JpaRepository<Candidate, String> {
     long countBySessionIdAndStatus(String sessionId, CandidateStatus status);
     long countBySessionIdAndReviewStatus(String sessionId, ReviewStatus reviewStatus);
     List<Candidate> findByIdInAndSessionId(Collection<String> ids, String sessionId);
+    java.util.Optional<Candidate> findByIdAndSessionId(String id, String sessionId);
 
     void deleteBySessionId(String sessionId);
 
@@ -24,4 +25,5 @@ public interface CandidateRepository extends JpaRepository<Candidate, String> {
     List<Candidate> findBySessionIdAndStatusIn(String sessionId, Collection<CandidateStatus> statuses);
     Page<Candidate> findBySessionIdOrderByCreatedAtDesc(String sessionId, Pageable pageable);
     Page<Candidate> findBySessionIdAndStatusOrderByCreatedAtDesc(String sessionId, CandidateStatus status, Pageable pageable);
+
 }
