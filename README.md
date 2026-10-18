@@ -8,6 +8,22 @@ It is built for modern talent acquisition teams where recruiters, interviewers, 
 
 ---
 
+## 🖼️ Screenshots
+
+Live screens from the running app. The full set, organized by role, is in [docs/design/screens](docs/design/screens).
+
+| Ranked standings | Candidate detail |
+|---|---|
+| ![Session standings](<docs/design/screens/Recruiter/Session_Detail_Standings.png>) | ![Candidate detail](<docs/design/screens/Recruiter/Candidate_Detail_View.png>) |
+| **Hiring pipeline** | **Recruiting analytics** |
+| ![Hiring pipeline](<docs/design/screens/Admin/Hiring_Pipeline.png>) | ![Recruiting analytics](<docs/design/screens/Admin/Recruiting_Analytics.png>) |
+| **New session wizard** | **My interviews** |
+| ![New session wizard](<docs/design/screens/Recruiter/New_Session_Wizard.png>) | ![My interviews](<docs/design/screens/Technical_Interviewer/My_Interviews.png>) |
+| **Roles and permissions** | **Sign in** |
+| ![Roles and permissions](<docs/design/screens/Admin/Admin_Roles_and_Permissions.png>) | ![Sign in](<docs/design/screens/00_Login_Screen.png>) |
+
+---
+
 ## 🚀 Key Capabilities
 
 | Capability | What it gives the recruiting team |
@@ -15,12 +31,12 @@ It is built for modern talent acquisition teams where recruiters, interviewers, 
 | **Role-Specific Weighted Scoring** | Each screening session defines weighted criteria: technical skills, experience, education, soft skills, and culture fit (totalling 100), ensuring rankings reflect specific role requirements. |
 | **Explainable AI Evaluations** | Every candidate receives five criterion scores, a composite score, strengths, gaps, extracted skills, and an explainable justification. |
 | **High-Volume Batch Processing** | Resumes are processed asynchronously by a dedicated worker with live progress, cancellation, and per-candidate failure isolation. |
-| **End-to-End Hiring Pipeline** | Visual Kanban board tracking candidates through every hiring milestone: `Sourced` ➔ `Screening` ➔ `Interviewing` ➔ `Interviewed` ➔ `Offer` ➔ `Joining`. |
+| **End-to-End Hiring Pipeline** | A pipeline board, filterable by stage, that follows every candidate past the shortlist: `Shortlisted` ➔ `Contacted` ➔ `Interviewing` ➔ `Interviewed` ➔ `Offer` ➔ `Offer approved` ➔ `Offer sent` ➔ `Accepted` / `Declined` ➔ `Joining`. |
 | **Interview Places & Modes** | Multi-mode interview logistics: Onsite (office location, room code), Online (video conference link, passcode), and Phone screen. |
-| **Interviewer Scorecards & Feedback** | Dedicated feedback portal for technical and HR interviewers with structured recommendations (`Strong Hire`, `Hire`, `No Hire`, `Strong No Hire`), criteria scoring, and qualitative notes. |
+| **Interviewer Scorecards & Feedback** | Dedicated feedback portal for technical and HR interviewers with structured recommendations (`Strong Hire`, `Hire`, `No Hire`, `Strong No Hire`), a 1 to 5 rating, and a written assessment. |
 | **Offer Approval Chain & Lifecycle** | Complete job offer lifecycle: drafting offers, multi-level authorization workflows (`OFFER_APPROVE`), signed document uploads, sending offers, and candidate acceptance/decline tracking. |
 | **Joining & Onboarding Tracking** | Candidate onboarding management recording accepted start dates, documentation status, and joining confirmations. |
-| **Candidate Review & Saved Shortlists** | Quick review status toggles (`Shortlisted`, `Rejected`, `Maybe`), bulk candidate reviews, and instant top-N auto-shortlisting. |
+| **Candidate Review & Saved Shortlists** | Shortlist or unshortlist one candidate, many at once, or the top N in one step; the shortlist is shared by everyone on the session. |
 | **Candidate Notes & Activity Timeline** | Chronological audit trail of all candidate interactions, stage transitions, and private team notes. |
 | **Dynamic Roles & Granular Permissions** | Admin-managed role permission matrix (`/admin/roles`) and user administration (`/admin/users`) with 8 distinct organizational roles. |
 | **Recruiting Analytics Dashboard** | Historical metrics, pipeline throughput, conversion funnels, score distributions, and recruiter velocity across 30, 90, or 365 days. |
@@ -43,7 +59,7 @@ It is built for modern talent acquisition teams where recruiters, interviewers, 
 
 1. **Intake & Setup:** A recruiter creates a session, customizes scoring weights, and uploads the Job Description (PDF) and candidate resumes (individual PDFs or ZIP archives up to 1000 files).
 2. **Batch Processing:** The batch worker extracts PDF text, prompts the configured LLM for scores and justifications, enforces rate limits, computes composite scores, and generates an Excel report.
-3. **Review & Shortlisting:** Recruiters review ranked candidates on the standings table with interactive radar charts and shortlist the top applicants.
+3. **Review & Shortlisting:** Recruiters review ranked candidates on the standings table, open each candidate's score breakdown, strengths and gaps, and shortlist the top applicants.
 4. **Pipeline & Interviews:** Candidates move to the hiring pipeline. Recruiters schedule onsite, online, or phone interviews with assigned interviewers.
 5. **Feedback & Decision:** Interviewers submit evaluations and recommendations directly via the *My Interviews* portal.
 6. **Offer & Joining:** HR drafts the offer, runs it through the required approval chain, marks it sent, records candidate acceptance, and confirms joining details.
@@ -96,7 +112,7 @@ docker compose up -d --build
 | **MinIO Console** | `http://localhost:9001` | S3 Object storage browser |
 | **Adminer** | `http://localhost:8085` | PostgreSQL database administration |
 
-> **First Login:** The initial account registered via `/register` automatically receives the `ADMIN` role. Subsequent accounts register as `RECRUITER` by default and can be assigned roles by the administrator. Default test credentials: password `12345678`.
+> **First Login:** The initial account registered via `/register` automatically receives the `ADMIN` role. Subsequent accounts register as `RECRUITER` by default and can be assigned roles by the administrator.
 
 ---
 
@@ -139,7 +155,7 @@ All secured endpoints require `Authorization: Bearer <token>`. Responses conform
 - `GET /api/sessions/{id}/export` — Download ranked Excel report
 
 ### Candidate Review & Shortlisting
-- `PATCH /api/sessions/{id}/candidates/{candidateId}/review` — Update review status (`SHORTLISTED`, `REJECTED`, `MAYBE`, `NONE`)
+- `PATCH /api/sessions/{id}/candidates/{candidateId}/review` — Shortlist or unshortlist a candidate (`SHORTLISTED` or `NONE`)
 - `POST /api/sessions/{id}/candidates/review` — Bulk candidate review update
 - `POST /api/sessions/{id}/shortlist/top` — Automatically shortlist top N candidates
 - `GET, POST, DELETE /api/sessions/{id}/candidates/{candidateId}/notes` — Candidate notes management
@@ -155,7 +171,7 @@ All secured endpoints require `Authorization: Bearer <token>`. Responses conform
 ### Interviewer Feedback Portal
 - `GET /api/my-interviews` — List interviews assigned to the current interviewer
 - `GET /api/interviews/{interviewId}` — Detailed interview view with candidate profile and scores
-- `POST /api/interviews/{interviewId}/feedback` — Submit recommendation (`STRONG_HIRE`, `HIRE`, `NO_HIRE`), score, and notes
+- `POST /api/interviews/{interviewId}/feedback` — Submit recommendation (`STRONG_HIRE`, `HIRE`, `NO_HIRE`, `STRONG_NO_HIRE`), rating, and assessment
 
 ### Offer Approval Chain & Joining
 - `POST /api/sessions/{id}/candidates/{candidateId}/move-to-offer` — Advance candidate to *Offer* stage

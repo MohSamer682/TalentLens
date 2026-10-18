@@ -16,7 +16,7 @@ docs/design/screens/
 │   ├── Landing_Page.png                        # Initial dashboard landing
 │   ├── Sessions_List.png                       # Screening sessions overview
 │   ├── Session_Detail_Standings.png            # Ranked candidate standings & scores
-│   ├── Candidate_Detail_View.png               # Deep-dive candidate evaluation & radar chart
+│   ├── Candidate_Detail_View.png               # Score breakdown, strengths, gaps & pipeline
 │   ├── New_Session_Wizard.png                  # Multi-weight scoring & JD/resume upload
 │   ├── Hiring_Pipeline.png                     # Multi-stage hiring pipeline board
 │   ├── My_Interviews.png                       # Assigned interview panels
@@ -35,7 +35,7 @@ docs/design/screens/
 │   ├── New_Session_Wizard.png                  # Session configuration with criteria sliders
 │   ├── Session_Detail_Standings.png            # Candidate ranking table & review
 │   ├── Candidate_Detail_View.png               # Candidate profile, notes & interview scheduling
-│   └── Hiring_Pipeline.png                     # Sourced-to-Hired pipeline management
+│   └── Hiring_Pipeline.png                     # Shortlist-to-joining pipeline management
 ├── HR_Interviewer/                             # HR Interviewer (Behavioral & HR evaluation)
 │   ├── Landing_Page.png                        # Interviewer portal landing
 │   └── My_Interviews.png                       # Assigned interviews & candidate feedback
@@ -78,15 +78,15 @@ docs/design/screens/
 1. **Roles and Permissions Matrix (`Admin/Admin_Roles_and_Permissions.png`)**
    - Dynamic checkbox grid allowing administrators to configure granular permissions per role without code modifications.
 
-2. **Hiring Pipeline Kanban (`Admin/Hiring_Pipeline.png`)**
-   - Candidate stage flow: *Sourced* ➔ *Screening* ➔ *Interviewing* ➔ *Interviewed* ➔ *Offer* ➔ *Joining*.
-   - Drag-and-drop or status transitions with automated stage timestamp logging.
+2. **Hiring Pipeline (`Admin/Hiring_Pipeline.png`)**
+   - Candidate stage flow: *Shortlisted* ➔ *Contacted* ➔ *Interviewing* ➔ *Interviewed* ➔ *Offer* ➔ *Offer approved* ➔ *Offer sent* ➔ *Accepted* / *Declined* ➔ *Joining*.
+   - Filter by stage or by offers awaiting approval; every stage change is logged with who and when.
 
 3. **Interview Planning & Places (`Candidate_Detail_View.png`)**
    - Multi-mode interview logistics: Onsite room booking, online video conference links, and phone screen details.
 
-4. **Candidate Detail & AI Radar (`Candidate_Detail_View.png`)**
-   - 5-axis criteria radar chart, explainable strengths and gaps breakdown, candidate notes, and review status.
+4. **Candidate Detail (`Candidate_Detail_View.png`)**
+   - Five-criterion score breakdown, explainable strengths and gaps, team notes, and the candidate's hiring pipeline.
 
 5. **Recruiting Analytics (`Recruiting_Analytics.png`)**
    - 30 / 90 / 365-day views of throughput, candidate quality distributions, and recruiter activity.
