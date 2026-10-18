@@ -95,27 +95,29 @@ public class CandidateService {
         String reviewerId = status == ReviewStatus.NONE ? null : (reviewer != null ? reviewer.getId() : null);
         String action = status == ReviewStatus.SHORTLISTED ? "CANDIDATE_SHORTLIST" : "CANDIDATE_UNSHORTLIST";
         int changed = 0;
-        if (status == ReviewStatus.NONE && candidates.stream().anyMatch(c -> c.getReviewStatus().compareTo(ReviewStatus.SHORTLISTED) > 0)) {
-            throw ApiException.validation("Candidates past the shortlist can't be unshortlisted",
-                    "One or more candidates are already contacted or further along");
-        }
         for (Candidate c : candidates) {
-            // shortlisting never moves a candidate who is further along back to SHORTLISTED
-            if (c.getReviewStatus() == status || (status == ReviewStatus.SHORTLISTED && c.getReviewStatus().isShortlistedOrBeyond())) {
+            if (c.getReviewStatus() == status) {
+                continue;
+            }
+            // Once a candidate is in the hiring pipeline, shortlisting or unshortlisting must not drag them back
+            ReviewStatus current = c.getReviewStatus();
+            if (current != ReviewStatus.NONE && current != ReviewStatus.SHORTLISTED) {
                 continue;
             }
             c.setReviewStatus(status);
             c.setReviewedBy(reviewerId);
             c.setReviewedAt(status == ReviewStatus.NONE ? null : Instant.now());
             auditService.record(action, "candidate", c.getId(), "success");
-            candidateStageEventRepository.save(CandidateStageEvent.builder()
-                    .candidateId(c.getId())
-                    .stage(status.name())
-                    .actorId(reviewer != null ? reviewer.getId() : null)
-                    .actorName(reviewer != null ? reviewer.getFullName() : null)
-                    .summary((status == ReviewStatus.SHORTLISTED ? "Shortlisted by " : "Removed from the shortlist by ")
-                            + (reviewer != null ? reviewer.getFullName() : "a recruiter"))
-                    .build());
+            if (status == ReviewStatus.SHORTLISTED) {
+                CandidateStageEvent event = CandidateStageEvent.builder()
+                        .candidateId(c.getId())
+                        .stage("SHORTLISTED")
+                        .actorId(reviewerId)
+                        .actorName(reviewer != null ? reviewer.getFullName() : null)
+                        .summary("Shortlisted by " + (reviewer != null ? reviewer.getFullName() : "Recruiter"))
+                        .build();
+                candidateStageEventRepository.save(event);
+            }
             changed++;
         }
         candidateRepository.saveAll(candidates);

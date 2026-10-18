@@ -1,26 +1,35 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, Download, FileText, Loader2 } from 'lucide-react';
+import { CheckCircle2, Download, FileText, Loader2, XCircle } from 'lucide-react';
 import { apiErrorMessage, pipelineApi } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import { hasPermission } from '@/lib/permissions';
 import type { PipelineCandidate, ReviewStatus } from '@/types';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Card';
 import { Alert, Loader } from '@/components/ui/Feedback';
+import { Textarea } from '@/components/ui/Input';
 import { Segmented } from '@/components/ui/Segmented';
+import { StageBadge } from '@/components/StageBadge';
 import { MainLayout, PageHeader } from '@/layouts/MainLayout';
+import { STAGE_LABEL } from '@/lib/pipeline';
 import { cn, formatScore } from '@/lib/utils';
 
-const PIPELINE_STAGES: { key: string; label: string; stage?: ReviewStatus }[] = [
+const FILTER_STAGES: ReviewStatus[] = [
+  'SHORTLISTED',
+  'CONTACTED',
+  'INTERVIEW_SCHEDULED',
+  'INTERVIEWED',
+  'OFFER',
+  'OFFER_APPROVED',
+  'OFFER_SENT',
+  'ACCEPTED',
+  'DECLINED',
+  'JOINING_SET',
+];
+const PIPELINE_STAGES: { key: string; label: string }[] = [
   { key: 'ALL', label: 'All' },
-  { key: 'SHORTLISTED', label: 'Shortlisted', stage: 'SHORTLISTED' },
-  { key: 'CONTACTED', label: 'Contacted', stage: 'CONTACTED' },
-  { key: 'INTERVIEW_SCHEDULED', label: 'Interviewing', stage: 'INTERVIEW_SCHEDULED' },
-  { key: 'INTERVIEWED', label: 'Interviewed', stage: 'INTERVIEWED' },
-  { key: 'OFFER', label: 'Offer', stage: 'OFFER' },
-  { key: 'OFFER_APPROVED', label: 'Offer approved', stage: 'OFFER_APPROVED' },
+  ...FILTER_STAGES.map((s) => ({ key: s, label: STAGE_LABEL[s] })),
 ];
 
 export default function Pipeline() {
@@ -38,6 +47,9 @@ export default function Pipeline() {
   // Approver action states
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectNote, setRejectNote] = useState('');
+  const [submittingReject, setSubmittingReject] = useState(false);
 
   const loadPipeline = async () => {
     setError(null);
@@ -70,6 +82,20 @@ export default function Pipeline() {
     }
   };
 
+  const handleReject = async (c: PipelineCandidate) => {
+    setSubmittingReject(true);
+    try {
+      await pipelineApi.rejectOffer(c.sessionId, c.id, rejectNote.trim() || undefined);
+      setRejectingId(null);
+      setRejectNote('');
+      await loadPipeline();
+    } catch (err) {
+      setError(apiErrorMessage(err, 'Could not reject the offer'));
+    } finally {
+      setSubmittingReject(false);
+    }
+  };
+
   const handleDownloadOffer = async (c: PipelineCandidate) => {
     setDownloadingId(c.id);
     try {
@@ -99,11 +125,16 @@ export default function Pipeline() {
     });
   }, [candidates, selectedStage]);
 
-  // Waiting offers for approver panel
+  // Offers waiting on this approver: the department director signs first, then the HR chief
   const waitingOffers = useMemo(() => {
     if (!canApprove) return [];
-    return candidates.filter((c) => c.stage === 'OFFER' && !!c.offerFileName && c.offerUploadedById !== me?.id);
-  }, [candidates, canApprove, me?.id]);
+    return candidates.filter((c) => {
+      if (c.stage !== 'OFFER' || !c.offerFileName || c.offerUploadedById === me?.id) return false;
+      if (me?.role === 'ADMIN') return c.offerStep === 'DIRECTOR' || c.offerStep === 'HR_CHIEF';
+      if (me?.role === 'DEPARTMENT_DIRECTOR') return c.offerStep === 'DIRECTOR';
+      return c.offerStep === 'HR_CHIEF';
+    });
+  }, [candidates, canApprove, me?.id, me?.role]);
 
   const stageOptions = PIPELINE_STAGES.map((s) => ({
     value: s.key,
@@ -158,7 +189,7 @@ export default function Pipeline() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 pt-2 border-t border-line">
+                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-line">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -179,9 +210,46 @@ export default function Pipeline() {
                     ) : (
                       <CheckCircle2 className="size-3" />
                     )}
-                    Approve offer
+                    {c.offerStep === 'DIRECTOR' ? 'Approve as director' : 'Approve offer'}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => {
+                      setRejectingId(rejectingId === c.id ? null : c.id);
+                      setRejectNote('');
+                    }}
+                    aria-expanded={rejectingId === c.id}
+                  >
+                    <XCircle className="size-3" aria-hidden="true" />
+                    Reject
                   </Button>
                 </div>
+
+                {rejectingId === c.id && (
+                  <div className="space-y-2 border-t border-line pt-3">
+                    <label htmlFor={`reject-${c.id}`} className="block text-[13px] font-semibold text-ink">
+                      Why are you rejecting it? <span className="font-normal text-ink-muted">(optional)</span>
+                    </label>
+                    <Textarea
+                      id={`reject-${c.id}`}
+                      rows={2}
+                      maxLength={1000}
+                      value={rejectNote}
+                      onChange={(e) => setRejectNote(e.target.value)}
+                      placeholder="Tell the recruiter what to change. You can leave this empty."
+                      className="min-h-[64px]"
+                    />
+                    <div className="flex gap-2">
+                      <Button variant="dangerSolid" size="sm" onClick={() => handleReject(c)} disabled={submittingReject}>
+                        {submittingReject ? 'Rejecting…' : 'Reject offer'}
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={() => setRejectingId(null)} disabled={submittingReject}>
+                        Keep reviewing
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -315,32 +383,3 @@ export default function Pipeline() {
   );
 }
 
-function StageBadge({ stage }: { stage: ReviewStatus }) {
-  const tone =
-    stage === 'OFFER_APPROVED'
-      ? 'success'
-      : stage === 'OFFER'
-      ? 'warn'
-      : stage === 'SHORTLISTED'
-      ? 'mark'
-      : stage === 'INTERVIEW_SCHEDULED' || stage === 'INTERVIEWED'
-      ? 'info'
-      : 'neutral';
-
-  const label =
-    stage === 'SHORTLISTED'
-      ? 'Shortlisted'
-      : stage === 'CONTACTED'
-      ? 'Contacted'
-      : stage === 'INTERVIEW_SCHEDULED'
-      ? 'Interviewing'
-      : stage === 'INTERVIEWED'
-      ? 'Interviewed'
-      : stage === 'OFFER'
-      ? 'Offer'
-      : stage === 'OFFER_APPROVED'
-      ? 'Offer approved'
-      : 'Screened';
-
-  return <Badge tone={tone}>{label}</Badge>;
-}

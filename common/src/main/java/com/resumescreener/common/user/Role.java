@@ -6,5 +6,13 @@ public enum Role {
     HR_CHIEF,
     RECRUITER,
     TECHNICAL_INTERVIEWER,
-    HR_INTERVIEWER
+    HR_INTERVIEWER,
+    /** Top management: sit on management interviews and see them on My Interviews */
+    DEPARTMENT_DIRECTOR,
+    CEO,
+    CHAIRMAN;
+
+    public boolean isTopManagement() {
+        return this == DEPARTMENT_DIRECTOR || this == CEO || this == CHAIRMAN;
+    }
 }

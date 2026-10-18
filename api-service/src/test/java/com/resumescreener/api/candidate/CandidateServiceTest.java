@@ -28,7 +28,7 @@ class CandidateServiceTest {
     private final SessionService sessions = mock(SessionService.class);
     private final CandidateRepository candidates = mock(CandidateRepository.class);
     private final com.resumescreener.common.session.CandidateNoteRepository notes = mock(com.resumescreener.common.session.CandidateNoteRepository.class);
-    private final CandidateService service = new CandidateService(sessions, candidates, null, null, null, notes, null);
+    private final CandidateService service = new CandidateService(sessions, candidates, null, null, null, notes, mock(com.resumescreener.common.session.CandidateStageEventRepository.class));
     private final PageRequest page = PageRequest.of(0, 50);
 
     @Test

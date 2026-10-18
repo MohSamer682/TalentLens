@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CheckCircle2, Clock, FileText, Loader2, MapPin } from 'lucide-react';
+import { CheckCircle2, Clock, FileText, Loader2 } from 'lucide-react';
 import { apiErrorMessage, pipelineApi } from '@/api/client';
 import type { InterviewDetail, InterviewRecommendation } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Card';
 import { Alert, Loader } from '@/components/ui/Feedback';
+import { InterviewPlaceText } from '@/components/InterviewPlace';
+import { KIND_LABEL } from '@/lib/pipeline';
 import { MainLayout } from '@/layouts/MainLayout';
 import { cn, formatRelativeDate, formatScore } from '@/lib/utils';
 
@@ -163,18 +165,11 @@ export default function InterviewFeedback() {
           <p className="mt-1 text-sm text-ink-muted flex flex-wrap items-center gap-x-3 gap-y-1">
             <span>{interview.sessionTitle}</span>
             <span>·</span>
-            <span>{interview.kind} interview</span>
+            <span>{KIND_LABEL[interview.kind] ?? interview.kind} interview</span>
             <span>·</span>
             <span>{formatTimeRange(interview.scheduledStart, interview.durationMinutes)}</span>
-            {interview.location && (
-              <>
-                <span>·</span>
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="size-3.5" aria-hidden="true" />
-                  {interview.location}
-                </span>
-              </>
-            )}
+            <span>·</span>
+            <InterviewPlaceText placeType={interview.placeType} location={interview.location} />
           </p>
         </div>
       </div>

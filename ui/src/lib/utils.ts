@@ -8,6 +8,9 @@ export const ROLE_LABEL: Record<Role, string> = {
   RECRUITER: 'Recruiter',
   TECHNICAL_INTERVIEWER: 'Technical interviewer',
   HR_INTERVIEWER: 'HR interviewer',
+  DEPARTMENT_DIRECTOR: 'Department director',
+  CEO: 'CEO',
+  CHAIRMAN: 'Chairman',
 };
 
 export function cn(...inputs: ClassValue[]) {

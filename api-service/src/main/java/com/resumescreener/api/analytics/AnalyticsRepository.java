@@ -158,10 +158,10 @@ public class AnalyticsRepository {
                 SELECT count(c.id) AS uploaded,
                        count(c.id) FILTER (WHERE c.status = 'SCORED') AS scored,
                        count(c.id) FILTER (WHERE c.review_status != 'NONE') AS shortlisted,
-                       count(c.id) FILTER (WHERE c.review_status IN ('CONTACTED', 'INTERVIEW_SCHEDULED', 'INTERVIEWED', 'OFFER', 'OFFER_APPROVED')) AS contacted,
-                       count(c.id) FILTER (WHERE c.review_status IN ('INTERVIEWED', 'OFFER', 'OFFER_APPROVED')) AS interviewed,
-                       count(c.id) FILTER (WHERE c.review_status IN ('OFFER', 'OFFER_APPROVED')) AS offer,
-                       count(c.id) FILTER (WHERE c.review_status = 'OFFER_APPROVED') AS approved
+                       count(c.id) FILTER (WHERE c.review_status IN ('CONTACTED', 'INTERVIEW_SCHEDULED', 'INTERVIEWED', 'OFFER', 'OFFER_APPROVED', 'OFFER_SENT', 'ACCEPTED', 'DECLINED', 'JOINING_SET')) AS contacted,
+                       count(c.id) FILTER (WHERE c.review_status IN ('INTERVIEWED', 'OFFER', 'OFFER_APPROVED', 'OFFER_SENT', 'ACCEPTED', 'DECLINED', 'JOINING_SET')) AS interviewed,
+                       count(c.id) FILTER (WHERE c.review_status IN ('OFFER', 'OFFER_APPROVED', 'OFFER_SENT', 'ACCEPTED', 'DECLINED', 'JOINING_SET')) AS offer,
+                       count(c.id) FILTER (WHERE c.review_status IN ('OFFER_APPROVED', 'OFFER_SENT', 'ACCEPTED', 'DECLINED', 'JOINING_SET')) AS approved
                   FROM candidates c JOIN screening_sessions s ON s.id = c.session_id
                  WHERE %s
                 """.formatted(IN_PERIOD), p, (rs, i) -> {
@@ -446,8 +446,8 @@ public class AnalyticsRepository {
                        count(DISTINCT s.id) AS sessions,
                        count(c.id) FILTER (WHERE c.status = 'SCORED') AS scored,
                        count(c.id) FILTER (WHERE c.review_status != 'NONE') AS shortlisted,
-                       count(c.id) FILTER (WHERE c.review_status IN ('CONTACTED', 'INTERVIEW_SCHEDULED', 'INTERVIEWED', 'OFFER', 'OFFER_APPROVED')) AS contacted,
-                       count(c.id) FILTER (WHERE c.review_status IN ('OFFER', 'OFFER_APPROVED')) AS offers,
+                       count(c.id) FILTER (WHERE c.review_status IN ('CONTACTED', 'INTERVIEW_SCHEDULED', 'INTERVIEWED', 'OFFER', 'OFFER_APPROVED', 'OFFER_SENT', 'ACCEPTED', 'DECLINED', 'JOINING_SET')) AS contacted,
+                       count(c.id) FILTER (WHERE c.review_status IN ('OFFER', 'OFFER_APPROVED', 'OFFER_SENT', 'ACCEPTED', 'DECLINED', 'JOINING_SET')) AS offers,
                        m.median_hours
                   FROM screening_sessions s
                   JOIN users u ON u.id = s.user_id

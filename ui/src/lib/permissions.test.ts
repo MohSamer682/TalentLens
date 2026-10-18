@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { can, canChangeSession, canReviewSession, canSwitchScope, defaultScope, diffGrants } from './permissions';
+import {
+  can,
+  canChangeSession,
+  canReviewSession,
+  canSeeSessions,
+  canSwitchScope,
+  defaultScope,
+  diffGrants,
+  homePath,
+} from './permissions';
 import type { Permission, User } from '@/types';
 
 const ALL: Permission[] = [
@@ -30,6 +39,24 @@ describe('can', () => {
     expect(can(hr, 'ANALYTICS_VIEW')).toBe(true);
     expect(can(hr, 'ROLE_MANAGE')).toBe(false);
   });
+});
+
+describe('homePath', () => {
+  it('sends recruiters to sessions', () =>
+    expect(homePath(user('RECRUITER', ['SESSION_RUN', 'PIPELINE_MANAGE']))).toBe('/dashboard'));
+  it('sends interviewers to My interviews and keeps them out of sessions', () => {
+    const interviewer = user('TECHNICAL_INTERVIEWER', ['INTERVIEW_FEEDBACK']);
+    expect(homePath(interviewer)).toBe('/interviews');
+    expect(canSeeSessions(interviewer)).toBe(false);
+  });
+  it('treats the department director, CEO and chairman the same way', () => {
+    expect(homePath(user('DEPARTMENT_DIRECTOR', ['INTERVIEW_FEEDBACK', 'OFFER_APPROVE']))).toBe('/interviews');
+    expect(homePath(user('CEO', ['INTERVIEW_FEEDBACK']))).toBe('/interviews');
+    expect(homePath(user('CHAIRMAN', ['INTERVIEW_FEEDBACK']))).toBe('/interviews');
+  });
+  it('lets an HR chief see sessions', () =>
+    expect(canSeeSessions(user('HR_CHIEF', ['SESSION_VIEW_ALL']))).toBe(true));
+  it('signs out a user with no rights', () => expect(homePath(user('RECRUITER', []))).toBe('/login'));
 });
 
 describe('canChangeSession', () => {

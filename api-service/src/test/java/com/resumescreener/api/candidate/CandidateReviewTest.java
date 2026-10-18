@@ -48,8 +48,8 @@ class CandidateReviewTest {
     private final UserRepository users = mock(UserRepository.class);
     private final AuditService audit = mock(AuditService.class);
     private final com.resumescreener.common.session.CandidateNoteRepository notes = mock(com.resumescreener.common.session.CandidateNoteRepository.class);
-    private final com.resumescreener.common.session.CandidateStageEventRepository events = mock(com.resumescreener.common.session.CandidateStageEventRepository.class);
-    private final CandidateService service = new CandidateService(sessions, candidates, scores, users, audit, notes, events);
+    private final com.resumescreener.common.session.CandidateStageEventRepository stageEvents = mock(com.resumescreener.common.session.CandidateStageEventRepository.class);
+    private final CandidateService service = new CandidateService(sessions, candidates, scores, users, audit, notes, stageEvents);
     private final ScreeningSession session = ScreeningSession.builder().id("s1").status(SessionStatus.DONE).build();
 
     @BeforeEach
@@ -122,6 +122,32 @@ class CandidateReviewTest {
     }
 
     @Test
+    void shortlistingNeverDragsACandidateBackFromALaterStage() {
+        Candidate contacted = scored("c1");
+        contacted.setReviewStatus(ReviewStatus.CONTACTED);
+        Candidate fresh = scored("c2");
+        when(candidates.findByIdInAndSessionId(anyCollection(), eq("s1"))).thenReturn(List.of(contacted, fresh));
+
+        ReviewResult result = service.review("s1", List.of("c1", "c2"), ReviewStatus.SHORTLISTED, EMAIL);
+
+        assertEquals(1, result.changed());
+        assertEquals(ReviewStatus.CONTACTED, contacted.getReviewStatus());
+        assertEquals(ReviewStatus.SHORTLISTED, fresh.getReviewStatus());
+    }
+
+    @Test
+    void unshortlistingLeavesCandidatesAlreadyInThePipeline() {
+        Candidate interviewing = scored("c1");
+        interviewing.setReviewStatus(ReviewStatus.INTERVIEW_SCHEDULED);
+        interviewing.setReviewedBy("u9");
+        when(candidates.findByIdInAndSessionId(anyCollection(), eq("s1"))).thenReturn(List.of(interviewing));
+
+        assertEquals(0, service.review("s1", List.of("c1"), ReviewStatus.NONE, EMAIL).changed());
+        assertEquals(ReviewStatus.INTERVIEW_SCHEDULED, interviewing.getReviewStatus());
+        assertEquals("u9", interviewing.getReviewedBy());
+    }
+
+    @Test
     void settingNoneClearsReviewer() {
         Candidate c = scored("c1");
         c.setReviewStatus(ReviewStatus.SHORTLISTED);
@@ -161,24 +187,12 @@ class CandidateReviewTest {
     }
 
     @Test
-    void unshortlistRefusedPastShortlist() {
-        Candidate c = scored("c1");
-        c.setReviewStatus(ReviewStatus.INTERVIEWED);
-        when(candidates.findByIdInAndSessionId(anyCollection(), eq("s1"))).thenReturn(List.of(c));
-
-        ApiException e = assertThrows(ApiException.class,
-                () -> service.review("s1", List.of("c1"), ReviewStatus.NONE, EMAIL));
-        assertEquals("Candidates past the shortlist can't be unshortlisted", e.getMessage());
-        assertEquals(ReviewStatus.INTERVIEWED, c.getReviewStatus());
-    }
-
-    @Test
     void shortlistWritesAStageEvent() {
         when(candidates.findByIdInAndSessionId(List.of("c1"), "s1")).thenReturn(List.of(scored("c1")));
 
         service.review("s1", List.of("c1"), ReviewStatus.SHORTLISTED, EMAIL);
 
-        verify(events).save(org.mockito.ArgumentMatchers.argThat(e -> "SHORTLISTED".equals(e.getStage()) && "u1".equals(e.getActorId())));
+        verify(stageEvents).save(org.mockito.ArgumentMatchers.argThat(e -> "SHORTLISTED".equals(e.getStage()) && "u1".equals(e.getActorId())));
     }
 
     private static Candidate scored(String id) {

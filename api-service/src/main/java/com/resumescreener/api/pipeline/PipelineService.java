@@ -18,12 +18,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -63,7 +65,7 @@ public class PipelineService {
 
     @Transactional(readOnly = true)
     public Optional<CandidateOfferDto> getOffer(String sessionId, String candidateId, String email) {
-        sessionService.getSession(sessionId, email);
+        sessionForOffer(sessionId, email);
         candidateInSession(sessionId, candidateId);
         return offerRepository.findByCandidateId(candidateId).map(CandidateOfferDto::from);
     }
@@ -72,7 +74,9 @@ public class PipelineService {
     public void markContacted(String sessionId, String candidateId, String email) {
         sessionService.getOwnedSession(sessionId, email);
         Candidate candidate = lockCandidate(sessionId, candidateId);
-        requireStage(candidate, ReviewStatus.SHORTLISTED);
+        if (candidate.getReviewStatus() != ReviewStatus.SHORTLISTED) {
+            throw ApiException.validation("Candidate cannot be marked as contacted", "Must be at SHORTLISTED stage");
+        }
         User actor = getUser(email);
         candidate.setReviewStatus(ReviewStatus.CONTACTED);
         candidate.setReviewedAt(Instant.now());
@@ -82,21 +86,62 @@ public class PipelineService {
         auditService.record("CANDIDATE_CONTACT", "CANDIDATE", candidateId, "SUCCESS");
     }
 
+    /** The interviews the recruiter chose for this candidate; empty when none was chosen yet. */
+    @Transactional(readOnly = true)
+    public List<InterviewKind> getInterviewPlan(String sessionId, String candidateId, String email) {
+        sessionService.getSession(sessionId, email);
+        Candidate candidate = candidateRepository.findByIdAndSessionId(candidateId, sessionId)
+                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate with id " + candidateId));
+        return new ArrayList<>(planOf(candidate));
+    }
+
+    @Transactional
+    public List<InterviewKind> setInterviewPlan(String sessionId, String candidateId, PlanInterviewsRequest req, String email) {
+        sessionService.getOwnedSession(sessionId, email);
+        Candidate candidate = lockCandidate(sessionId, candidateId);
+        ReviewStatus stage = candidate.getReviewStatus();
+        if (stage != ReviewStatus.CONTACTED && stage != ReviewStatus.INTERVIEW_SCHEDULED && stage != ReviewStatus.INTERVIEWED) {
+            throw ApiException.validation("Cannot plan interviews", "Candidate must be between CONTACTED and OFFER stages");
+        }
+
+        Set<InterviewKind> plan = EnumSet.copyOf(req.kinds());
+        Set<InterviewKind> inUse = interviewRepository.findByCandidateIdOrderByScheduledStartAsc(candidateId).stream()
+                .filter(i -> i.getStatus() != InterviewStatus.CANCELLED)
+                .map(CandidateInterview::getKind)
+                .collect(Collectors.toCollection(() -> EnumSet.noneOf(InterviewKind.class)));
+        if (!plan.containsAll(inUse)) {
+            throw ApiException.validation("Cannot remove an interview that is already scheduled",
+                    "Cancel the scheduled " + inUse.stream().filter(k -> !plan.contains(k)).findFirst().orElseThrow() + " interview first");
+        }
+
+        candidate.setInterviewPlan(plan.stream().map(Enum::name).collect(Collectors.joining(",")));
+        candidateRepository.save(candidate);
+
+        User actor = getUser(email);
+        recordEvent(candidateId, "INTERVIEW_PLAN", actor, "Interviews planned: " + candidate.getInterviewPlan().replace(',', ' ') + " by " + actor.getFullName());
+        auditService.record("INTERVIEW_PLAN", "CANDIDATE", candidateId, "SUCCESS");
+        settleInterviewed(candidate);
+        return new ArrayList<>(plan);
+    }
+
     @Transactional
     public CandidateInterviewDto scheduleInterview(String sessionId, String candidateId, ScheduleInterviewRequest req, String email) {
         sessionService.getOwnedSession(sessionId, email);
         Candidate candidate = lockCandidate(sessionId, candidateId);
-        requireStage(candidate, ReviewStatus.CONTACTED, ReviewStatus.INTERVIEW_SCHEDULED, ReviewStatus.INTERVIEWED);
+
+        ReviewStatus stage = candidate.getReviewStatus();
+        if (stage != ReviewStatus.CONTACTED && stage != ReviewStatus.INTERVIEW_SCHEDULED && stage != ReviewStatus.INTERVIEWED) {
+            throw ApiException.validation("Cannot schedule interview", "Candidate must be between CONTACTED and OFFER stages");
+        }
+        Set<InterviewKind> plan = planOf(candidate);
+        if (!plan.isEmpty() && !plan.contains(req.kind())) {
+            throw ApiException.validation("Interview is not in the plan", "Add " + req.kind() + " to this candidate's interviews first");
+        }
 
         User interviewer = userRepository.findById(req.interviewerId())
                 .orElseThrow(() -> ApiException.notFound("Interviewer not found", "No user with id " + req.interviewerId()));
-
-        if (req.kind() == InterviewKind.TECHNICAL && interviewer.getRole() != Role.TECHNICAL_INTERVIEWER) {
-            throw ApiException.validation("Choose a technical interviewer for a technical interview", "Interviewer role is " + interviewer.getRole());
-        }
-        if (req.kind() == InterviewKind.HR && interviewer.getRole() != Role.HR_INTERVIEWER) {
-            throw ApiException.validation("Choose an HR interviewer for an HR interview", "Interviewer role is " + interviewer.getRole());
-        }
+        requireInterviewerFor(req.kind(), interviewer);
+        String location = resolveLocation(req.placeType(), req.location());
 
         User creator = getUser(email);
         CandidateInterview interview = CandidateInterview.builder()
@@ -105,17 +150,23 @@ public class PipelineService {
                 .interviewer(interviewer)
                 .scheduledStart(req.scheduledStart())
                 .durationMinutes(req.resolvedDuration())
-                .location(req.location())
+                .placeType(req.placeType())
+                .location(location)
                 .noteToInterviewer(req.noteToInterviewer())
                 .status(InterviewStatus.SCHEDULED)
                 .createdBy(creator)
                 .build();
 
-        interview = interviewRepository.saveAndFlush(interview);
+        interview = interviewRepository.save(interview);
+
+        if (stage == ReviewStatus.CONTACTED || stage == ReviewStatus.INTERVIEWED) {
+            candidate.setReviewStatus(ReviewStatus.INTERVIEW_SCHEDULED);
+            candidate.setReviewedAt(Instant.now());
+            candidateRepository.save(candidate);
+        }
 
         recordEvent(candidateId, "INTERVIEW_SCHEDULED", creator,
                 req.kind() + " interview scheduled with " + interviewer.getFullName() + " by " + creator.getFullName());
-        recomputeInterviewStage(candidate, creator);
         auditService.record("INTERVIEW_SCHEDULE", "CANDIDATE_INTERVIEW", interview.getId(), "SUCCESS");
 
         return CandidateInterviewDto.from(interview);
@@ -127,7 +178,8 @@ public class PipelineService {
         Candidate candidate = lockCandidate(sessionId, candidateId);
         CandidateInterview interview = interviewRepository.findById(interviewId)
                 .filter(i -> i.getCandidateId().equals(candidateId))
-                .orElseThrow(() -> ApiException.notFound("Interview not found", "No interview " + interviewId + " for candidate " + candidateId));
+                .orElseThrow(() -> ApiException.notFound("Interview not found", "No interview with id " + interviewId));
+
         if (interview.getStatus() != InterviewStatus.SCHEDULED) {
             throw ApiException.validation("Cannot reschedule interview", "Only scheduled interviews can be rescheduled");
         }
@@ -136,8 +188,11 @@ public class PipelineService {
         if (req.durationMinutes() != null) {
             interview.setDurationMinutes(req.durationMinutes());
         }
-        if (req.location() != null) {
-            interview.setLocation(req.location());
+        if (req.placeType() != null) {
+            interview.setPlaceType(req.placeType());
+            interview.setLocation(resolveLocation(req.placeType(), req.location()));
+        } else if (req.location() != null) {
+            interview.setLocation(resolveLocation(interview.getPlaceType(), req.location()));
         }
         interview.setUpdatedAt(Instant.now());
         interview = interviewRepository.save(interview);
@@ -156,7 +211,8 @@ public class PipelineService {
         Candidate candidate = lockCandidate(sessionId, candidateId);
         CandidateInterview interview = interviewRepository.findById(interviewId)
                 .filter(i -> i.getCandidateId().equals(candidateId))
-                .orElseThrow(() -> ApiException.notFound("Interview not found", "No interview " + interviewId + " for candidate " + candidateId));
+                .orElseThrow(() -> ApiException.notFound("Interview not found", "No interview with id " + interviewId));
+
         if (interview.getStatus() != InterviewStatus.SCHEDULED) {
             throw ApiException.validation("Cannot cancel interview", "Only scheduled interviews can be cancelled");
         }
@@ -170,8 +226,7 @@ public class PipelineService {
                 interview.getKind() + " interview cancelled by " + actor.getFullName());
         auditService.record("INTERVIEW_CANCEL", "CANDIDATE_INTERVIEW", interviewId, "SUCCESS");
 
-        interviewRepository.flush();
-        recomputeInterviewStage(candidate, actor);
+        settleInterviewed(candidate);
     }
 
     @Transactional
@@ -190,10 +245,8 @@ public class PipelineService {
             throw ApiException.validation("This interview was cancelled", "Cancelled interviews take no feedback");
         }
         if (interview.getScheduledStart().isAfter(Instant.now())) {
-            throw ApiException.validation("You can give feedback once the interview has started", "Starts at " + interview.getScheduledStart());
+            throw ApiException.validation("You can give feedback once the interview has started", "Feedback can only be submitted once the interview has started");
         }
-        Candidate candidate = candidateRepository.findForUpdateById(interview.getCandidateId())
-                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate for interview " + interviewId));
 
         interview.setRecommendation(req.recommendation());
         interview.setRating(req.rating());
@@ -206,7 +259,8 @@ public class PipelineService {
         recordEvent(interview.getCandidateId(), "FEEDBACK_SUBMITTED", interviewer,
                 "Feedback submitted by " + interviewer.getFullName() + ": " + req.recommendation());
         auditService.record("INTERVIEW_FEEDBACK_SUBMIT", "CANDIDATE_INTERVIEW", interviewId, "SUCCESS");
-        recomputeInterviewStage(candidate, interviewer);
+
+        candidateRepository.findForUpdateById(interview.getCandidateId()).ifPresent(this::settleInterviewed);
 
         return CandidateInterviewDto.from(interview);
     }
@@ -215,7 +269,10 @@ public class PipelineService {
     public void moveToOffer(String sessionId, String candidateId, String email) {
         sessionService.getOwnedSession(sessionId, email);
         Candidate candidate = lockCandidate(sessionId, candidateId);
-        requireStage(candidate, ReviewStatus.INTERVIEWED);
+
+        if (candidate.getReviewStatus() != ReviewStatus.INTERVIEWED) {
+            throw ApiException.validation("Cannot move to offer", "Candidate must be at INTERVIEWED stage");
+        }
 
         User actor = getUser(email);
         candidate.setReviewStatus(ReviewStatus.OFFER);
@@ -227,10 +284,13 @@ public class PipelineService {
     }
 
     @Transactional
-    public CandidateOfferDto uploadOffer(String sessionId, String candidateId, MultipartFile file, String email) {
+    public CandidateOfferDto uploadOffer(String sessionId, String candidateId, MultipartFile file, boolean requiresDirectorApproval, String email) {
         sessionService.getOwnedSession(sessionId, email);
         Candidate candidate = lockCandidate(sessionId, candidateId);
-        requireStage(candidate, ReviewStatus.OFFER);
+
+        if (candidate.getReviewStatus() != ReviewStatus.OFFER) {
+            throw ApiException.validation("Cannot upload offer", "Candidate must be at OFFER stage");
+        }
 
         byte[] bytes;
         try {
@@ -252,46 +312,64 @@ public class PipelineService {
         User uploader = getUser(email);
         CandidateOffer offer = offerRepository.findByCandidateId(candidateId).orElse(null);
         if (offer == null) {
-            offer = CandidateOffer.builder()
-                    .candidateId(candidateId)
-                    .fileKey(fileKey)
-                    .fileName(fileName)
-                    .sizeBytes(bytes.length)
-                    .uploadedBy(uploader)
-                    .build();
-        } else {
-            offer.setFileKey(fileKey);
-            offer.setFileName(fileName);
-            offer.setSizeBytes(bytes.length);
-            offer.setUploadedBy(uploader);
-            offer.setUploadedAt(Instant.now());
-            offer.setApprovedBy(null);
-            offer.setApprovedAt(null);
+            offer = CandidateOffer.builder().candidateId(candidateId).build();
         }
+        // A new or revised offer restarts the approval chain
+        offer.setFileKey(fileKey);
+        offer.setFileName(fileName);
+        offer.setSizeBytes(bytes.length);
+        offer.setUploadedBy(uploader);
+        offer.setUploadedAt(Instant.now());
+        offer.setRequiresDirectorApproval(requiresDirectorApproval);
+        offer.setApprovedBy(null);
+        offer.setApprovedAt(null);
+        offer.setDirectorApprovedBy(null);
+        offer.setDirectorApprovedAt(null);
+        offer.setRejectedBy(null);
+        offer.setRejectedAt(null);
+        offer.setRejectionNote(null);
         offer = offerRepository.save(offer);
 
-        recordEvent(candidateId, "OFFER", uploader, "Offer uploaded by " + uploader.getFullName());
+        recordEvent(candidateId, "OFFER", uploader, "Offer uploaded by " + uploader.getFullName()
+                + (requiresDirectorApproval ? " (department director approval required)" : ""));
         auditService.record("OFFER_UPLOAD", "CANDIDATE_OFFER", offer.getId(), "SUCCESS");
 
         return CandidateOfferDto.from(offer);
     }
 
+    /**
+     * One call, two possible steps. While the department director's sign-off is outstanding only a
+     * department director (or admin) can give it; after that, only the HR chief (or admin) gives the final one.
+     */
     @Transactional
     public CandidateOfferDto approveOffer(String sessionId, String candidateId, String email) {
-        sessionService.getSession(sessionId, email);
+        sessionForOffer(sessionId, email);
         Candidate candidate = lockCandidate(sessionId, candidateId);
-        requireStage(candidate, ReviewStatus.OFFER);
         CandidateOffer offer = offerRepository.findByCandidateId(candidateId)
                 .orElseThrow(() -> ApiException.notFound("Offer not found", "No offer exists for this candidate"));
 
         User approver = getUser(email);
         if (offer.getUploadedBy() != null && offer.getUploadedBy().getId().equals(approver.getId())) {
-            throw ApiException.validation("Someone other than the uploader must approve this offer", "Approver uploaded the offer");
+            throw ApiException.validation("Cannot approve your own offer", "A different approver is required to approve this offer");
         }
         if (offer.getApprovedAt() != null) {
             throw ApiException.validation("Offer already approved", "This offer has already been approved");
         }
+        if (offer.getRejectedAt() != null) {
+            throw ApiException.validation("Offer was rejected", "The recruiter has to upload a revised offer first");
+        }
 
+        if (directorStepPending(offer)) {
+            requireRole(approver, "Waiting for the department director", Role.DEPARTMENT_DIRECTOR);
+            offer.setDirectorApprovedBy(approver);
+            offer.setDirectorApprovedAt(Instant.now());
+            offer = offerRepository.save(offer);
+            recordEvent(candidateId, "OFFER_DIRECTOR_APPROVED", approver, "Offer approved by department director " + approver.getFullName());
+            auditService.record("OFFER_DIRECTOR_APPROVE", "CANDIDATE_OFFER", offer.getId(), "SUCCESS");
+            return CandidateOfferDto.from(offer);
+        }
+
+        requireRole(approver, "Only the HR chief can give the final approval", Role.HR_CHIEF);
         offer.setApprovedBy(approver);
         offer.setApprovedAt(Instant.now());
         offer = offerRepository.save(offer);
@@ -306,9 +384,93 @@ public class PipelineService {
         return CandidateOfferDto.from(offer);
     }
 
+    /** Whoever holds the current approval step may send the offer back; the note is optional. */
+    @Transactional
+    public CandidateOfferDto rejectOffer(String sessionId, String candidateId, RejectOfferRequest req, String email) {
+        sessionForOffer(sessionId, email);
+        lockCandidate(sessionId, candidateId);
+        CandidateOffer offer = offerRepository.findByCandidateId(candidateId)
+                .orElseThrow(() -> ApiException.notFound("Offer not found", "No offer exists for this candidate"));
+        if (offer.getApprovedAt() != null) {
+            throw ApiException.validation("Offer already approved", "An approved offer cannot be rejected");
+        }
+        if (offer.getRejectedAt() != null) {
+            throw ApiException.validation("Offer already rejected", "Waiting for the recruiter to upload a revised offer");
+        }
+
+        User rejecter = getUser(email);
+        if (directorStepPending(offer)) {
+            requireRole(rejecter, "Waiting for the department director", Role.DEPARTMENT_DIRECTOR);
+        } else {
+            requireRole(rejecter, "Only the HR chief can reject at this step", Role.HR_CHIEF);
+        }
+
+        String note = req == null || req.note() == null || req.note().isBlank() ? null : req.note().trim();
+        offer.setRejectedBy(rejecter);
+        offer.setRejectedAt(Instant.now());
+        offer.setRejectionNote(note);
+        offer = offerRepository.save(offer);
+
+        recordEvent(candidateId, "OFFER_REJECTED", rejecter,
+                "Offer rejected by " + rejecter.getFullName() + (note != null ? ": " + note : ""));
+        auditService.record("OFFER_REJECT", "CANDIDATE_OFFER", offer.getId(), "SUCCESS");
+
+        return CandidateOfferDto.from(offer);
+    }
+
+    @Transactional
+    public CandidateOfferDto markOfferSent(String sessionId, String candidateId, String email) {
+        sessionService.getOwnedSession(sessionId, email);
+        Candidate candidate = candidateInStage(sessionId, candidateId, ReviewStatus.OFFER_APPROVED, "Offer must be approved before it is sent");
+        CandidateOffer offer = offerOf(candidateId);
+
+        offer.setSentAt(Instant.now());
+        offerRepository.save(offer);
+        User actor = getUser(email);
+        moveTo(candidate, ReviewStatus.OFFER_SENT, "OFFER_SENT", actor, "Offer sent to the candidate by " + actor.getFullName());
+        return CandidateOfferDto.from(offer);
+    }
+
+    @Transactional
+    public CandidateOfferDto answerOffer(String sessionId, String candidateId, OfferAnswerRequest req, String email) {
+        sessionService.getOwnedSession(sessionId, email);
+        Candidate candidate = candidateInStage(sessionId, candidateId, ReviewStatus.OFFER_SENT, "The offer must be sent before the candidate can answer");
+        CandidateOffer offer = offerOf(candidateId);
+
+        boolean accepted = Boolean.TRUE.equals(req.accepted());
+        offer.setCandidateResponse(accepted ? "ACCEPTED" : "DECLINED");
+        offer.setRespondedAt(Instant.now());
+        offerRepository.save(offer);
+        User actor = getUser(email);
+        moveTo(candidate, accepted ? ReviewStatus.ACCEPTED : ReviewStatus.DECLINED, accepted ? "ACCEPTED" : "DECLINED", actor,
+                "Candidate " + (accepted ? "accepted" : "declined") + " the offer, recorded by " + actor.getFullName());
+        return CandidateOfferDto.from(offer);
+    }
+
+    @Transactional
+    public CandidateOfferDto saveJoining(String sessionId, String candidateId, JoiningRequest req, String email) {
+        sessionService.getOwnedSession(sessionId, email);
+        Candidate candidate = lockCandidate(sessionId, candidateId);
+        if (candidate.getReviewStatus() != ReviewStatus.ACCEPTED && candidate.getReviewStatus() != ReviewStatus.JOINING_SET) {
+            throw ApiException.validation("Cannot set a joining date", "The candidate must have accepted the offer");
+        }
+        CandidateOffer offer = offerOf(candidateId);
+
+        offer.setJoiningDate(req.joiningDate());
+        offer.setJoiningNotes(req.notes() == null || req.notes().isBlank() ? null : req.notes().trim());
+        offerRepository.save(offer);
+        User actor = getUser(email);
+        if (candidate.getReviewStatus() == ReviewStatus.ACCEPTED) {
+            moveTo(candidate, ReviewStatus.JOINING_SET, "JOINING_SET", actor, "Joining date set to " + req.joiningDate() + " by " + actor.getFullName());
+        } else {
+            recordEvent(candidateId, "JOINING_SET", actor, "Joining details changed to " + req.joiningDate() + " by " + actor.getFullName());
+        }
+        return CandidateOfferDto.from(offer);
+    }
+
     @Transactional(readOnly = true)
     public String getOfferDownloadUrl(String sessionId, String candidateId, String email) {
-        sessionService.getSession(sessionId, email);
+        sessionForOffer(sessionId, email);
         candidateInSession(sessionId, candidateId);
         CandidateOffer offer = offerRepository.findByCandidateId(candidateId)
                 .orElseThrow(() -> ApiException.notFound("Offer not found", "No offer exists for this candidate"));
@@ -318,7 +480,7 @@ public class PipelineService {
     @Transactional(readOnly = true)
     public List<PipelineCandidateDto> getPipeline(Boolean awaitingApprovalOnly, String email) {
         User user = getUser(email);
-        boolean canSeeAll = Authorities.has(Permission.SESSION_VIEW_ALL);
+        boolean canSeeAll = user.getRole() == Role.ADMIN || user.getRole() == Role.HR_CHIEF || user.getRole() == Role.DEPARTMENT_DIRECTOR;
 
         List<Candidate> candidates;
         if (canSeeAll) {
@@ -337,7 +499,8 @@ public class PipelineService {
 
         for (Candidate c : candidates) {
             CandidateOffer offer = offerRepository.findByCandidateId(c.getId()).orElse(null);
-            boolean isAwaitingApproval = c.getReviewStatus() == ReviewStatus.OFFER && offer != null && offer.getApprovedAt() == null;
+            String offerStep = offerStep(c, offer);
+            boolean isAwaitingApproval = "DIRECTOR".equals(offerStep) || "HR_CHIEF".equals(offerStep);
             if (Boolean.TRUE.equals(awaitingApprovalOnly) && !isAwaitingApproval) {
                 continue;
             }
@@ -348,7 +511,7 @@ public class PipelineService {
             CandidateScore score = candidateScoreRepository.findByCandidateId(c.getId()).stream().findFirst().orElse(null);
             Double compositeScore = score != null ? score.getCompositeScore() : null;
 
-            String nextStep = determineNextStep(c, offer);
+            String nextStep = determineNextStep(c, offer, offerStep);
 
             result.add(new PipelineCandidateDto(
                     c.getId(),
@@ -363,7 +526,8 @@ public class PipelineService {
                     changedAt,
                     offer != null ? offer.getFileName() : null,
                     offer != null && offer.getUploadedBy() != null ? offer.getUploadedBy().getFullName() : null,
-                    offer != null && offer.getUploadedBy() != null ? offer.getUploadedBy().getId() : null
+                    offer != null && offer.getUploadedBy() != null ? offer.getUploadedBy().getId() : null,
+                    offerStep
             ));
         }
 
@@ -394,6 +558,7 @@ public class PipelineService {
             item.put("kind", i.getKind());
             item.put("scheduledStart", i.getScheduledStart());
             item.put("durationMinutes", i.getDurationMinutes());
+            item.put("placeType", i.getPlaceType());
             item.put("location", i.getLocation());
             item.put("status", i.getStatus());
             item.put("recommendation", i.getRecommendation());
@@ -418,7 +583,22 @@ public class PipelineService {
         return response;
     }
 
-    private String determineNextStep(Candidate candidate, CandidateOffer offer) {
+    /** Who must act on the offer next: DIRECTOR, HR_CHIEF, or REJECTED when the recruiter has to revise it. */
+    private String offerStep(Candidate candidate, CandidateOffer offer) {
+        if (candidate.getReviewStatus() != ReviewStatus.OFFER || offer == null || offer.getApprovedAt() != null) {
+            return null;
+        }
+        if (offer.getRejectedAt() != null) {
+            return "REJECTED";
+        }
+        return directorStepPending(offer) ? "DIRECTOR" : "HR_CHIEF";
+    }
+
+    private boolean directorStepPending(CandidateOffer offer) {
+        return offer.isRequiresDirectorApproval() && offer.getDirectorApprovedAt() == null;
+    }
+
+    private String determineNextStep(Candidate candidate, CandidateOffer offer, String offerStep) {
         if (candidate.getReviewStatus() == null) {
             return "Screened";
         }
@@ -432,65 +612,24 @@ public class PipelineService {
                     DateTimeFormatter fmt = DateTimeFormatter.ofPattern("EEE d MMM, HH:mm").withZone(ZoneId.of("UTC"));
                     yield next.getKind() + " · " + fmt.format(next.getScheduledStart());
                 }
-                yield "Interview scheduled";
+                yield "Schedule the next interview";
             }
             case INTERVIEWED -> "Move to offer";
-            case OFFER -> offer != null ? "Waiting for approval" : "Upload offer";
-            case OFFER_APPROVED -> "Done";
+            case OFFER -> {
+                if (offer == null) yield "Upload offer";
+                yield switch (offerStep == null ? "" : offerStep) {
+                    case "REJECTED" -> "Revise offer";
+                    case "DIRECTOR" -> "Waiting for department director";
+                    default -> "Waiting for HR chief";
+                };
+            }
+            case OFFER_APPROVED -> "Send offer";
+            case OFFER_SENT -> "Record candidate's answer";
+            case ACCEPTED -> "Set joining date";
+            case JOINING_SET -> "Joining " + (offer != null && offer.getJoiningDate() != null ? offer.getJoiningDate() : "");
+            case DECLINED -> "Closed: offer declined";
             default -> "Screened";
         };
-    }
-
-    /**
-     * The three interview-driven stages follow the interviews: none left -> CONTACTED, any without
-     * feedback -> INTERVIEW_SCHEDULED, all with feedback -> INTERVIEWED. Offers and earlier stages are untouched.
-     */
-    void recomputeInterviewStage(Candidate candidate, User actor) {
-        ReviewStatus current = candidate.getReviewStatus();
-        if (current.compareTo(ReviewStatus.CONTACTED) < 0 || current.compareTo(ReviewStatus.OFFER) >= 0) {
-            return;
-        }
-        List<CandidateInterview> live = interviewRepository.findByCandidateIdOrderByScheduledStartAsc(candidate.getId())
-                .stream().filter(i -> i.getStatus() != InterviewStatus.CANCELLED).toList();
-        ReviewStatus next = live.isEmpty() ? ReviewStatus.CONTACTED
-                : live.stream().anyMatch(i -> i.getStatus() == InterviewStatus.SCHEDULED) ? ReviewStatus.INTERVIEW_SCHEDULED
-                : ReviewStatus.INTERVIEWED;
-        if (next == current) {
-            return;
-        }
-        candidate.setReviewStatus(next);
-        candidate.setReviewedAt(Instant.now());
-        candidateRepository.save(candidate);
-        // scheduling already wrote its INTERVIEW_SCHEDULED event
-        if (next == ReviewStatus.INTERVIEWED) {
-            recordEvent(candidate.getId(), "INTERVIEWED", actor, "All interviews have feedback");
-        } else if (next == ReviewStatus.CONTACTED) {
-            recordEvent(candidate.getId(), "CONTACTED", actor, "No interviews left, back to contacted");
-        }
-    }
-
-    private Candidate lockCandidate(String sessionId, String candidateId) {
-        candidateInSession(sessionId, candidateId);
-        return candidateRepository.findForUpdateById(candidateId)
-                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate with id " + candidateId));
-    }
-
-    private void candidateInSession(String sessionId, String candidateId) {
-        if (candidateRepository.findByIdAndSessionId(candidateId, sessionId).isEmpty()) {
-            throw ApiException.notFound("Candidate not found", "No candidate " + candidateId + " in session " + sessionId);
-        }
-    }
-
-    private static final Map<ReviewStatus, String> STAGE_LABEL = Map.of(
-            ReviewStatus.NONE, "Screened", ReviewStatus.SHORTLISTED, "Shortlisted", ReviewStatus.CONTACTED, "Contacted",
-            ReviewStatus.INTERVIEW_SCHEDULED, "Interviewing", ReviewStatus.INTERVIEWED, "Interviewed",
-            ReviewStatus.OFFER, "Offer", ReviewStatus.OFFER_APPROVED, "Offer approved");
-
-    private static void requireStage(Candidate candidate, ReviewStatus... allowed) {
-        if (!Arrays.asList(allowed).contains(candidate.getReviewStatus())) {
-            throw ApiException.validation("This candidate is at " + STAGE_LABEL.get(candidate.getReviewStatus())
-                    + ", so this step isn't available", "Stage " + candidate.getReviewStatus());
-        }
     }
 
     private void recordEvent(String candidateId, String stage, User actor, String summary) {
@@ -506,9 +645,13 @@ public class PipelineService {
 
     @Transactional(readOnly = true)
     public List<Map<String, String>> getInterviewers(InterviewKind kind) {
-        List<Role> roles = (kind == null)
-                ? List.of(Role.TECHNICAL_INTERVIEWER, Role.HR_INTERVIEWER)
-                : (kind == InterviewKind.TECHNICAL ? List.of(Role.TECHNICAL_INTERVIEWER) : List.of(Role.HR_INTERVIEWER));
+        List<Role> roles = kind == null
+                ? List.of(Role.TECHNICAL_INTERVIEWER, Role.HR_INTERVIEWER, Role.DEPARTMENT_DIRECTOR, Role.CEO, Role.CHAIRMAN)
+                : switch (kind) {
+                    case TECHNICAL -> List.of(Role.TECHNICAL_INTERVIEWER);
+                    case HR -> List.of(Role.HR_INTERVIEWER);
+                    case MANAGEMENT -> List.of(Role.DEPARTMENT_DIRECTOR, Role.CEO, Role.CHAIRMAN);
+                };
         return userRepository.findByRoleIn(roles).stream()
                 .map(u -> Map.of(
                         "id", u.getId(),
@@ -564,6 +707,7 @@ public class PipelineService {
                 interview.getInterviewer() != null ? interview.getInterviewer().getFullName() : null,
                 interview.getScheduledStart(),
                 interview.getDurationMinutes(),
+                interview.getPlaceType(),
                 interview.getLocation(),
                 interview.getNoteToInterviewer(),
                 interview.getStatus(),
@@ -577,6 +721,145 @@ public class PipelineService {
                 score != null ? score.getGaps() : null,
                 resumeUrl
         );
+    }
+
+    /** The kinds the recruiter chose, in enum order; empty for candidates planned before plans existed. */
+    static Set<InterviewKind> planOf(Candidate candidate) {
+        Set<InterviewKind> plan = EnumSet.noneOf(InterviewKind.class);
+        if (candidate.getInterviewPlan() != null && !candidate.getInterviewPlan().isBlank()) {
+            for (String name : candidate.getInterviewPlan().split(",")) {
+                plan.add(InterviewKind.valueOf(name.trim()));
+            }
+        }
+        return plan;
+    }
+
+    /**
+     * HQ needs no detail, ONLINE needs an http(s) link, OTHER needs the place written out. The link is stored
+     * as typed so it can be shown and clicked as is.
+     */
+    static String resolveLocation(InterviewPlace place, String location) {
+        String text = location == null ? "" : location.trim();
+        return switch (place) {
+            case HQ -> null;
+            case ONLINE -> {
+                if (!isWebLink(text)) {
+                    throw ApiException.validation("Meeting link is required", "Paste a link that starts with http:// or https://");
+                }
+                yield text;
+            }
+            case OTHER -> {
+                if (text.isEmpty()) {
+                    throw ApiException.validation("Place is required", "Write where the interview takes place");
+                }
+                yield text;
+            }
+        };
+    }
+
+    private static boolean isWebLink(String text) {
+        try {
+            URI uri = new URI(text);
+            return ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+                    && uri.getHost() != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static void requireInterviewerFor(InterviewKind kind, User interviewer) {
+        Role role = interviewer.getRole();
+        boolean ok = role == Role.ADMIN || switch (kind) {
+            case TECHNICAL -> role == Role.TECHNICAL_INTERVIEWER;
+            case HR -> role == Role.HR_INTERVIEWER;
+            case MANAGEMENT -> role.isTopManagement();
+        };
+        if (!ok) {
+            String who = switch (kind) {
+                case TECHNICAL -> "Technical interviews can only be assigned to technical interviewers";
+                case HR -> "HR interviews can only be assigned to HR interviewers";
+                case MANAGEMENT -> "Management interviews can only be assigned to the CEO, chairman or a department director";
+            };
+            throw ApiException.validation("Invalid interviewer", who);
+        }
+    }
+
+    private static void requireRole(User user, String message, Role role) {
+        if (user.getRole() != Role.ADMIN && user.getRole() != role) {
+            throw ApiException.forbidden(message, "Your role cannot act on this step");
+        }
+    }
+
+    /**
+     * Moves INTERVIEW_SCHEDULED to INTERVIEWED once nothing is waiting and every planned interview has been
+     * held. Without a plan (older candidates), one held interview is enough as before.
+     */
+    private void settleInterviewed(Candidate candidate) {
+        if (candidate.getReviewStatus() != ReviewStatus.INTERVIEW_SCHEDULED) {
+            return;
+        }
+        List<CandidateInterview> all = interviewRepository.findByCandidateIdOrderByScheduledStartAsc(candidate.getId());
+        if (all.stream().anyMatch(i -> i.getStatus() == InterviewStatus.SCHEDULED)) {
+            return;
+        }
+        Set<InterviewKind> held = all.stream().filter(i -> i.getStatus() == InterviewStatus.COMPLETED)
+                .map(CandidateInterview::getKind)
+                .collect(Collectors.toCollection(() -> EnumSet.noneOf(InterviewKind.class)));
+        Set<InterviewKind> plan = planOf(candidate);
+        boolean covered = plan.isEmpty() ? !held.isEmpty() : held.containsAll(plan);
+        if (covered) {
+            candidate.setReviewStatus(ReviewStatus.INTERVIEWED);
+            candidate.setReviewedAt(Instant.now());
+            candidateRepository.save(candidate);
+            recordEvent(candidate.getId(), "INTERVIEWED", null, "All planned interviews completed");
+        }
+    }
+
+    private Candidate candidateInStage(String sessionId, String candidateId, ReviewStatus required, String message) {
+        Candidate candidate = lockCandidate(sessionId, candidateId);
+        if (candidate.getReviewStatus() != required) {
+            throw ApiException.validation("Wrong stage", message);
+        }
+        return candidate;
+    }
+
+    private Candidate lockCandidate(String sessionId, String candidateId) {
+        candidateInSession(sessionId, candidateId);
+        return candidateRepository.findForUpdateById(candidateId)
+                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate with id " + candidateId));
+    }
+
+    private void candidateInSession(String sessionId, String candidateId) {
+        if (candidateRepository.findByIdAndSessionId(candidateId, sessionId).isEmpty()) {
+            throw ApiException.notFound("Candidate not found", "No candidate " + candidateId + " in session " + sessionId);
+        }
+    }
+
+    private CandidateOffer offerOf(String candidateId) {
+        return offerRepository.findByCandidateId(candidateId)
+                .orElseThrow(() -> ApiException.notFound("Offer not found", "No offer exists for this candidate"));
+    }
+
+    private void moveTo(Candidate candidate, ReviewStatus next, String eventStage, User actor, String summary) {
+        candidate.setReviewStatus(next);
+        candidate.setReviewedAt(Instant.now());
+        candidateRepository.save(candidate);
+        recordEvent(candidate.getId(), eventStage, actor, summary);
+        auditService.record("CANDIDATE_" + eventStage, "CANDIDATE", candidate.getId(), "SUCCESS");
+    }
+
+    /**
+     * Approvers read the session of an offer without being able to browse sessions: holding
+     * OFFER_APPROVE is enough here. Everyone else needs normal read access to the session.
+     */
+    private void sessionForOffer(String sessionId, String email) {
+        if (Authorities.has(Permission.OFFER_APPROVE)) {
+            if (!sessionRepository.existsById(sessionId)) {
+                throw ApiException.notFound("Session not found", "No session with id " + sessionId);
+            }
+            return;
+        }
+        sessionService.getSession(sessionId, email);
     }
 
     private User getUser(String email) {

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { LogOut, Moon, Sun } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { ROLE_LABEL, cn } from '@/lib/utils';
-import { can } from '@/lib/permissions';
+import { can, canSeeSessions as userCanSeeSessions, homePath } from '@/lib/permissions';
 import { BrandMark } from '@/components/BrandMark';
 
 export function Navbar() {
@@ -30,9 +30,8 @@ export function Navbar() {
     navigate('/login');
   };
 
-  const canSeeSessions = can(user, 'SESSION_RUN') || can(user, 'SESSION_VIEW_ALL');
-  const isInterviewerOnly = can(user, 'INTERVIEW_FEEDBACK') && !canSeeSessions;
-  const homePath = isInterviewerOnly ? '/interviews' : '/dashboard';
+  const canSeeSessions = userCanSeeSessions(user);
+  const home = homePath(user);
 
   const links = [
     ...(canSeeSessions ? [{ to: '/dashboard', label: 'Sessions', match: ['/dashboard', '/sessions'] }] : []),
@@ -53,7 +52,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-line glass text-ink">
       <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-2 px-4 sm:gap-6 sm:px-6">
-        <Link to={homePath} aria-label="TalentLens, home" className="flex shrink-0 items-center gap-2 rounded-md">
+        <Link to={home} aria-label="TalentLens, home" className="flex shrink-0 items-center gap-2 rounded-md">
           <BrandMark size={28} />
           <span className="hidden whitespace-nowrap font-display text-[17px] font-bold tracking-tight text-ink sm:inline">TalentLens</span>
         </Link>

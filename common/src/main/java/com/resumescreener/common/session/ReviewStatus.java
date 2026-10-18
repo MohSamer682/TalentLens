@@ -8,7 +8,11 @@ public enum ReviewStatus {
     INTERVIEW_SCHEDULED,
     INTERVIEWED,
     OFFER,
-    OFFER_APPROVED;
+    OFFER_APPROVED,
+    OFFER_SENT,
+    ACCEPTED,
+    DECLINED,
+    JOINING_SET;
 
     public boolean isShortlistedOrBeyond() {
         return this != NONE;

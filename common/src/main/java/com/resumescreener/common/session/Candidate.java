@@ -51,6 +51,10 @@ public class Candidate {
     /** Id of the user who made the current review decision */
     private String reviewedBy;
 
+    /** Comma-separated {@link InterviewKind}s the recruiter chose; null for candidates planned before this existed */
+    @Column(name = "interview_plan", length = 64)
+    private String interviewPlan;
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {

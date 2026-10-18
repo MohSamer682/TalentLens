@@ -38,6 +38,12 @@ public class CandidateInterview {
     @Builder.Default
     private int durationMinutes = 60;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "place_type", nullable = false, length = 16)
+    @Builder.Default
+    private InterviewPlace placeType = InterviewPlace.HQ;
+
+    /** The meeting link for ONLINE, free text for OTHER, empty for HQ */
     @Column(length = 500)
     private String location;
 

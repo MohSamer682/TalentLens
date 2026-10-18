@@ -41,6 +41,13 @@ Rule: if something is saffron, it made the cut. Never use `mark` for decoration,
   - **Glass** (`.glass`): navbar and sticky bars only. Pitch/white with 16px blur; solid fallback where blur is off or with reduced transparency.
 - Motion: `cubic-bezier(0.22, 1, 0.36, 1)`; 160 ms for state, 240 ms for enter, 320 ms for panels. Interactive cards rise 1px on hover. Everything drops travel under `prefers-reduced-motion`.
 
+## Stages, places and approvals
+
+- One stage vocabulary (`src/lib/pipeline.ts`): Shortlisted, Contacted, Interviewing, Interviewed, Offer, Offer approved, Offer sent, Accepted or Declined, Joining. `StageBadge` renders it everywhere (standings, candidate page, pipeline), so screens cannot disagree. Saffron stays for the cut: the position cell and row wash cover every stage from Shortlisted on, while the badge says where the candidate is.
+- The candidate status line shows only the interviews the recruiter planned (HR, technical, management), then the offer steps.
+- Interview place is HQ, Online or Other. Online shows as a real link that opens in a new tab. In list rows the row link is stretched from the title and the place sits above it (`relative z-10`), so the two links never nest.
+- Offer approvals read as a short ordered list: department director (only when the recruiter asked for it), then HR chief. Rejecting opens an inline optional note, not a modal.
+
 ## Not yet done
 
 Rank-change markers (a row that moves holds a marker until seen) are not built.

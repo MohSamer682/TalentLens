@@ -5,6 +5,8 @@ import type { InterviewRecommendation, MyInterviewItem, MyInterviewsResponse } f
 import { Badge } from '@/components/ui/Badge';
 import { Panel } from '@/components/ui/Card';
 import { Alert, Loader } from '@/components/ui/Feedback';
+import { InterviewPlaceText } from '@/components/InterviewPlace';
+import { KIND_LABEL } from '@/lib/pipeline';
 import { MainLayout } from '@/layouts/MainLayout';
 import { cn } from '@/lib/utils';
 
@@ -166,10 +168,9 @@ function InterviewRow({
   const timeRange = formatTimeRange(item.scheduledStart, item.durationMinutes);
 
   return (
-    <Link
-      to={`/interviews/${item.id}/feedback`}
+    <div
       className={cn(
-        'group flex flex-wrap sm:flex-nowrap items-center gap-4 px-5 py-4 transition-all focus:outline-none focus:ring-2 focus:ring-accent-text focus:ring-inset',
+        'group relative flex flex-wrap sm:flex-nowrap items-center gap-4 px-5 py-4 transition-all focus-within:ring-2 focus-within:ring-accent-text focus-within:ring-inset',
         group === 'waiting'
           ? 'bg-warn/[0.04] hover:bg-warn/[0.08]'
           : 'bg-surface hover:bg-sunken/50'
@@ -177,7 +178,7 @@ function InterviewRow({
     >
       {/* 64px Date Tile */}
       <div className="size-16 shrink-0 rounded-xl bg-sunken border border-line flex flex-col items-center justify-center text-center">
-        <span className="text-[12.5px] font-medium uppercase tracking-wider text-ink-muted leading-tight">
+        <span className="text-[12.5px] font-medium text-ink-muted leading-tight">
           {weekday}
         </span>
         <span className="font-mono text-xl font-bold text-ink leading-tight">{day}</span>
@@ -187,12 +188,21 @@ function InterviewRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2.5">
           <h3 className="text-base font-semibold text-ink group-hover:text-accent-text transition-colors truncate">
-            {item.candidateName}
+            <Link
+              to={`/interviews/${item.id}/feedback`}
+              className="rounded-sm after:absolute after:inset-0 focus:outline-none"
+            >
+              {item.candidateName}
+            </Link>
           </h3>
-          <Badge tone="neutral">{item.kind}</Badge>
+          <Badge tone="neutral">{KIND_LABEL[item.kind] ?? item.kind}</Badge>
         </div>
-        <p className="mt-1 text-[12.5px] text-ink-muted truncate">
-          {item.role} · {timeRange} {item.location ? `· ${item.location}` : ''}
+        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12.5px] text-ink-muted">
+          <span>
+            {item.role} · {timeRange}
+          </span>
+          {/* Above the stretched row link, so a meeting link can be clicked */}
+          <InterviewPlaceText placeType={item.placeType} location={item.location} className="relative z-10" />
         </p>
       </div>
 
@@ -233,6 +243,6 @@ function InterviewRow({
           </div>
         )}
       </div>
-    </Link>
+    </div>
   );
 }

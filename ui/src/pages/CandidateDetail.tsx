@@ -10,6 +10,7 @@ import { Panel, PanelHeader } from '@/components/ui/Card';
 import { Alert, Loader } from '@/components/ui/Feedback';
 import { CandidateNotes } from '@/components/CandidateNotes';
 import { HiringPipeline } from '@/components/HiringPipeline';
+import { StageBadge } from '@/components/StageBadge';
 import { MainLayout } from '@/layouts/MainLayout';
 import { useCountUp } from '@/lib/motion';
 import { DEFAULT_WEIGHTS, DIMENSIONS, cn, formatScore } from '@/lib/utils';
@@ -152,10 +153,9 @@ export default function CandidateDetail() {
                 <span>No email found in resume</span>
               )}
               {isShortlistedOrBeyond && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-mark-soft px-2.5 py-0.5 text-xs font-semibold text-mark-text">
+                <StageBadge stage={score.reviewStatus}>
                   <Check className="size-3.5" aria-hidden="true" />
-                  Shortlisted
-                </span>
+                </StageBadge>
               )}
             </p>
           </div>

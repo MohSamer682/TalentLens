@@ -54,6 +54,11 @@ class RoleServiceDatabaseTest {
     void seedMatchesTheDefaults() {
         assertThat(grants.findByRole(Role.RECRUITER)).extracting(RolePermission::getPermission)
                 .containsExactlyInAnyOrder(Permission.SESSION_RUN, Permission.CANDIDATE_REVIEW, Permission.PIPELINE_MANAGE);
+        assertThat(grants.findByRole(Role.DEPARTMENT_DIRECTOR)).extracting(RolePermission::getPermission)
+                .containsExactlyInAnyOrder(Permission.INTERVIEW_FEEDBACK, Permission.OFFER_APPROVE);
+        assertThat(grants.findByRole(Role.CEO)).extracting(RolePermission::getPermission)
+                .containsExactly(Permission.INTERVIEW_FEEDBACK);
+        assertThat(service.catalog().roles()).hasSize(Role.values().length);
         assertThat(grants.findByRole(Role.HR_CHIEF)).extracting(RolePermission::getPermission)
                 .containsExactlyInAnyOrder(Permission.SESSION_VIEW_ALL, Permission.CANDIDATE_REVIEW,
                         Permission.ANALYTICS_VIEW, Permission.OFFER_APPROVE);
@@ -61,6 +66,5 @@ class RoleServiceDatabaseTest {
                 .containsExactly(Permission.INTERVIEW_FEEDBACK);
         assertThat(grants.findByRole(Role.TECHNICAL_INTERVIEWER)).extracting(RolePermission::getPermission)
                 .containsExactly(Permission.INTERVIEW_FEEDBACK);
-        assertThat(service.catalog().roles()).hasSize(5);
     }
 }

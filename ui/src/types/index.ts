@@ -81,7 +81,10 @@ export type Role =
   | 'HR_CHIEF'
   | 'RECRUITER'
   | 'TECHNICAL_INTERVIEWER'
-  | 'HR_INTERVIEWER';
+  | 'HR_INTERVIEWER'
+  | 'DEPARTMENT_DIRECTOR'
+  | 'CEO'
+  | 'CHAIRMAN';
 
 export type Permission =
   | 'SESSION_RUN'
@@ -201,9 +204,14 @@ export type ReviewStatus =
   | 'INTERVIEW_SCHEDULED'
   | 'INTERVIEWED'
   | 'OFFER'
-  | 'OFFER_APPROVED';
+  | 'OFFER_APPROVED'
+  | 'OFFER_SENT'
+  | 'ACCEPTED'
+  | 'DECLINED'
+  | 'JOINING_SET';
 
-export type InterviewKind = 'TECHNICAL' | 'HR';
+export type InterviewKind = 'HR' | 'TECHNICAL' | 'MANAGEMENT';
+export type InterviewPlaceType = 'HQ' | 'ONLINE' | 'OTHER';
 export type InterviewStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 export type InterviewRecommendation = 'STRONG_HIRE' | 'HIRE' | 'NO_HIRE' | 'STRONG_NO_HIRE';
 
@@ -216,6 +224,7 @@ export interface CandidateInterview {
   interviewerRole: string | null;
   scheduledStart: string;
   durationMinutes: number;
+  placeType: InterviewPlaceType;
   location: string | null;
   noteToInterviewer: string | null;
   status: InterviewStatus;
@@ -239,6 +248,17 @@ export interface CandidateOffer {
   approvedByName: string | null;
   approvedAt: string | null;
   isApproved: boolean;
+  requiresDirectorApproval: boolean;
+  directorApprovedByName: string | null;
+  directorApprovedAt: string | null;
+  rejectedByName: string | null;
+  rejectedAt: string | null;
+  rejectionNote: string | null;
+  sentAt: string | null;
+  candidateResponse: 'ACCEPTED' | 'DECLINED' | null;
+  respondedAt: string | null;
+  joiningDate: string | null;
+  joiningNotes: string | null;
 }
 
 export interface CandidateStageEvent {
@@ -265,6 +285,8 @@ export interface PipelineCandidate {
   offerFileName?: string;
   offerUploaderName?: string;
   offerUploadedById?: string;
+  /** Who must act on the offer next; null when no approval is pending */
+  offerStep?: 'DIRECTOR' | 'HR_CHIEF' | 'REJECTED' | null;
 }
 
 export interface MyInterviewItem {
@@ -275,6 +297,7 @@ export interface MyInterviewItem {
   kind: InterviewKind;
   scheduledStart: string;
   durationMinutes: number;
+  placeType: InterviewPlaceType;
   location: string | null;
   status: InterviewStatus;
   recommendation: InterviewRecommendation | null;
@@ -301,6 +324,7 @@ export interface InterviewDetail {
   interviewerName: string;
   scheduledStart: string;
   durationMinutes: number;
+  placeType: InterviewPlaceType;
   location: string | null;
   noteToInterviewer: string | null;
   status: InterviewStatus;

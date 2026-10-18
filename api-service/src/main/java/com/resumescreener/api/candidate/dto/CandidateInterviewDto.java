@@ -2,6 +2,7 @@ package com.resumescreener.api.candidate.dto;
 
 import com.resumescreener.common.session.CandidateInterview;
 import com.resumescreener.common.session.InterviewKind;
+import com.resumescreener.common.session.InterviewPlace;
 import com.resumescreener.common.session.InterviewRecommendation;
 import com.resumescreener.common.session.InterviewStatus;
 
@@ -16,6 +17,7 @@ public record CandidateInterviewDto(
     String interviewerRole,
     Instant scheduledStart,
     int durationMinutes,
+    InterviewPlace placeType,
     String location,
     String noteToInterviewer,
     InterviewStatus status,
@@ -36,6 +38,7 @@ public record CandidateInterviewDto(
             interview.getInterviewer() != null && interview.getInterviewer().getRole() != null ? interview.getInterviewer().getRole().name() : null,
             interview.getScheduledStart(),
             interview.getDurationMinutes(),
+            interview.getPlaceType(),
             interview.getLocation(),
             interview.getNoteToInterviewer(),
             interview.getStatus(),

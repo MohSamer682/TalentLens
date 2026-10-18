@@ -47,6 +47,21 @@ export function defaultScope(user: User | null | undefined): 'MINE' | 'EVERYONE'
   return can(user, 'SESSION_VIEW_ALL') && !can(user, 'SESSION_RUN') ? 'EVERYONE' : 'MINE';
 }
 
+/** Sessions are for people who run or oversee screening; interviewers never see them. */
+export function canSeeSessions(user: User | null | undefined): boolean {
+  return can(user, 'SESSION_RUN') || can(user, 'SESSION_VIEW_ALL');
+}
+
+/** Where a user lands: sessions for recruiters, My interviews for people who only interview. */
+export function homePath(user: User | null | undefined): string {
+  if (canSeeSessions(user)) return '/dashboard';
+  if (can(user, 'INTERVIEW_FEEDBACK')) return '/interviews';
+  if (can(user, 'PIPELINE_MANAGE') || can(user, 'OFFER_APPROVE')) return '/pipeline';
+  if (can(user, 'ANALYTICS_VIEW')) return '/analytics';
+  if (can(user, 'USER_MANAGE') || can(user, 'ROLE_MANAGE')) return '/admin/users';
+  return '/login';
+}
+
 /** Only users with both rights get the Mine / All recruiters switch. */
 export function canSwitchScope(user: User | null | undefined): boolean {
   return can(user, 'SESSION_VIEW_ALL') && can(user, 'SESSION_RUN');

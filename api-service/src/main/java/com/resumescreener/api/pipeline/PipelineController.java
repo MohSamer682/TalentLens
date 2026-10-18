@@ -115,9 +115,73 @@ public class PipelineController {
             @PathVariable String sessionId,
             @PathVariable String candidateId,
             @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "requiresDirectorApproval", defaultValue = "false") boolean requiresDirectorApproval,
             Authentication auth) {
         return ResponseEntity.ok(ApiResponse.success("Offer uploaded",
-                pipelineService.uploadOffer(sessionId, candidateId, file, auth.getName())));
+                pipelineService.uploadOffer(sessionId, candidateId, file, requiresDirectorApproval, auth.getName())));
+    }
+
+    @GetMapping("/api/sessions/{sessionId}/candidates/{candidateId}/interview-plan")
+    public ResponseEntity<ApiResponse<List<InterviewKind>>> getInterviewPlan(
+            @PathVariable String sessionId,
+            @PathVariable String candidateId,
+            Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.success("Interview plan loaded",
+                pipelineService.getInterviewPlan(sessionId, candidateId, auth.getName())));
+    }
+
+    @PutMapping("/api/sessions/{sessionId}/candidates/{candidateId}/interview-plan")
+    @PreAuthorize("hasAuthority('PIPELINE_MANAGE')")
+    public ResponseEntity<ApiResponse<List<InterviewKind>>> setInterviewPlan(
+            @PathVariable String sessionId,
+            @PathVariable String candidateId,
+            @Valid @RequestBody PlanInterviewsRequest req,
+            Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.success("Interview plan saved",
+                pipelineService.setInterviewPlan(sessionId, candidateId, req, auth.getName())));
+    }
+
+    @PostMapping("/api/sessions/{sessionId}/candidates/{candidateId}/offer/reject")
+    @PreAuthorize("hasAuthority('OFFER_APPROVE')")
+    public ResponseEntity<ApiResponse<CandidateOfferDto>> rejectOffer(
+            @PathVariable String sessionId,
+            @PathVariable String candidateId,
+            @Valid @RequestBody(required = false) RejectOfferRequest req,
+            Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.success("Offer rejected",
+                pipelineService.rejectOffer(sessionId, candidateId, req, auth.getName())));
+    }
+
+    @PostMapping("/api/sessions/{sessionId}/candidates/{candidateId}/offer/sent")
+    @PreAuthorize("hasAuthority('PIPELINE_MANAGE')")
+    public ResponseEntity<ApiResponse<CandidateOfferDto>> markOfferSent(
+            @PathVariable String sessionId,
+            @PathVariable String candidateId,
+            Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.success("Offer marked as sent",
+                pipelineService.markOfferSent(sessionId, candidateId, auth.getName())));
+    }
+
+    @PostMapping("/api/sessions/{sessionId}/candidates/{candidateId}/offer/answer")
+    @PreAuthorize("hasAuthority('PIPELINE_MANAGE')")
+    public ResponseEntity<ApiResponse<CandidateOfferDto>> answerOffer(
+            @PathVariable String sessionId,
+            @PathVariable String candidateId,
+            @Valid @RequestBody OfferAnswerRequest req,
+            Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.success("Candidate's answer recorded",
+                pipelineService.answerOffer(sessionId, candidateId, req, auth.getName())));
+    }
+
+    @PutMapping("/api/sessions/{sessionId}/candidates/{candidateId}/joining")
+    @PreAuthorize("hasAuthority('PIPELINE_MANAGE')")
+    public ResponseEntity<ApiResponse<CandidateOfferDto>> saveJoining(
+            @PathVariable String sessionId,
+            @PathVariable String candidateId,
+            @Valid @RequestBody JoiningRequest req,
+            Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.success("Joining details saved",
+                pipelineService.saveJoining(sessionId, candidateId, req, auth.getName())));
     }
 
     @GetMapping("/api/sessions/{sessionId}/candidates/{candidateId}/offer")

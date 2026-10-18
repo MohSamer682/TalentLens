@@ -14,6 +14,7 @@ import type {
   CreateSessionRequest,
   ExportResponse,
   InterviewKind,
+  InterviewPlaceType,
   InterviewRecommendation,
   InterviewDetail,
   LoginRequest,
@@ -234,6 +235,7 @@ export const pipelineApi = {
       interviewerId: string;
       scheduledStart: string;
       durationMinutes?: number;
+      placeType: InterviewPlaceType;
       location?: string;
       noteToInterviewer?: string;
     }
@@ -242,7 +244,7 @@ export const pipelineApi = {
     sessionId: string,
     candidateId: string,
     interviewId: string,
-    req: { scheduledStart: string; durationMinutes?: number; location?: string }
+    req: { scheduledStart: string; durationMinutes?: number; placeType?: InterviewPlaceType; location?: string }
   ) => api.patch<CandidateInterview>(`/sessions/${sessionId}/candidates/${candidateId}/interviews/${interviewId}`, req),
   cancelInterview: (sessionId: string, candidateId: string, interviewId: string) =>
     api.delete<void>(`/sessions/${sessionId}/candidates/${candidateId}/interviews/${interviewId}`),
@@ -254,9 +256,22 @@ export const pipelineApi = {
   myInterviews: () => api.get<MyInterviewsResponse>('/my-interviews'),
   moveToOffer: (sessionId: string, candidateId: string) =>
     api.post<void>(`/sessions/${sessionId}/candidates/${candidateId}/move-to-offer`),
-  uploadOffer: (sessionId: string, candidateId: string, file: File) => {
+  getInterviewPlan: (sessionId: string, candidateId: string) =>
+    api.get<InterviewKind[]>(`/sessions/${sessionId}/candidates/${candidateId}/interview-plan`),
+  setInterviewPlan: (sessionId: string, candidateId: string, kinds: InterviewKind[]) =>
+    api.put<InterviewKind[]>(`/sessions/${sessionId}/candidates/${candidateId}/interview-plan`, { kinds }),
+  rejectOffer: (sessionId: string, candidateId: string, note?: string) =>
+    api.post<CandidateOffer>(`/sessions/${sessionId}/candidates/${candidateId}/offer/reject`, { note }),
+  markOfferSent: (sessionId: string, candidateId: string) =>
+    api.post<CandidateOffer>(`/sessions/${sessionId}/candidates/${candidateId}/offer/sent`),
+  answerOffer: (sessionId: string, candidateId: string, accepted: boolean) =>
+    api.post<CandidateOffer>(`/sessions/${sessionId}/candidates/${candidateId}/offer/answer`, { accepted }),
+  saveJoining: (sessionId: string, candidateId: string, joiningDate: string, notes?: string) =>
+    api.put<CandidateOffer>(`/sessions/${sessionId}/candidates/${candidateId}/joining`, { joiningDate, notes }),
+  uploadOffer: (sessionId: string, candidateId: string, file: File, requiresDirectorApproval = false) => {
     const data = new FormData();
     data.append('file', file);
+    data.append('requiresDirectorApproval', String(requiresDirectorApproval));
     return api.post<CandidateOffer>(`/sessions/${sessionId}/candidates/${candidateId}/offer`, data, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });

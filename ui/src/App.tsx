@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { refreshCurrentUser } from '@/api/client';
-import { PermissionRoute, ProtectedRoute } from '@/components/ProtectedRoute';
+import { PermissionRoute, ProtectedRoute, SessionsRoute } from '@/components/ProtectedRoute';
 import { useAuthStore } from '@/store/authStore';
-import { can } from '@/lib/permissions';
+import { homePath } from '@/lib/permissions';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import Dashboard from '@/pages/Dashboard';
@@ -19,10 +19,7 @@ import Analytics from '@/pages/Analytics';
 
 function RootRedirect() {
   const user = useAuthStore((s) => s.user);
-  if (user && can(user, 'INTERVIEW_FEEDBACK') && !can(user, 'SESSION_RUN') && !can(user, 'SESSION_VIEW_ALL')) {
-    return <Navigate to="/interviews" replace />;
-  }
-  return <Navigate to="/dashboard" replace />;
+  return <Navigate to={user ? homePath(user) : '/login'} replace />;
 }
 
 export default function App() {
@@ -38,9 +35,9 @@ export default function App() {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <SessionsRoute>
             <Dashboard />
-          </ProtectedRoute>
+          </SessionsRoute>
         }
       />
       <Route
@@ -54,25 +51,25 @@ export default function App() {
       <Route
         path="/sessions/:id"
         element={
-          <ProtectedRoute>
+          <SessionsRoute>
             <SessionDetail />
-          </ProtectedRoute>
+          </SessionsRoute>
         }
       />
       <Route
         path="/sessions/:sessionId/candidate/:candidateId"
         element={
-          <ProtectedRoute>
+          <SessionsRoute>
             <CandidateDetail />
-          </ProtectedRoute>
+          </SessionsRoute>
         }
       />
       <Route
         path="/sessions/:sessionId/candidates/:candidateId"
         element={
-          <ProtectedRoute>
+          <SessionsRoute>
             <CandidateDetail />
-          </ProtectedRoute>
+          </SessionsRoute>
         }
       />
       <Route

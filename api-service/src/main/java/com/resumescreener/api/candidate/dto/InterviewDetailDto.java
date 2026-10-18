@@ -1,6 +1,7 @@
 package com.resumescreener.api.candidate.dto;
 
 import com.resumescreener.common.session.InterviewKind;
+import com.resumescreener.common.session.InterviewPlace;
 import com.resumescreener.common.session.InterviewRecommendation;
 import com.resumescreener.common.session.InterviewStatus;
 
@@ -19,6 +20,7 @@ public record InterviewDetailDto(
         String interviewerName,
         Instant scheduledStart,
         int durationMinutes,
+        InterviewPlace placeType,
         String location,
         String noteToInterviewer,
         InterviewStatus status,

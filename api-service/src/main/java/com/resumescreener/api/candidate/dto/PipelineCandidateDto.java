@@ -17,7 +17,9 @@ public record PipelineCandidateDto(
     Instant stageChangedAt,
     String offerFileName,
     String offerUploaderName,
-    String offerUploadedById
+    String offerUploadedById,
+    /** Who must act on the offer next: DIRECTOR, HR_CHIEF, REJECTED; null when no approval is pending */
+    String offerStep
 ) {
     public PipelineCandidateDto(
             String id,
@@ -31,6 +33,6 @@ public record PipelineCandidateDto(
             String nextStep,
             Instant stageChangedAt
     ) {
-        this(id, sessionId, sessionTitle, name, email, score, stage, inStageDays, nextStep, stageChangedAt, null, null, null);
+        this(id, sessionId, sessionTitle, name, email, score, stage, inStageDays, nextStep, stageChangedAt, null, null, null, null);
     }
 }

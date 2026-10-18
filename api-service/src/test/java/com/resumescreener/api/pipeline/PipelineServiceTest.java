@@ -1,6 +1,10 @@
 package com.resumescreener.api.pipeline;
 
 import com.resumescreener.api.audit.AuditService;
+import com.resumescreener.api.candidate.dto.OfferAnswerRequest;
+import com.resumescreener.api.candidate.dto.PlanInterviewsRequest;
+import com.resumescreener.api.candidate.dto.RejectOfferRequest;
+import com.resumescreener.api.candidate.dto.ScheduleInterviewRequest;
 import com.resumescreener.api.candidate.dto.SubmitFeedbackRequest;
 import com.resumescreener.api.common.ApiException;
 import com.resumescreener.api.session.SessionService;
@@ -9,22 +13,20 @@ import com.resumescreener.common.session.*;
 import com.resumescreener.common.user.Role;
 import com.resumescreener.common.user.User;
 import com.resumescreener.common.user.UserRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 class PipelineServiceTest {
 
@@ -32,134 +34,229 @@ class PipelineServiceTest {
     private final CandidateInterviewRepository interviews = mock(CandidateInterviewRepository.class);
     private final CandidateOfferRepository offers = mock(CandidateOfferRepository.class);
     private final CandidateStageEventRepository events = mock(CandidateStageEventRepository.class);
-    private final SessionService sessions = mock(SessionService.class);
+    private final ScreeningSessionRepository sessions = mock(ScreeningSessionRepository.class);
     private final UserRepository users = mock(UserRepository.class);
-    private final AuditService audit = mock(AuditService.class);
-    private final PipelineService service = new PipelineService(candidates, mock(CandidateScoreRepository.class),
-            interviews, offers, events, sessions, mock(ScreeningSessionRepository.class), users, audit,
-            mock(MinioUploadService.class));
+    private final SessionService sessionService = mock(SessionService.class);
+    private final PipelineService service = new PipelineService(candidates, mock(CandidateScoreRepository.class), interviews,
+            offers, events, sessionService, sessions, users, mock(AuditService.class), mock(MinioUploadService.class));
 
-    private final User recruiter = user("u1", "r@example.com", Role.RECRUITER);
-    private final User chief = user("u2", "chief@example.com", Role.HR_CHIEF);
-    private final User tech = user("u3", "tech@example.com", Role.TECHNICAL_INTERVIEWER);
-    private final User hr = user("u4", "hr@example.com", Role.HR_INTERVIEWER);
-    private final Candidate candidate = Candidate.builder().id("c1").build();
-    private final List<CandidateInterview> stored = new ArrayList<>();
+    private final User recruiter = user("r1", "recruiter@x.com", Role.RECRUITER);
+    private final User director = user("d1", "director@x.com", Role.DEPARTMENT_DIRECTOR);
+    private final User hrChief = user("h1", "chief@x.com", Role.HR_CHIEF);
 
     @BeforeEach
-    void setUp() {
-        for (User u : List.of(recruiter, chief, tech, hr)) {
+    void approverAuthority() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("x", "x", "OFFER_APPROVE"));
+        when(sessions.existsById("s1")).thenReturn(true);
+        for (User u : List.of(recruiter, director, hrChief)) {
             when(users.findByEmailIgnoreCase(u.getEmail())).thenReturn(Optional.of(u));
-            when(users.findById(u.getId())).thenReturn(Optional.of(u));
         }
-        when(candidates.findByIdAndSessionId("c1", "s1")).thenReturn(Optional.of(candidate));
-        when(candidates.findForUpdateById("c1")).thenReturn(Optional.of(candidate));
-        when(interviews.findByCandidateIdOrderByScheduledStartAsc("c1")).thenReturn(stored);
-        when(interviews.saveAndFlush(any())).thenAnswer(i -> {
-            CandidateInterview iv = i.getArgument(0);
-            if (iv.getId() == null) iv.setId("i" + stored.size());
-            if (!stored.contains(iv)) stored.add(iv);
-            return iv;
-        });
+    }
+
+    @AfterEach
+    void clear() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private static User user(String id, String email, Role role) {
+        return User.builder().id(id).email(email).fullName(role.name()).role(role).build();
+    }
+
+    private CandidateOffer offer(boolean needsDirector) {
+        CandidateOffer o = CandidateOffer.builder().id("o1").candidateId("c1").fileKey("k").fileName("offer.pdf")
+                .uploadedBy(recruiter).requiresDirectorApproval(needsDirector).build();
+        when(offers.findByCandidateId("c1")).thenReturn(Optional.of(o));
+        when(offers.save(any())).thenAnswer(i -> i.getArgument(0));
+        return o;
+    }
+
+    private Candidate candidate(ReviewStatus stage, String plan) {
+        Candidate c = Candidate.builder().id("c1").reviewStatus(stage).interviewPlan(plan).build();
+        when(candidates.findByIdAndSessionId("c1", "s1")).thenReturn(Optional.of(c));
+        when(candidates.findById("c1")).thenReturn(Optional.of(c));
+        when(candidates.findForUpdateById("c1")).thenReturn(Optional.of(c));
+        return c;
+    }
+
+    private static CandidateInterview held(InterviewKind kind) {
+        return CandidateInterview.builder().candidateId("c1").kind(kind).status(InterviewStatus.COMPLETED).build();
+    }
+
+    // --- interview place ---
+
+    @Test
+    void hqNeedsNoDetail() {
+        assertNull(PipelineService.resolveLocation(InterviewPlace.HQ, "ignored"));
     }
 
     @Test
-    void contactsOnlyFromShortlisted() {
-        ApiException e = assertThrows(ApiException.class, () -> service.markContacted("s1", "c1", recruiter.getEmail()));
-        assertEquals("This candidate is at Screened, so this step isn't available", e.getMessage());
-
-        candidate.setReviewStatus(ReviewStatus.SHORTLISTED);
-        service.markContacted("s1", "c1", recruiter.getEmail());
-        assertEquals(ReviewStatus.CONTACTED, candidate.getReviewStatus());
-        verify(events).save(any());
+    void onlineKeepsTheLinkAndRejectsTextThatIsNotAWebLink() {
+        assertEquals("https://meet.example.com/a", PipelineService.resolveLocation(InterviewPlace.ONLINE, "  https://meet.example.com/a "));
+        assertThrows(ApiException.class, () -> PipelineService.resolveLocation(InterviewPlace.ONLINE, "meeting room 3"));
+        assertThrows(ApiException.class, () -> PipelineService.resolveLocation(InterviewPlace.ONLINE, "javascript:alert(1)"));
+        assertThrows(ApiException.class, () -> PipelineService.resolveLocation(InterviewPlace.ONLINE, null));
     }
+
+    @Test
+    void otherNeedsText() {
+        assertEquals("Cedar room", PipelineService.resolveLocation(InterviewPlace.OTHER, " Cedar room "));
+        assertThrows(ApiException.class, () -> PipelineService.resolveLocation(InterviewPlace.OTHER, "  "));
+    }
+
+    // --- interview plan ---
+
+    @Test
+    void managementInterviewsGoToTopManagementOnly() {
+        candidate(ReviewStatus.CONTACTED, "MANAGEMENT");
+        when(users.findById("t1")).thenReturn(Optional.of(user("t1", "t@x.com", Role.TECHNICAL_INTERVIEWER)));
+        when(users.findById("d1")).thenReturn(Optional.of(director));
+        when(interviews.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        var wrong = new ScheduleInterviewRequest(InterviewKind.MANAGEMENT, "t1", Instant.now(), 60, InterviewPlace.HQ, null, null);
+        assertThrows(ApiException.class, () -> service.scheduleInterview("s1", "c1", wrong, "recruiter@x.com"));
+
+        var right = new ScheduleInterviewRequest(InterviewKind.MANAGEMENT, "d1", Instant.now(), 60, InterviewPlace.ONLINE, "https://meet.example.com/m", null);
+        assertEquals("https://meet.example.com/m", service.scheduleInterview("s1", "c1", right, "recruiter@x.com").location());
+    }
+
+    @Test
+    void cannotScheduleAKindOutsideThePlan() {
+        candidate(ReviewStatus.CONTACTED, "HR");
+        when(users.findById("t1")).thenReturn(Optional.of(user("t1", "t@x.com", Role.TECHNICAL_INTERVIEWER)));
+        var req = new ScheduleInterviewRequest(InterviewKind.TECHNICAL, "t1", Instant.now(), 60, InterviewPlace.HQ, null, null);
+        assertThrows(ApiException.class, () -> service.scheduleInterview("s1", "c1", req, "recruiter@x.com"));
+    }
+
+    @Test
+    void candidateIsInterviewedOnceEveryPlannedKindIsHeld() {
+        Candidate c = candidate(ReviewStatus.INTERVIEW_SCHEDULED, "HR,TECHNICAL");
+        when(interviews.findByCandidateIdOrderByScheduledStartAsc("c1")).thenReturn(List.of(held(InterviewKind.HR)));
+
+        service.setInterviewPlan("s1", "c1", new PlanInterviewsRequest(List.of(InterviewKind.HR, InterviewKind.TECHNICAL)), "recruiter@x.com");
+        assertEquals(ReviewStatus.INTERVIEW_SCHEDULED, c.getReviewStatus(), "technical is still to come");
+
+        service.setInterviewPlan("s1", "c1", new PlanInterviewsRequest(List.of(InterviewKind.HR)), "recruiter@x.com");
+        assertEquals(ReviewStatus.INTERVIEWED, c.getReviewStatus());
+    }
+
+    @Test
+    void cannotDropAKindThatIsAlreadyScheduled() {
+        candidate(ReviewStatus.INTERVIEW_SCHEDULED, "HR,TECHNICAL");
+        var scheduled = CandidateInterview.builder().candidateId("c1").kind(InterviewKind.TECHNICAL).status(InterviewStatus.SCHEDULED).build();
+        when(interviews.findByCandidateIdOrderByScheduledStartAsc("c1")).thenReturn(List.of(scheduled));
+        assertThrows(ApiException.class, () ->
+                service.setInterviewPlan("s1", "c1", new PlanInterviewsRequest(List.of(InterviewKind.HR)), "recruiter@x.com"));
+    }
+
+    // --- offer approval chain ---
+
+    @Test
+    void directorSignsFirstThenOnlyTheHrChiefFinishesIt() {
+        CandidateOffer o = offer(true);
+        candidate(ReviewStatus.OFFER, null);
+
+        assertThrows(ApiException.class, () -> service.approveOffer("s1", "c1", "chief@x.com"), "HR chief cannot skip the director");
+        service.approveOffer("s1", "c1", "director@x.com");
+        assertNotNull(o.getDirectorApprovedAt());
+        assertNull(o.getApprovedAt());
+
+        assertThrows(ApiException.class, () -> service.approveOffer("s1", "c1", "director@x.com"), "director cannot give the final approval");
+        service.approveOffer("s1", "c1", "chief@x.com");
+        assertNotNull(o.getApprovedAt());
+    }
+
+    @Test
+    void withoutTheDirectorStepTheHrChiefApprovesAlone() {
+        CandidateOffer o = offer(false);
+        Candidate c = candidate(ReviewStatus.OFFER, null);
+        service.approveOffer("s1", "c1", "chief@x.com");
+        assertNotNull(o.getApprovedAt());
+        assertEquals(ReviewStatus.OFFER_APPROVED, c.getReviewStatus());
+    }
+
+    @Test
+    void rejectionNoteIsOptionalAndBlocksApprovalUntilRevised() {
+        CandidateOffer o = offer(false);
+        candidate(ReviewStatus.OFFER, null);
+        service.rejectOffer("s1", "c1", new RejectOfferRequest("   "), "chief@x.com");
+        assertNotNull(o.getRejectedAt());
+        assertNull(o.getRejectionNote());
+        assertThrows(ApiException.class, () -> service.approveOffer("s1", "c1", "chief@x.com"));
+    }
+
+    @Test
+    void rejectionKeepsTheNote() {
+        CandidateOffer o = offer(false);
+        candidate(ReviewStatus.OFFER, null);
+        service.rejectOffer("s1", "c1", new RejectOfferRequest(" Salary above band "), "chief@x.com");
+        assertEquals("Salary above band", o.getRejectionNote());
+    }
+
+    // --- after the offer ---
+
+    @Test
+    void offerSentThenAcceptedThenJoiningDate() {
+        CandidateOffer o = offer(false);
+        Candidate c = candidate(ReviewStatus.OFFER_APPROVED, null);
+        service.markOfferSent("s1", "c1", "recruiter@x.com");
+        assertEquals(ReviewStatus.OFFER_SENT, c.getReviewStatus());
+        service.answerOffer("s1", "c1", new OfferAnswerRequest(true), "recruiter@x.com");
+        assertEquals(ReviewStatus.ACCEPTED, c.getReviewStatus());
+        assertEquals("ACCEPTED", o.getCandidateResponse());
+    }
+
+    @Test
+    void cannotRecordAnAnswerBeforeTheOfferIsSent() {
+        offer(false);
+        candidate(ReviewStatus.OFFER_APPROVED, null);
+        assertThrows(ApiException.class, () -> service.answerOffer("s1", "c1", new OfferAnswerRequest(true), "recruiter@x.com"));
+    }
+
+    // --- access ---
 
     @Test
     void viewerWithoutOwnershipCannotContact() {
-        candidate.setReviewStatus(ReviewStatus.SHORTLISTED);
-        when(sessions.getOwnedSession("s1", chief.getEmail())).thenThrow(new AccessDeniedException("no"));
+        Candidate c = candidate(ReviewStatus.SHORTLISTED, null);
+        when(sessionService.getOwnedSession("s1", "chief@x.com")).thenThrow(new AccessDeniedException("no"));
 
-        assertThrows(AccessDeniedException.class, () -> service.markContacted("s1", "c1", chief.getEmail()));
-        assertEquals(ReviewStatus.SHORTLISTED, candidate.getReviewStatus());
+        assertThrows(AccessDeniedException.class, () -> service.markContacted("s1", "c1", "chief@x.com"));
+        assertEquals(ReviewStatus.SHORTLISTED, c.getReviewStatus());
     }
 
     @Test
     void candidateFromAnotherSessionIs404() {
-        assertThrows(ApiException.class, () -> service.getTimeline("s1", "c-elsewhere", recruiter.getEmail()));
-        assertThrows(ApiException.class, () -> service.getInterviews("s1", "c-elsewhere", recruiter.getEmail()));
-    }
-
-    @Test
-    void refusesWrongInterviewerKind() {
-        candidate.setReviewStatus(ReviewStatus.CONTACTED);
-        ApiException e = assertThrows(ApiException.class, () -> service.scheduleInterview("s1", "c1",
-                schedule(InterviewKind.TECHNICAL, hr), recruiter.getEmail()));
-        assertEquals("Choose a technical interviewer for a technical interview", e.getMessage());
-    }
-
-    @Test
-    void stageFollowsTheInterviews() {
-        candidate.setReviewStatus(ReviewStatus.CONTACTED);
-        service.scheduleInterview("s1", "c1", schedule(InterviewKind.TECHNICAL, tech), recruiter.getEmail());
-        service.scheduleInterview("s1", "c1", schedule(InterviewKind.HR, hr), recruiter.getEmail());
-        assertEquals(ReviewStatus.INTERVIEW_SCHEDULED, candidate.getReviewStatus());
-
-        CandidateInterview technical = stored.get(0);
-        CandidateInterview hrInterview = stored.get(1);
-        when(interviews.findById(technical.getId())).thenReturn(Optional.of(technical));
-        when(interviews.findById(hrInterview.getId())).thenReturn(Optional.of(hrInterview));
-
-        service.submitFeedback(technical.getId(), feedback(), tech.getEmail());
-        assertEquals(ReviewStatus.INTERVIEW_SCHEDULED, candidate.getReviewStatus());
-        service.submitFeedback(hrInterview.getId(), feedback(), hr.getEmail());
-        assertEquals(ReviewStatus.INTERVIEWED, candidate.getReviewStatus());
-    }
-
-    @Test
-    void cancellingTheOnlyInterviewReturnsToContacted() {
-        candidate.setReviewStatus(ReviewStatus.CONTACTED);
-        service.scheduleInterview("s1", "c1", schedule(InterviewKind.TECHNICAL, tech), recruiter.getEmail());
-        CandidateInterview only = stored.get(0);
-        when(interviews.findById(only.getId())).thenReturn(Optional.of(only));
-
-        service.cancelInterview("s1", "c1", only.getId(), recruiter.getEmail());
-
-        assertEquals(ReviewStatus.CONTACTED, candidate.getReviewStatus());
+        assertThrows(ApiException.class, () -> service.getTimeline("s1", "c-elsewhere", "recruiter@x.com"));
+        assertThrows(ApiException.class, () -> service.getInterviews("s1", "c-elsewhere", "recruiter@x.com"));
+        assertThrows(ApiException.class, () -> service.getOffer("s1", "c-elsewhere", "chief@x.com"));
     }
 
     @Test
     void onlyTheAssignedInterviewerGivesFeedbackAfterTheStart() {
-        CandidateInterview later = CandidateInterview.builder().id("i9").candidateId("c1").interviewer(tech)
-                .kind(InterviewKind.TECHNICAL).scheduledStart(Instant.now().plusSeconds(3600)).build();
+        User admin = user("a1", "admin@x.com", Role.ADMIN);
+        when(users.findByEmailIgnoreCase(admin.getEmail())).thenReturn(Optional.of(admin));
+        CandidateInterview later = CandidateInterview.builder().id("i9").candidateId("c1").interviewer(director)
+                .kind(InterviewKind.MANAGEMENT).status(InterviewStatus.SCHEDULED)
+                .scheduledStart(Instant.now().plusSeconds(3600)).build();
         when(interviews.findById("i9")).thenReturn(Optional.of(later));
 
-        assertThrows(ApiException.class, () -> service.submitFeedback("i9", feedback(), hr.getEmail()));
-        ApiException early = assertThrows(ApiException.class, () -> service.submitFeedback("i9", feedback(), tech.getEmail()));
+        assertThrows(ApiException.class, () -> service.submitFeedback("i9", feedback(), "recruiter@x.com"));
+        assertThrows(ApiException.class, () -> service.submitFeedback("i9", feedback(), admin.getEmail()));
+        ApiException early = assertThrows(ApiException.class, () -> service.submitFeedback("i9", feedback(), "director@x.com"));
         assertEquals("You can give feedback once the interview has started", early.getMessage());
     }
 
     @Test
-    void uploaderCannotApprove() {
-        candidate.setReviewStatus(ReviewStatus.OFFER);
-        when(offers.findByCandidateId("c1")).thenReturn(Optional.of(
-                CandidateOffer.builder().id("o1").candidateId("c1").uploadedBy(chief).build()));
+    void cancelledInterviewTakesNoFeedback() {
+        CandidateInterview cancelled = CandidateInterview.builder().id("i8").candidateId("c1").interviewer(director)
+                .kind(InterviewKind.MANAGEMENT).status(InterviewStatus.CANCELLED)
+                .scheduledStart(Instant.now().minusSeconds(3600)).build();
+        when(interviews.findById("i8")).thenReturn(Optional.of(cancelled));
 
-        ApiException e = assertThrows(ApiException.class, () -> service.approveOffer("s1", "c1", chief.getEmail()));
-        assertEquals("Someone other than the uploader must approve this offer", e.getMessage());
-        assertEquals(ReviewStatus.OFFER, candidate.getReviewStatus());
-        verify(offers, never()).save(any());
-    }
-
-    private static com.resumescreener.api.candidate.dto.ScheduleInterviewRequest schedule(InterviewKind kind, User interviewer) {
-        return new com.resumescreener.api.candidate.dto.ScheduleInterviewRequest(kind, interviewer.getId(),
-                Instant.now().minusSeconds(60), 60, null, null);
+        ApiException e = assertThrows(ApiException.class, () -> service.submitFeedback("i8", feedback(), "director@x.com"));
+        assertEquals("This interview was cancelled", e.getMessage());
     }
 
     private static SubmitFeedbackRequest feedback() {
         return new SubmitFeedbackRequest(InterviewRecommendation.HIRE, 4, "Solid answers on system design.");
-    }
-
-    private static User user(String id, String email, Role role) {
-        return User.builder().id(id).email(email).fullName(id).role(role).build();
     }
 }
