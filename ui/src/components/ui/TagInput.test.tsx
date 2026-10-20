@@ -56,4 +56,25 @@ describe('TagInput', () => {
     expect(tags()).toBe('A|B');
     expect(screen.getByText('2 of 2')).toBeTruthy();
   });
+
+  it('refuses a skill longer than 80 characters and says why', () => {
+    render(<Harness />);
+    fireEvent.change(input(), { target: { value: 'x'.repeat(81) } });
+    fireEvent.keyDown(input(), { key: 'Enter' });
+    expect(tags()).toBe('');
+    expect(screen.getByText('Keep each skill under 80 characters.')).toBeTruthy();
+  });
+
+  it('keeps the input usable at the maximum so Backspace still removes', () => {
+    render(<Harness initial={['A', 'B']} max={2} />);
+    expect(input().disabled).toBe(false);
+    fireEvent.keyDown(input(), { key: 'Backspace' });
+    expect(tags()).toBe('A');
+  });
+
+  it('returns focus to the input after a remove button is used', () => {
+    render(<Harness initial={['Java', 'SQL']} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Java' }));
+    expect(document.activeElement).toBe(input());
+  });
 });

@@ -20,6 +20,7 @@ public class CreateSessionRequest {
     private WeightsDto weights;
 
     @NotBlank(groups = OnCreate.class)
+    @Pattern(regexp = "(?s).*\\S.*", message = "must not be blank")
     @Size(max = 160)
     private String jobTitle;
 
@@ -31,7 +32,7 @@ public class CreateSessionRequest {
     private String jobDescription;
 
     @NotEmpty(groups = OnCreate.class)
-    @Size(max = 30)
+    @Size(min = 1, max = 30)
     private List<@NotBlank @Size(max = 80) String> requiredSkills;
 
     public JobDetailsRequest jobDetails() {

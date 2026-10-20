@@ -157,6 +157,24 @@ class SessionControllerTest {
                 .andExpect(jsonPath("$.error.details").value(org.hamcrest.Matchers.startsWith("positionCode")));
     }
 
+    @Test
+    void patchRejectsEmptySkillList() throws Exception {
+        savingMvc().perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/sessions/session-1")
+                        .principal(auth).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"requiredSkills\":[]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.details").value(org.hamcrest.Matchers.startsWith("requiredSkills")));
+    }
+
+    @Test
+    void patchRejectsBlankJobTitle() throws Exception {
+        savingMvc().perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/sessions/session-1")
+                        .principal(auth).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"jobTitle\":\"   \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.details").value(org.hamcrest.Matchers.startsWith("jobTitle")));
+    }
+
     private static ScreeningSessionRepository sessionRepositoryHolding(ScreeningSession session) {
         return (ScreeningSessionRepository) Proxy.newProxyInstance(
                 ScreeningSessionRepository.class.getClassLoader(),
