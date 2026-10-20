@@ -117,9 +117,9 @@ export function PortalAccessPanel({
               label="Access link"
               hint="Valid for 7 days. Anyone with the link can set the password, so send it only to the candidate."
             >
-              <div className="flex gap-2">
-                <Input id="portal-link" readOnly value={issued.url} onFocus={(e) => e.currentTarget.select()} className="min-w-0 font-mono text-[13px]" />
-                <Button variant="secondary" onClick={copy}>
+              <div className="space-y-2">
+                <Input id="portal-link" readOnly value={issued.url} onFocus={(e) => e.currentTarget.select()} className="font-mono text-[13px]" />
+                <Button variant="secondary" size="sm" onClick={copy}>
                   <Copy aria-hidden="true" />
                   {copied ? 'Copied' : 'Copy link'}
                 </Button>
@@ -136,7 +136,7 @@ export function PortalAccessPanel({
             </Button>
             {access.invite && <ConfirmButton label="Revoke link" confirmLabel="Revoke it" onConfirm={revoke} disabled={busy} />}
             {!creating && (
-              <Button variant="ghost" onClick={() => setCreating(true)} disabled={busy}>
+              <Button variant="ghost" onClick={() => setCreating(true)} disabled={busy} className="h-auto min-h-10 whitespace-normal py-2 text-left">
                 <KeyRound aria-hidden="true" />
                 Create account with a temporary password
               </Button>
