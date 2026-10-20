@@ -33,7 +33,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
         try {
-            AuthResponse response = authService.login(request);
+            AuthResponse response = authService.login(request, Portal.CANDIDATE);
             auditService.record("LOGIN", "user", response.getUser().getId(), "success");
             return ResponseEntity.ok(ApiResponse.success("Login successful", response));
         } catch (BadCredentialsException e) {

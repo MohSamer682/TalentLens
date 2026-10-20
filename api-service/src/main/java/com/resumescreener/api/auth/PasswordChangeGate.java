@@ -25,7 +25,7 @@ public class PasswordChangeGate extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String uri = request.getRequestURI();
-        return uri.equals("/api/auth/login") || uri.equals("/api/auth/register")
+        return uri.equals("/api/auth/login") || uri.equals("/api/admins/auth/login") || uri.equals("/api/auth/register")
                 || uri.equals("/api/portal/invites/preview") || uri.equals("/api/portal/invites/accept");
     }
 

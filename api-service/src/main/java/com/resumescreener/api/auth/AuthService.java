@@ -29,23 +29,22 @@ public class AuthService {
             throw new EmailTakenException("Email already registered");
         }
 
-        long userCount = userRepository.count();
-        Role role = userCount == 0 ? Role.ADMIN : Role.RECRUITER;
-
+        // Public sign-up is for candidates; staff accounts come from an admin, and the first admin from BootstrapAdmin
         User user = User.builder()
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
-                .role(role)
+                .role(Role.CANDIDATE)
                 .build();
 
         user = userRepository.save(user);
-        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+        String token = jwtService.generateToken(user.getEmail(), user.getRole());
 
         return new AuthResponse(token, mapToUserDto(user));
     }
 
-    public AuthResponse login(LoginRequest request) {
+    /** Password first, door second, so only someone who knows the password learns which door the account uses. */
+    public AuthResponse login(LoginRequest request, Portal portal) {
         try {
             authenticationManager.authenticate(
                     new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
@@ -67,14 +66,18 @@ public class AuthService {
 
         User user = userRepository.findByEmailIgnoreCase(request.getEmail())
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
+        if (Portal.of(user.getRole()) != portal) {
+            throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.WRONG_PORTAL, portal.wrongDoor(),
+                    user.getRole().kind() + " account at the " + portal.audience() + " sign-in");
+        }
 
-        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+        String token = jwtService.generateToken(user.getEmail(), user.getRole());
         return new AuthResponse(token, mapToUserDto(user));
     }
 
     /** Issues a session for a user whose identity was proven another way, such as a redeemed access link. */
     public AuthResponse signIn(User user) {
-        return new AuthResponse(jwtService.generateToken(user.getEmail(), user.getRole().name()), mapToUserDto(user));
+        return new AuthResponse(jwtService.generateToken(user.getEmail(), user.getRole()), mapToUserDto(user));
     }
 
     /** The signed-in user as they are now, so the UI picks up a role or permission change without signing out. */

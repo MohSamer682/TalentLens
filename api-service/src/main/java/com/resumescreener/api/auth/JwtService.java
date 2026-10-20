@@ -1,5 +1,6 @@
 package com.resumescreener.api.auth;
 
+import com.resumescreener.common.user.Role;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,10 +18,11 @@ public class JwtService {
     @Value("${jwt.expiration-ms}")
     private long jwtExpiration;
 
-    public String generateToken(String email, String role) {
+    public String generateToken(String email, Role role) {
         return Jwts.builder()
                 .subject(email)
-                .claim("role", role)
+                .audience().add(Portal.of(role).audience()).and()
+                .claim("role", role.name())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8)), Jwts.SIG.HS256)
@@ -33,6 +35,12 @@ public class JwtService {
 
     public String extractRole(String token) {
         return extractClaims(token).get("role", String.class);
+    }
+
+    /** True when the token was issued to this kind of account; a token from before audiences existed has none. */
+    public boolean isFor(String token, Portal portal) {
+        java.util.Set<String> audience = extractClaims(token).getAudience();
+        return audience != null && audience.contains(portal.audience());
     }
 
     public boolean isTokenValid(String token) {

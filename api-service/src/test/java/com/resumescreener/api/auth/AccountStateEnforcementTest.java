@@ -49,7 +49,7 @@ class AccountStateEnforcementTest extends ApiIntegrationTest {
         user.hide();
         users.save(user);
 
-        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(login(user, PASSWORD)))
+        mvc.perform(post("/api/admins/auth/login").contentType(MediaType.APPLICATION_JSON).content(login(user, PASSWORD)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("This account is disabled. Contact your administrator."));
     }
@@ -60,7 +60,7 @@ class AccountStateEnforcementTest extends ApiIntegrationTest {
         user.hide();
         users.save(user);
 
-        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(login(user, "nope-nope-nope")))
+        mvc.perform(post("/api/admins/auth/login").contentType(MediaType.APPLICATION_JSON).content(login(user, "nope-nope-nope")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Invalid email or password"));
     }
@@ -71,7 +71,7 @@ class AccountStateEnforcementTest extends ApiIntegrationTest {
         user.resetPassword(encoder.encode(PASSWORD));
         users.save(user);
 
-        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(login(user, PASSWORD)))
+        mvc.perform(post("/api/admins/auth/login").contentType(MediaType.APPLICATION_JSON).content(login(user, PASSWORD)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.user.mustChangePassword").value(true));
     }
@@ -83,7 +83,7 @@ class AccountStateEnforcementTest extends ApiIntegrationTest {
         users.save(flagged);
         User other = user(Role.RECRUITER);
 
-        mvc.perform(post("/api/auth/login").header("Authorization", bearer(flagged))
+        mvc.perform(post("/api/admins/auth/login").header("Authorization", bearer(flagged))
                         .contentType(MediaType.APPLICATION_JSON).content(login(other, PASSWORD)))
                 .andExpect(status().isOk());
     }

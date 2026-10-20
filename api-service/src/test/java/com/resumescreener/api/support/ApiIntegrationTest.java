@@ -50,6 +50,6 @@ public abstract class ApiIntegrationTest {
     }
 
     protected String bearer(User user) {
-        return "Bearer " + jwt.generateToken(user.getEmail(), user.getRole().name());
+        return "Bearer " + jwt.generateToken(user.getEmail(), user.getRole());
     }
 }

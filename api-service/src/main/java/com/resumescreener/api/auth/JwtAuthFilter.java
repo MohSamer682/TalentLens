@@ -44,8 +44,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             } catch (UsernameNotFoundException e) {
                 userDetails = null;
             }
-            // A deleted or hidden account stays anonymous, so the entry point answers 401 on its next call
-            if (userDetails == null || !userDetails.isEnabled()) {
+            // A deleted or hidden account stays anonymous, so the entry point answers 401 on its next call.
+            // So does a token minted for the other kind of account, which ends old sessions when the kind changes.
+            if (userDetails == null || !userDetails.isEnabled() || !jwtService.isFor(jwt, portalOf(userDetails))) {
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -59,5 +60,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
         
         filterChain.doFilter(request, response);
+    }
+
+    private static Portal portalOf(UserDetails user) {
+        boolean candidate = user.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_" + com.resumescreener.common.user.Role.CANDIDATE.name()));
+        return candidate ? Portal.CANDIDATE : Portal.STAFF;
     }
 }
