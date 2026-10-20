@@ -39,7 +39,7 @@ class SchemaIntegrityTest {
     @BeforeEach
     void seed() {
         jdbc.update("INSERT INTO users (id, email, password_hash, full_name, role, created_at) VALUES ('u1','a@x.com','h','A','RECRUITER', now())");
-        jdbc.update("INSERT INTO screening_sessions (id, user_id, title, status, created_at) VALUES ('s1','u1','t','DONE', now())");
+        jdbc.update("INSERT INTO screening_sessions (id, user_id, title, job_title, status, created_at) VALUES ('s1','u1','t','t','DONE', now())");
         jdbc.update("INSERT INTO scoring_weights (id, session_id, technical_skills) VALUES ('w1','s1',100)");
         jdbc.update("INSERT INTO candidates (id, session_id, status) VALUES ('c1','s1','SCORED')");
         jdbc.update("INSERT INTO candidate_texts (candidate_id, raw_text) VALUES ('c1','text')");

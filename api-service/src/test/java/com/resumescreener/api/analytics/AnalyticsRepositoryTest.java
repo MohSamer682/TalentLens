@@ -177,7 +177,7 @@ class AnalyticsRepositoryTest {
 
     private String session(String userId, String status, Instant created, Duration toRanked) {
         String id = UUID.randomUUID().toString();
-        jdbc.update("INSERT INTO screening_sessions (id, user_id, title, status, created_at, completed_at) VALUES (?, ?, 't', ?, ?, ?)",
+        jdbc.update("INSERT INTO screening_sessions (id, user_id, title, job_title, status, created_at, completed_at) VALUES (?, ?, 't', 't', ?, ?, ?)",
                 id, userId, status, Timestamp.from(created), toRanked == null ? null : Timestamp.from(created.plus(toRanked)));
         return id;
     }
