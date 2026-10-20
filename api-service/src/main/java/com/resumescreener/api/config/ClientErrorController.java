@@ -14,8 +14,8 @@ public class ClientErrorController {
 
     @PostMapping("/api/client-errors")
     public ResponseEntity<ApiResponse<Void>> reportClientError(@RequestBody ClientError error) {
-        log.warn("Client error: code={} message={} url={} stack={}",
-                error.getCode(), error.getMessage(), error.getUrl(), error.getStack());
+        log.warn("Client error: code={} message={} url={} request={} stack={}",
+                error.getCode(), error.getMessage(), error.getUrl(), error.getRequest(), error.getStack());
         return ResponseEntity.ok(ApiResponse.success("Error reported", null));
     }
 
@@ -24,6 +24,7 @@ public class ClientErrorController {
         private String code;
         private String message;
         private String url;
+        private String request;
         private String stack;
     }
 }

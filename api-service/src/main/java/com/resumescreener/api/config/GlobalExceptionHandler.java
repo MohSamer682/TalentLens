@@ -14,6 +14,8 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -112,6 +114,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleNoResource(NoResourceFoundException e) {
         return envelope(HttpStatus.NOT_FOUND, "Endpoint not found",
                 ApiErrorCode.NOT_FOUND, e.getResourcePath());
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodNotAllowed(HttpRequestMethodNotSupportedException e) {
+        return envelope(HttpStatus.METHOD_NOT_ALLOWED, "Method not allowed",
+                ApiErrorCode.VALIDATION_ERROR, safeDetails(e));
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException e) {
+        return envelope(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported content type",
+                ApiErrorCode.VALIDATION_ERROR, safeDetails(e));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

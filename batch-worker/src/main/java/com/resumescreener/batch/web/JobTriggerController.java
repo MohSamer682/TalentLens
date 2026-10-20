@@ -17,20 +17,20 @@ public class JobTriggerController {
     private final LlmStatusService llmStatusService;
 
     @PostMapping("/jobs/start")
-    public ResponseEntity<Void> startJob(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, String>> startJob(@RequestBody Map<String, String> request) {
         String sessionId = request.get("sessionId");
         if (sessionId == null) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("status", "rejected", "error", "sessionId is required"));
         }
         ScoringScope scope;
         try {
             scope = ScoringScope.valueOf(request.getOrDefault("scope", ScoringScope.UNSCORED.name()));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("status", "rejected", "error", "unknown scope"));
         }
 
         jobService.processCandidates(sessionId, scope);
-        return ResponseEntity.accepted().build();
+        return ResponseEntity.accepted().body(Map.of("status", "accepted", "sessionId", sessionId));
     }
 
     @GetMapping("/llm/status")

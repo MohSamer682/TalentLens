@@ -52,6 +52,19 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void wrongMethodAndContentTypeKeepTheirStatusInsteadOf500() {
+        ResponseEntity<ApiResponse<Void>> method = handler.handleMethodNotAllowed(
+                new org.springframework.web.HttpRequestMethodNotSupportedException("DELETE"));
+        ResponseEntity<ApiResponse<Void>> media = handler.handleUnsupportedMediaType(
+                new org.springframework.web.HttpMediaTypeNotSupportedException("text/plain"));
+
+        assertThat(method.getStatusCode()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+        assertThat(media.getStatusCode()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        assertThat(method.getBody().isSuccess()).isFalse();
+        assertThat(media.getBody().getError().getDetails()).isNotBlank();
+    }
+
+    @Test
     void dataIntegrityViolationDoesNotLeakSql() {
         ResponseEntity<ApiResponse<Void>> response = handler.handleDataIntegrity(
                 new org.springframework.dao.DataIntegrityViolationException(
