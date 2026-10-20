@@ -62,6 +62,15 @@ class ProfileApiTest extends ApiIntegrationTest {
     }
 
     @Test
+    void blankPhoneMeansNoPhone() throws Exception {
+        User user = user(Role.RECRUITER);
+        mvc.perform(put("/api/me/profile").header("Authorization", bearer(user)).contentType(MediaType.APPLICATION_JSON)
+                        .content(body("Karim", "", 0)))
+                .andExpect(status().isOk());
+        assertThat(profiles.findById(user.getId()).orElseThrow().getPhone()).isNull();
+    }
+
+    @Test
     void invalidPhoneIs400() throws Exception {
         User user = user(Role.RECRUITER);
         mvc.perform(put("/api/me/profile").header("Authorization", bearer(user)).contentType(MediaType.APPLICATION_JSON)

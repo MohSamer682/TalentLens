@@ -77,6 +77,18 @@ class AccountStateEnforcementTest extends ApiIntegrationTest {
     }
 
     @Test
+    void anOldTemporaryPasswordTokenDoesNotBlockSigningIn() throws Exception {
+        User flagged = user(Role.RECRUITER);
+        flagged.resetPassword(encoder.encode(PASSWORD));
+        users.save(flagged);
+        User other = user(Role.RECRUITER);
+
+        mvc.perform(post("/api/auth/login").header("Authorization", bearer(flagged))
+                        .contentType(MediaType.APPLICATION_JSON).content(login(other, PASSWORD)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void mustChangePasswordBlocksOtherEndpointsWith403Envelope() throws Exception {
         User user = user(Role.RECRUITER);
         user.resetPassword(encoder.encode(PASSWORD));

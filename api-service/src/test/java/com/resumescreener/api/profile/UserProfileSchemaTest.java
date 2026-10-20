@@ -50,6 +50,7 @@ class UserProfileSchemaTest {
     @Autowired UserRepository users;
     @Autowired UserProfileRepository profiles;
     @Autowired TransactionTemplate tx;
+    @Autowired org.springframework.transaction.PlatformTransactionManager txManager;
 
     private User newUser() {
         return users.save(User.builder().email(UUID.randomUUID() + "@x.com").passwordHash("h")
@@ -93,6 +94,30 @@ class UserProfileSchemaTest {
 
         assertThatThrownBy(() -> users.saveAndFlush(second)).isInstanceOf(ObjectOptimisticLockingFailureException.class);
         assertThat(users.findById(user.getId()).orElseThrow().getFullName()).isEqualTo("First edit");
+    }
+
+    @Test
+    void emailIsUniqueIgnoringCaseInTheDatabase() {
+        String email = "Case-" + UUID.randomUUID() + "@t.io";
+        jdbc.update("INSERT INTO users (id, email, password_hash, full_name, role, created_at) VALUES (?, ?, 'h', 'A', 'RECRUITER', now())",
+                UUID.randomUUID().toString(), email);
+
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO users (id, email, password_hash, full_name, role, created_at) VALUES (?, ?, 'h', 'B', 'RECRUITER', now())",
+                UUID.randomUUID().toString(), email.toLowerCase())).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void lockingActiveAdminsMakesASecondGuardWait() {
+        User admin = users.save(User.builder().email("lock-" + UUID.randomUUID() + "@t.io").fullName("L").passwordHash("h").role(Role.ADMIN).build());
+
+        tx.executeWithoutResult(s -> {
+            assertThat(users.lockByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)).extracting(User::getId).contains(admin.getId());
+            TransactionTemplate separate = new TransactionTemplate(txManager);
+            separate.setPropagationBehavior(TransactionTemplate.PROPAGATION_REQUIRES_NEW);
+            assertThatThrownBy(() -> separate.executeWithoutResult(other ->
+                    jdbc.queryForList("SELECT id FROM users WHERE id = ? FOR UPDATE NOWAIT", admin.getId())))
+                    .isInstanceOf(org.springframework.dao.DataAccessException.class);
+        });
     }
 
     @Test

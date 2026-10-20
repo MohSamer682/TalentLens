@@ -23,7 +23,7 @@ class AdminUserGuardsTest {
 
     @Test
     void theLastActiveAdminCannotBeHiddenDemotedOrDeleted() {
-        when(users.countByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)).thenReturn(1L);
+        when(users.lockByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)).thenReturn(java.util.List.of(new User()));
 
         assertThatThrownBy(() -> service.guardLosingAdmin(target))
                 .isInstanceOf(ApiException.class).hasMessage("At least one active admin must remain");
@@ -31,14 +31,14 @@ class AdminUserGuardsTest {
 
     @Test
     void anotherActiveAdminLetsItThrough() {
-        when(users.countByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)).thenReturn(2L);
+        when(users.lockByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)).thenReturn(java.util.List.of(new User(), new User()));
         assertThatCode(() -> service.guardLosingAdmin(target)).doesNotThrowAnyException();
     }
 
     @Test
     void aHiddenAdminIsNotCountedAsTheLastOne() {
         target.hide();
-        when(users.countByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)).thenReturn(1L);
+        when(users.lockByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)).thenReturn(java.util.List.of(new User()));
         assertThatCode(() -> service.guardLosingAdmin(target)).doesNotThrowAnyException();
     }
 

@@ -16,4 +16,8 @@ CREATE TABLE user_profiles (
     updated_by VARCHAR(255) REFERENCES users (id) ON DELETE SET NULL
 );
 
+-- Deleting a user nulls actor_user_id; the email keeps the audit trail readable.
+ALTER TABLE audit_events ADD COLUMN actor_email VARCHAR(255);
+UPDATE audit_events a SET actor_email = u.email FROM users u WHERE a.actor_user_id = u.id;
+
 CREATE INDEX idx_user_profiles_updated_by ON user_profiles (updated_by) WHERE updated_by IS NOT NULL;

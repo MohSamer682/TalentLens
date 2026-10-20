@@ -61,6 +61,14 @@ class AdminUserApiTest extends ApiIntegrationTest {
     }
 
     @Test
+    void createAcceptsABlankPhone() throws Exception {
+        mvc.perform(post("/api/admin/users").header("Authorization", token).contentType(MediaType.APPLICATION_JSON)
+                        .content(json("{'email':'blank-" + UUID.randomUUID() + "@t.io','fullName':'No Phone','role':'RECRUITER',"
+                                + "'temporaryPassword':'TempPass1234','phone':''}")))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
     void emailIsUniqueIgnoringCaseWith409() throws Exception {
         User existing = user(Role.RECRUITER);
         mvc.perform(post("/api/admin/users").header("Authorization", token).contentType(MediaType.APPLICATION_JSON)
@@ -141,11 +149,27 @@ class AdminUserApiTest extends ApiIntegrationTest {
     }
 
     @Test
+    void auditLogStillNamesADeletedUser() throws Exception {
+        User target = user(Role.RECRUITER);
+        mvc.perform(put("/api/me/profile").header("Authorization", bearer(target)).contentType(MediaType.APPLICATION_JSON)
+                        .content(json("{'fullName':'Short Stay','version':0}")))
+                .andExpect(status().isOk());
+
+        mvc.perform(delete("/api/admin/users/" + target.getId()).header("Authorization", token))
+                .andExpect(status().isNoContent());
+
+        assertThat(jdbc.queryForObject("SELECT actor_email FROM audit_events WHERE action = 'PROFILE_UPDATE' AND target_id = ?",
+                String.class, target.getId())).isEqualTo(target.getEmail());
+    }
+
+    @Test
     void resetPasswordSetsTemporaryPassword() throws Exception {
         User target = user(Role.RECRUITER);
         mvc.perform(post("/api/admin/users/" + target.getId() + "/password").header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON).content(json("{'temporaryPassword':'ResetPass999'}")))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.mustChangePassword").value(true))
+                .andExpect(jsonPath("$.data.version").value(1));
         User saved = users.findById(target.getId()).orElseThrow();
         assertThat(saved.isMustChangePassword()).isTrue();
         assertThat(encoder.matches("ResetPass999", saved.getPasswordHash())).isTrue();
@@ -169,6 +193,13 @@ class AdminUserApiTest extends ApiIntegrationTest {
                 .andExpect(jsonPath("$.data.content[0].id").value(a.getId()));
         mvc.perform(get("/api/admin/users").param("size", "500").header("Authorization", token))
                 .andExpect(jsonPath("$.data.size").value(100));
+    }
+
+    @Test
+    void searchTreatsWildcardsAsPlainText() throws Exception {
+        user(Role.RECRUITER);
+        mvc.perform(get("/api/admin/users").param("q", "%").header("Authorization", token))
+                .andExpect(jsonPath("$.data.totalElements").value(0));
     }
 
     @Test

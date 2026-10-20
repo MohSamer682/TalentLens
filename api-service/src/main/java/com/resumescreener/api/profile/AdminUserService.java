@@ -37,7 +37,7 @@ public class AdminUserService {
 
     @Transactional(readOnly = true)
     public Page<UserRow> list(UserStatus status, Role role, String query, Pageable pageable) {
-        String pattern = query == null || query.isBlank() ? "%" : "%" + query.trim().toLowerCase(Locale.ROOT) + "%";
+        String pattern = query == null || query.isBlank() ? "%" : "%" + query.trim().toLowerCase(Locale.ROOT).replaceAll("([\\\\%_])", "\\\\$1") + "%";
         return userRepository.search(status, role, pattern, pageable);
     }
 
@@ -111,12 +111,13 @@ public class AdminUserService {
     }
 
     @Transactional
-    public void resetPassword(String id, String temporaryPassword, String actorEmail) {
+    public ProfileView resetPassword(String id, String temporaryPassword, String actorEmail) {
         User user = byId(id);
         guardNotSelf(byEmail(actorEmail), user);
         user.resetPassword(passwordEncoder.encode(temporaryPassword));
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
         auditService.record("PASSWORD_RESET", "user", id, "success");
+        return get(id);
     }
 
     /** A hard delete: the foreign keys from sessions, interviews and notes refuse it when the user has history. */
@@ -144,7 +145,7 @@ public class AdminUserService {
 
     /** Called before an active admin loses admin rights or access. */
     void guardLosingAdmin(User target) {
-        if (target.isActive() && userRepository.countByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE) <= 1) {
+        if (target.isActive() && userRepository.lockByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE).size() <= 1) {
             throw ApiException.validation("At least one active admin must remain", "User " + target.getId() + " is the only active admin");
         }
     }

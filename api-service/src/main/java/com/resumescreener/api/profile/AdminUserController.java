@@ -69,10 +69,10 @@ public class AdminUserController {
     }
 
     @PostMapping("/{id}/password")
-    public ResponseEntity<Void> resetPassword(@PathVariable String id, @Valid @RequestBody TemporaryPasswordRequest request,
-                                              Authentication auth) {
-        service.resetPassword(id, request.temporaryPassword(), auth.getName());
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<ApiResponse<ProfileView>> resetPassword(@PathVariable String id, @Valid @RequestBody TemporaryPasswordRequest request,
+                                                                  Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.success("Temporary password set",
+                service.resetPassword(id, request.temporaryPassword(), auth.getName())));
     }
 
     @DeleteMapping("/{id}")

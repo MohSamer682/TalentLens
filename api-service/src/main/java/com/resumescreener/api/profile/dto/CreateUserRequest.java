@@ -13,7 +13,7 @@ public record CreateUserRequest(
         @NotBlank @Size(max = 120) String fullName,
         @NotNull Role role,
         @NotBlank @Size(min = 10, max = 128) String temporaryPassword,
-        @Pattern(regexp = "^[+0-9 ()-]{6,32}$", message = "can use digits, spaces, +, - and brackets") String phone,
+        @Pattern(regexp = "^\\s*$|^[+0-9 ()-]{6,32}$", message = "can use digits, spaces, +, - and brackets") String phone,
         @Size(max = 120) String headline,
         @Size(max = 80) String department,
         @Size(max = 120) String location,
