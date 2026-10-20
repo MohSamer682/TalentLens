@@ -52,7 +52,7 @@ class SessionControllerTest {
         mvc.perform(post("/api/sessions").principal(auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"title":"T","description":"d","weights":{
+                                {"title":"T","description":"d","jobTitle":"E","positionCode":"BE-1","requiredSkills":["Java"],"weights":{
                                  "technicalSkills":30,"experience":25,"education":15,
                                  "softSkills":20,"cultureFit":10}}
                                 """))
@@ -82,6 +82,90 @@ class SessionControllerTest {
         assertThat(weights).isNotNull();
         assertThat(weights.getSession()).isSameAs(saved);
         assertThat(weights.getTechnicalSkills()).isEqualTo(30.0);
+    }
+
+    private static final String JOB = "\"jobTitle\":\"Senior Backend Engineer\",\"positionCode\":\"be-104\","
+            + "\"jobDescription\":\"Build APIs\",\"requiredSkills\":[\"Java\",\"Spring\",\"SQL\"]";
+
+    private MockMvc savingMvc() {
+        SessionService service = new SessionService(
+                savingSessionRepository(), null, null,
+                userRepositoryReturning(user()), null);
+        return mvcFor(new SessionController(service, countingCandidateRepository(), null));
+    }
+
+    @Test
+    void createRejectsMissingPositionCodeWith400() throws Exception {
+        savingMvc().perform(post("/api/sessions").principal(auth).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"T\",\"jobTitle\":\"Engineer\",\"requiredSkills\":[\"Java\"]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.error.details").value(org.hamcrest.Matchers.startsWith("positionCode")));
+    }
+
+    @Test
+    void createRejectsThirtyOneSkills() throws Exception {
+        String skills = java.util.stream.IntStream.rangeClosed(1, 31).mapToObj(i -> "\"S" + i + "\"")
+                .collect(java.util.stream.Collectors.joining(","));
+        savingMvc().perform(post("/api/sessions").principal(auth).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"T\",\"jobTitle\":\"E\",\"positionCode\":\"BE-1\",\"requiredSkills\":[" + skills + "]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.details").value(org.hamcrest.Matchers.startsWith("requiredSkills")));
+    }
+
+    @Test
+    void createRejectsSkillRepeatedIgnoringCase() throws Exception {
+        savingMvc().perform(post("/api/sessions").principal(auth).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"T\",\"jobTitle\":\"E\",\"positionCode\":\"BE-1\",\"requiredSkills\":[\"Java\",\" java \"]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("That skill is already on the list"));
+    }
+
+    @Test
+    void createUppercasesPositionCodeAndReturnsJob() throws Exception {
+        savingMvc().perform(post("/api/sessions").principal(auth).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"T\"," + JOB + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.job.title").value("Senior Backend Engineer"))
+                .andExpect(jsonPath("$.data.job.positionCode").value("BE-104"))
+                .andExpect(jsonPath("$.data.job.description").value("Build APIs"))
+                .andExpect(jsonPath("$.data.job.requiredSkills[1]").value("Spring"));
+    }
+
+    @Test
+    void patchWithoutTitleIsAccepted() throws Exception {
+        ScreeningSession existing = ScreeningSession.builder().id("session-1").title("Old").jobTitle("Old")
+                .user(user()).status(SessionStatus.PENDING).build();
+        SessionService service = new SessionService(sessionRepositoryHolding(existing), null, null,
+                userRepositoryReturning(user()), null);
+        MockMvc mvc = mvcFor(new SessionController(service, countingCandidateRepository(), null));
+
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/sessions/session-1")
+                        .principal(auth).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"requiredSkills\":[\"Kafka\",\"Java\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.job.title").value("Old"))
+                .andExpect(jsonPath("$.data.job.requiredSkills[0]").value("Kafka"));
+    }
+
+    @Test
+    void patchRejectsInvalidPositionCode() throws Exception {
+        savingMvc().perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/sessions/session-1")
+                        .principal(auth).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"positionCode\":\"BE 104\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.details").value(org.hamcrest.Matchers.startsWith("positionCode")));
+    }
+
+    private static ScreeningSessionRepository sessionRepositoryHolding(ScreeningSession session) {
+        return (ScreeningSessionRepository) Proxy.newProxyInstance(
+                ScreeningSessionRepository.class.getClassLoader(),
+                new Class<?>[]{ScreeningSessionRepository.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "findWithWeightsById" -> Optional.of(session);
+                    case "save" -> args[0];
+                    default -> null;
+                });
     }
 
     private MockMvc mvcFor(SessionController controller) {

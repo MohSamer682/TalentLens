@@ -29,7 +29,7 @@ public interface ScreeningSessionRepository extends JpaRepository<ScreeningSessi
 
     List<ScreeningSession> findByStatus(SessionStatus status);
 
-    @EntityGraph(attributePaths = {"weights"})
+    @EntityGraph(attributePaths = {"weights", "requiredSkills"})
     Optional<ScreeningSession> findWithWeightsById(String id);
 
     @EntityGraph(attributePaths = {"user"})

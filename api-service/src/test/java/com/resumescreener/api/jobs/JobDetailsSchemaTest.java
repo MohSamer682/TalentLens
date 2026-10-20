@@ -82,6 +82,15 @@ class JobDetailsSchemaTest {
     }
 
     @Test
+    void detailFinderLoadsSkillsForUseOutsideATransaction() {
+        String id = tx.execute(s -> sessions.save(newSession(List.of("Java", "Spring"))).getId());
+
+        ScreeningSession detached = sessions.findWithWeightsById(id).orElseThrow();
+
+        assertThat(detached.getRequiredSkills()).containsExactly("Java", "Spring");
+    }
+
+    @Test
     void duplicateSkillIgnoringCaseIsRejected() {
         assertThatThrownBy(() -> tx.execute(s -> sessions.saveAndFlush(newSession(List.of("Java", "java")))))
                 .isInstanceOf(DataIntegrityViolationException.class);

@@ -3,6 +3,7 @@ package com.resumescreener.api.session.dto;
 import com.resumescreener.common.session.SessionStatus;
 import com.resumescreener.common.llm.LlmStatusDto;
 import com.resumescreener.common.session.WeightsDto;
+import com.resumescreener.api.jobs.dto.JobDetailsDto;
 import lombok.Data;
 import java.time.Instant;
 
@@ -25,6 +26,7 @@ public class SessionResponse {
     private String ownerName;
     /** Model the batch worker scores with and whether it is reachable; set on the session detail only */
     private LlmStatusDto llm;
+    private JobDetailsDto job;
 
     public SessionResponse(String id, String title, String description, SessionStatus status,
                            String jdFileKey, Instant createdAt, Instant completedAt, WeightsDto weights,
