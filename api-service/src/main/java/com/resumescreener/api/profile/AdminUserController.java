@@ -76,8 +76,8 @@ public class AdminUserController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id, Authentication auth) {
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String id, Authentication auth) {
         service.delete(id, auth.getName());
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success("User deleted", null));
     }
 }

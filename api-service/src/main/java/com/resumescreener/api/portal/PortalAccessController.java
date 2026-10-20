@@ -38,9 +38,9 @@ public class PortalAccessController {
 
     @DeleteMapping("/invites")
     @PreAuthorize("hasAuthority('PIPELINE_MANAGE')")
-    public ResponseEntity<Void> revoke(@PathVariable String sessionId, @PathVariable String candidateId, Authentication auth) {
+    public ResponseEntity<ApiResponse<Void>> revoke(@PathVariable String sessionId, @PathVariable String candidateId, Authentication auth) {
         service.revokeInvite(sessionId, candidateId, auth.getName());
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success("Access link revoked", null));
     }
 
     @PostMapping("/account")

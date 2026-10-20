@@ -175,7 +175,8 @@ class PortalAccessApiTest extends ApiIntegrationTest {
     void revokedInviteIsGone() throws Exception {
         String candidateId = shortlisted();
         String token = rawToken(candidateId);
-        mvc.perform(delete(base(candidateId) + "/invites").header("Authorization", hr)).andExpect(status().isNoContent());
+        mvc.perform(delete(base(candidateId) + "/invites").header("Authorization", hr)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.message").value("Access link revoked"));
 
         preview(token).andExpect(status().isGone());
         assertThat(audits("PORTAL_INVITE_REVOKED", candidateId)).isEqualTo(1);
