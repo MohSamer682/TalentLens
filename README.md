@@ -120,16 +120,18 @@ docker compose up -d --build
 
 TalentLens features an admin-managed dynamic permission matrix (`/admin/roles`) covering 8 specialized roles:
 
-| Role | Primary Purpose | Key Permissions |
+| Role | Primary Purpose | Default Permissions |
 |---|---|---|
-| **Admin** | Full system control & configuration | `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_VIEW`, `SESSION_RUN`, `SESSION_VIEW_ALL`, `PIPELINE_MANAGE`, `OFFER_APPROVE`, `ANALYTICS_VIEW` |
-| **HR Chief** | Departmental oversight & analytics | `SESSION_RUN`, `SESSION_VIEW_ALL`, `CANDIDATE_REVIEW`, `PIPELINE_MANAGE`, `OFFER_APPROVE`, `ANALYTICS_VIEW` |
+| **Admin** | Full system control & configuration | All ten permissions; this role can't be edited |
+| **HR Chief** | Company-wide oversight, analytics & final offer approval (view-only on sessions) | `SESSION_VIEW_ALL`, `CANDIDATE_REVIEW`, `OFFER_APPROVE`, `ANALYTICS_VIEW` |
 | **Recruiter** | Screening session owner & candidate manager | `SESSION_RUN`, `CANDIDATE_REVIEW`, `PIPELINE_MANAGE` |
 | **HR Interviewer** | Behavioral interview evaluation | `INTERVIEW_FEEDBACK` |
 | **Technical Interviewer** | Code and technical interview evaluation | `INTERVIEW_FEEDBACK` |
-| **Department Director** | Department candidate review & offer approval | `PIPELINE_MANAGE`, `OFFER_APPROVE`, `INTERVIEW_FEEDBACK` |
-| **Chairman** | Executive review & offer authorization | `OFFER_APPROVE`, `ANALYTICS_VIEW`, `INTERVIEW_FEEDBACK` |
-| **CEC / CEO** | Executive review & offer authorization | `OFFER_APPROVE`, `ANALYTICS_VIEW`, `INTERVIEW_FEEDBACK` |
+| **Department Director** | Management interviews & first offer approval when required | `INTERVIEW_FEEDBACK`, `OFFER_APPROVE` |
+| **CEO** | Management interviews | `INTERVIEW_FEEDBACK` |
+| **Chairman** | Management interviews | `INTERVIEW_FEEDBACK` |
+
+Pipeline steps (contact, interviews, moving to offer, uploading and sending offers, joining) can only be taken by the recruiter who owns the session, or an admin. Others who can see a session read its pipeline without changing it. Offer approvals and rejections go to the department director (when the recruiter asks for that step) and then the HR chief, on any session.
 
 ---
 
