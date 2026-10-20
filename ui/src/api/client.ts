@@ -89,14 +89,34 @@ export class ApiRequestError extends Error {
   }
 }
 
+/** Console trace of every call; a text/html body means a proxy or the SPA answered instead of the API. */
+function logExchange(
+  config: { method?: string; baseURL?: string; url?: string } | undefined,
+  response: { status: number; headers?: unknown; data: unknown } | undefined,
+  error?: string
+) {
+  const url = `${config?.baseURL ?? ''}${config?.url ?? ''}`;
+  const type = String((response?.headers as { 'content-type'?: string } | undefined)?.['content-type'] ?? '');
+  const html = type.includes('text/html');
+  const line = `[api] ${config?.method?.toUpperCase()} ${url} -> ${response?.status ?? 'NO RESPONSE'}`;
+  if (error || html || (response && response.status >= 400)) {
+    const body = typeof response?.data === 'string' ? response.data.slice(0, 300) : response?.data;
+    console.error(line, html ? 'NON-JSON (text/html) RESPONSE' : '', error ?? '', body);
+  } else {
+    console.debug(line);
+  }
+}
+
 api.interceptors.response.use(
   (response) => {
+    logExchange(response.config, response);
     if (isApiResponse(response.data) && response.data.success) {
       response.data = response.data.data;
     }
     return response;
   },
   (error) => {
+    logExchange(error.config, error.response, error.message);
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
       window.location.href = '/login';
@@ -110,23 +130,23 @@ api.interceptors.response.use(
           body.error?.details,
           error.response?.status
         );
-      reportClientError(apiErr);
+      reportClientError(apiErr, requestSummary(error));
       // A 403 usually means an admin changed this role's permissions; pick up the new set.
       if (apiErr.code === 'ACCESS_DENIED') void refreshCurrentUser();
       return Promise.reject(apiErr);
     }
 
     // No envelope: the request never reached the API, or a proxy answered instead
-    return Promise.reject(
-      new ApiRequestError(
+    const nonApi = new ApiRequestError(
         error.response
-          ? `Unexpected response from server (HTTP ${error.response.status})`
+          ? `Unexpected non-API response from server (HTTP ${error.response.status}, ${error.response.headers?.['content-type'] ?? 'unknown type'})`
           : 'Cannot reach the server. Check your connection and try again.',
         'NETWORK_ERROR',
         error.message,
         error.response?.status
-      )
-    );
+      );
+    reportClientError(nonApi, requestSummary(error));
+    return Promise.reject(nonApi);
   }
 );
 
@@ -304,13 +324,22 @@ export const adminApi = {
     api.put<RoleInfo>(`/admin/roles/${role}/permissions`, { permissions }),
 };
 
-function reportClientError(error: ApiRequestError) {
-  if (error.code === 'NETWORK_ERROR') return;
+/** "METHOD url -> status body" so the server log shows what the browser actually received. */
+function requestSummary(error: { config?: { method?: string; baseURL?: string; url?: string }; response?: { status: number; data: unknown } }) {
+  const { config, response } = error;
+  const body = typeof response?.data === 'string' ? response.data : JSON.stringify(response?.data ?? '');
+  return `${config?.method?.toUpperCase()} ${config?.baseURL ?? ''}${config?.url ?? ''} -> ${response?.status ?? 'no response'} ${body.slice(0, 300)}`;
+}
+
+function reportClientError(error: ApiRequestError, request: string) {
+  // Nothing reached the API, so there is nothing to deliver the report to
+  if (error.code === 'NETWORK_ERROR' && error.status === undefined) return;
   try {
     const payload = {
       code: error.code,
       message: error.message,
       url: window.location.href,
+      request,
       stack: error.stack,
     };
     navigator.sendBeacon(
