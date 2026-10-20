@@ -141,7 +141,7 @@ class AdminUserApiTest extends ApiIntegrationTest {
                 .andExpect(status().isOk());
 
         mvc.perform(delete("/api/admin/users/" + target.getId()).header("Authorization", token))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true));
 
         assertThat(users.findById(target.getId())).isEmpty();
         assertThat(profiles.findById(target.getId())).isEmpty();
@@ -156,7 +156,7 @@ class AdminUserApiTest extends ApiIntegrationTest {
                 .andExpect(status().isOk());
 
         mvc.perform(delete("/api/admin/users/" + target.getId()).header("Authorization", token))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true));
 
         assertThat(jdbc.queryForObject("SELECT actor_email FROM audit_events WHERE action = 'PROFILE_UPDATE' AND target_id = ?",
                 String.class, target.getId())).isEqualTo(target.getEmail());
