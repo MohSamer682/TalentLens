@@ -13,6 +13,9 @@ public interface CandidateOfferRepository extends JpaRepository<CandidateOffer, 
     @Query("SELECT o FROM CandidateOffer o JOIN FETCH o.uploadedBy LEFT JOIN FETCH o.approvedBy WHERE o.candidateId = :candidateId")
     Optional<CandidateOffer> findByCandidateId(@Param("candidateId") String candidateId);
 
+    @Query("SELECT o FROM CandidateOffer o JOIN FETCH o.uploadedBy LEFT JOIN FETCH o.approvedBy WHERE o.candidateId IN :ids")
+    List<CandidateOffer> findByCandidateIdIn(@Param("ids") java.util.Collection<String> ids);
+
     @Query("SELECT o FROM CandidateOffer o JOIN FETCH o.uploadedBy WHERE o.approvedBy IS NULL ORDER BY o.uploadedAt ASC")
     List<CandidateOffer> findPendingApproval();
 

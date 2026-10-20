@@ -24,8 +24,6 @@ public class Candidate {
     private String name;
     private String email;
     private String resumeFileKey;
-    @Column(columnDefinition = "TEXT")
-    private String rawText;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

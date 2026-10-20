@@ -137,7 +137,7 @@ public class SessionService {
                     "Session " + id + " is in status RUNNING");
         }
         minioUploadService.deleteSessionFiles(id);
-        sessionRepository.delete(session);
+        sessionRepository.deleteByIdDirect(session.getId());
     }
 
     @Transactional

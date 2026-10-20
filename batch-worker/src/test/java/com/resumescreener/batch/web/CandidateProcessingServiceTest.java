@@ -13,6 +13,7 @@ import com.resumescreener.common.session.ReviewStatus;
 import com.resumescreener.common.session.BatchJobRepository;
 import com.resumescreener.common.session.CandidateRepository;
 import com.resumescreener.common.session.CandidateScoreRepository;
+import com.resumescreener.common.session.CandidateTextRepository;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.InvocationHandler;
@@ -37,6 +38,7 @@ class CandidateProcessingServiceTest {
                 repositoryProxy(CandidateRepository.class, candidateSaves),
                 repositoryProxy(CandidateScoreRepository.class, scoreSaves),
                 repositoryProxy(BatchJobRepository.class, batchJobSaves),
+                repositoryProxy(CandidateTextRepository.class, new SaveTracker()),
                 minioStorageService,
                 pdfTextExtractor,
                 llmClient
@@ -78,6 +80,7 @@ class CandidateProcessingServiceTest {
                 repositoryProxy(CandidateRepository.class, new SaveTracker()),
                 repositoryProxy(CandidateScoreRepository.class, new SaveTracker()),
                 repositoryProxy(BatchJobRepository.class, new SaveTracker()),
+                repositoryProxy(CandidateTextRepository.class, new SaveTracker()),
                 null, null, null);
 
         service.handleCandidateFailure(candidate, BatchJob.builder().id("j1").processed(0).failed(0).build(),
@@ -96,6 +99,7 @@ class CandidateProcessingServiceTest {
                 repositoryProxy(CandidateRepository.class, new SaveTracker()),
                 repositoryProxy(CandidateScoreRepository.class, new SaveTracker()),
                 repositoryProxy(BatchJobRepository.class, new SaveTracker()),
+                repositoryProxy(CandidateTextRepository.class, new SaveTracker()),
                 new FakeMinioStorageService(), new FakePdfTextExtractor(), new ScoringLlmClient());
 
         service.processSingleCandidate(candidate, "jd", ScoringWeights.builder().technicalSkills(30.0)

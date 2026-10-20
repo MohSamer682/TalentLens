@@ -7,7 +7,7 @@ import org.hibernate.annotations.UuidGenerator;
 import java.time.Instant;
 
 @Entity
-@Table(name = "audit_event")
+@Table(name = "audit_events")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class AuditEvent {
 

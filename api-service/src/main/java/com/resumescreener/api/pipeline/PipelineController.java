@@ -19,6 +19,8 @@ import java.util.Map;
 public class PipelineController {
 
     private final PipelineService pipelineService;
+    private final OfferService offerService;
+    private final PipelineQueryService queryService;
 
     @GetMapping("/api/sessions/{sessionId}/candidates/{candidateId}/timeline")
     public ResponseEntity<ApiResponse<List<CandidateStageEventDto>>> getTimeline(
@@ -96,7 +98,7 @@ public class PipelineController {
     @PreAuthorize("hasAuthority('INTERVIEW_FEEDBACK')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getMyInterviews(Authentication auth) {
         return ResponseEntity.ok(ApiResponse.success("Interviews loaded",
-                pipelineService.getMyInterviews(auth.getName())));
+                queryService.getMyInterviews(auth.getName())));
     }
 
     @PostMapping("/api/sessions/{sessionId}/candidates/{candidateId}/move-to-offer")
@@ -105,7 +107,7 @@ public class PipelineController {
             @PathVariable String sessionId,
             @PathVariable String candidateId,
             Authentication auth) {
-        pipelineService.moveToOffer(sessionId, candidateId, auth.getName());
+        offerService.moveToOffer(sessionId, candidateId, auth.getName());
         return ResponseEntity.ok(ApiResponse.success("Moved to offer stage", null));
     }
 
@@ -118,7 +120,7 @@ public class PipelineController {
             @RequestParam(value = "requiresDirectorApproval", defaultValue = "false") boolean requiresDirectorApproval,
             Authentication auth) {
         return ResponseEntity.ok(ApiResponse.success("Offer uploaded",
-                pipelineService.uploadOffer(sessionId, candidateId, file, requiresDirectorApproval, auth.getName())));
+                offerService.uploadOffer(sessionId, candidateId, file, requiresDirectorApproval, auth.getName())));
     }
 
     @GetMapping("/api/sessions/{sessionId}/candidates/{candidateId}/interview-plan")
@@ -149,7 +151,7 @@ public class PipelineController {
             @Valid @RequestBody(required = false) RejectOfferRequest req,
             Authentication auth) {
         return ResponseEntity.ok(ApiResponse.success("Offer rejected",
-                pipelineService.rejectOffer(sessionId, candidateId, req, auth.getName())));
+                offerService.rejectOffer(sessionId, candidateId, req, auth.getName())));
     }
 
     @PostMapping("/api/sessions/{sessionId}/candidates/{candidateId}/offer/sent")
@@ -159,7 +161,7 @@ public class PipelineController {
             @PathVariable String candidateId,
             Authentication auth) {
         return ResponseEntity.ok(ApiResponse.success("Offer marked as sent",
-                pipelineService.markOfferSent(sessionId, candidateId, auth.getName())));
+                offerService.markOfferSent(sessionId, candidateId, auth.getName())));
     }
 
     @PostMapping("/api/sessions/{sessionId}/candidates/{candidateId}/offer/answer")
@@ -170,7 +172,7 @@ public class PipelineController {
             @Valid @RequestBody OfferAnswerRequest req,
             Authentication auth) {
         return ResponseEntity.ok(ApiResponse.success("Candidate's answer recorded",
-                pipelineService.answerOffer(sessionId, candidateId, req, auth.getName())));
+                offerService.answerOffer(sessionId, candidateId, req, auth.getName())));
     }
 
     @PutMapping("/api/sessions/{sessionId}/candidates/{candidateId}/joining")
@@ -181,7 +183,7 @@ public class PipelineController {
             @Valid @RequestBody JoiningRequest req,
             Authentication auth) {
         return ResponseEntity.ok(ApiResponse.success("Joining details saved",
-                pipelineService.saveJoining(sessionId, candidateId, req, auth.getName())));
+                offerService.saveJoining(sessionId, candidateId, req, auth.getName())));
     }
 
     @GetMapping("/api/sessions/{sessionId}/candidates/{candidateId}/offer")
@@ -190,7 +192,7 @@ public class PipelineController {
             @PathVariable String candidateId,
             Authentication auth) {
         return ResponseEntity.ok(ApiResponse.success("Offer loaded",
-                pipelineService.getOffer(sessionId, candidateId, auth.getName()).orElse(null)));
+                offerService.getOffer(sessionId, candidateId, auth.getName()).orElse(null)));
     }
 
     @GetMapping("/api/sessions/{sessionId}/candidates/{candidateId}/offer/download")
@@ -198,7 +200,7 @@ public class PipelineController {
             @PathVariable String sessionId,
             @PathVariable String candidateId,
             Authentication auth) {
-        String url = pipelineService.getOfferDownloadUrl(sessionId, candidateId, auth.getName());
+        String url = offerService.getOfferDownloadUrl(sessionId, candidateId, auth.getName());
         return ResponseEntity.ok(ApiResponse.success("Download URL generated", Map.of("url", url)));
     }
 
@@ -209,7 +211,7 @@ public class PipelineController {
             @PathVariable String candidateId,
             Authentication auth) {
         return ResponseEntity.ok(ApiResponse.success("Offer approved",
-                pipelineService.approveOffer(sessionId, candidateId, auth.getName())));
+                offerService.approveOffer(sessionId, candidateId, auth.getName())));
     }
 
     @GetMapping("/api/pipeline")
@@ -218,7 +220,7 @@ public class PipelineController {
             @RequestParam(required = false) Boolean awaitingApprovalOnly,
             Authentication auth) {
         return ResponseEntity.ok(ApiResponse.success("Pipeline loaded",
-                pipelineService.getPipeline(awaitingApprovalOnly, auth.getName())));
+                queryService.getPipeline(awaitingApprovalOnly, auth.getName())));
     }
 
     @GetMapping("/api/interviewers")
@@ -226,7 +228,7 @@ public class PipelineController {
     public ResponseEntity<ApiResponse<List<Map<String, String>>>> getInterviewers(
             @RequestParam(required = false) InterviewKind kind) {
         return ResponseEntity.ok(ApiResponse.success("Interviewers loaded",
-                pipelineService.getInterviewers(kind)));
+                queryService.getInterviewers(kind)));
     }
 
     @GetMapping("/api/interviews/{interviewId}")
@@ -235,6 +237,6 @@ public class PipelineController {
             @PathVariable String interviewId,
             Authentication auth) {
         return ResponseEntity.ok(ApiResponse.success("Interview loaded",
-                pipelineService.getInterviewDetail(interviewId, auth.getName())));
+                queryService.getInterviewDetail(interviewId, auth.getName())));
     }
 }

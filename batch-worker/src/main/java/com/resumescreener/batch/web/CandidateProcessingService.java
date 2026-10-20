@@ -26,6 +26,7 @@ public class CandidateProcessingService {
     private final CandidateRepository candidateRepository;
     private final CandidateScoreRepository candidateScoreRepository;
     private final BatchJobRepository batchJobRepository;
+    private final CandidateTextRepository candidateTextRepository;
     private final MinioStorageService minioStorageService;
     private final PdfTextExtractor pdfTextExtractor;
     private final LlmClient llmClient;
@@ -39,7 +40,7 @@ public class CandidateProcessingService {
         log.info("Processing candidate");
         byte[] pdfBytes = minioStorageService.downloadBytes(candidate.getResumeFileKey());
         String text = pdfTextExtractor.extract(pdfBytes);
-        candidate.setRawText(text);
+        candidateTextRepository.save(CandidateText.builder().candidateId(candidate.getId()).rawText(text).build());
 
         LlmScoreDto score = llmClient.score(jdText, text);
         

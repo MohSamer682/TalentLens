@@ -55,7 +55,9 @@ class PermissionEnforcementTest {
         @Bean RoleController roleController() { return new RoleController(mock(RoleService.class)); }
         @Bean AnalyticsController analyticsController() { return new AnalyticsController(mock(AnalyticsService.class), mock(AuditService.class)); }
         @Bean com.resumescreener.api.pipeline.PipelineService pipelineService() { return mock(com.resumescreener.api.pipeline.PipelineService.class); }
-        @Bean com.resumescreener.api.pipeline.PipelineController pipelineController(com.resumescreener.api.pipeline.PipelineService p) { return new com.resumescreener.api.pipeline.PipelineController(p); }
+        @Bean com.resumescreener.api.pipeline.OfferService offerService() { return mock(com.resumescreener.api.pipeline.OfferService.class); }
+        @Bean com.resumescreener.api.pipeline.PipelineQueryService pipelineQueryService() { return mock(com.resumescreener.api.pipeline.PipelineQueryService.class); }
+        @Bean com.resumescreener.api.pipeline.PipelineController pipelineController(com.resumescreener.api.pipeline.PipelineService p, com.resumescreener.api.pipeline.OfferService o, com.resumescreener.api.pipeline.PipelineQueryService q) { return new com.resumescreener.api.pipeline.PipelineController(p, o, q); }
     }
 
     @Autowired SessionController sessions;
