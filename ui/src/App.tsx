@@ -19,6 +19,8 @@ const InterviewFeedback = lazy(() => import('@/features/pipeline/InterviewFeedba
 const AdminUsers = lazy(() => import('@/features/admin/AdminUsers'));
 const AdminRoles = lazy(() => import('@/features/admin/AdminRoles'));
 const Analytics = lazy(() => import('@/features/analytics/AnalyticsPage'));
+const ProfilePage = lazy(() => import('@/features/profile/ProfilePage'));
+const PasswordPage = lazy(() => import('@/features/profile/PasswordPage'));
 
 function RootRedirect() {
   const user = useAuthStore((s) => s.user);
@@ -122,6 +124,22 @@ export default function App() {
           <PermissionRoute permission="ANALYTICS_VIEW">
             <Analytics />
           </PermissionRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile/password"
+        element={
+          <ProtectedRoute>
+            <PasswordPage />
+          </ProtectedRoute>
         }
       />
       <Route path="/" element={<RootRedirect />} />

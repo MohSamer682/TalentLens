@@ -52,6 +52,11 @@ export function canSeeSessions(user: User | null | undefined): boolean {
   return can(user, 'SESSION_RUN') || can(user, 'SESSION_VIEW_ALL');
 }
 
+/** A temporary password must be replaced before anything else loads. */
+export function forcedPath(user: User | null | undefined, pathname: string): string | null {
+  return user?.mustChangePassword && pathname !== '/profile/password' ? '/profile/password' : null;
+}
+
 /** Where a user lands: sessions for recruiters, My interviews for people who only interview. */
 export function homePath(user: User | null | undefined): string {
   if (canSeeSessions(user)) return '/dashboard';
