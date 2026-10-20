@@ -65,15 +65,16 @@ export function RescheduleSheet({ interviewId, onSent, onCancel }: { interviewId
         <p id={`${reasonId}-times`} className="text-[13px] text-ink-muted">
           Up to three, in {zoneLabel(browserZone())}. Your recruiter picks one or suggests another.
         </p>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="space-y-2">
           {times.map((value, i) => (
-            <div key={i} className="space-y-1">
-              <label htmlFor={`${reasonId}-slot-${i}`} className="block text-[13px] text-ink-muted">
+            <div key={i} className="flex items-center gap-3">
+              <label htmlFor={`${reasonId}-slot-${i}`} className="w-14 shrink-0 text-[13px] text-ink-muted">
                 Time {i + 1}
               </label>
               <Input
                 id={`${reasonId}-slot-${i}`}
                 type="datetime-local"
+                className="max-w-[260px]"
                 value={value}
                 aria-invalid={shown?.field === 'times'}
                 onChange={(e) => setTimes((all) => all.map((t, j) => (j === i ? e.target.value : t)))}
