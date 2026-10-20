@@ -31,6 +31,10 @@ END $$;
 
 -- 3. Audit: plural like every other table, actor linked to users, searchable by target and by time.
 ALTER TABLE IF EXISTS audit_event RENAME TO audit_events;
+-- Until now the column held the login email; keep the actor by mapping it to the user id, then drop only true orphans.
+UPDATE audit_events a SET actor_user_id = u.id FROM users u
+    WHERE a.actor_user_id IS NOT NULL AND a.actor_user_id NOT IN (SELECT id FROM users)
+      AND lower(u.email) = lower(a.actor_user_id);
 UPDATE audit_events SET actor_user_id = NULL
     WHERE actor_user_id IS NOT NULL AND actor_user_id NOT IN (SELECT id FROM users);
 ALTER TABLE audit_events

@@ -141,3 +141,15 @@ Adding features:
 2. Gaps 4, 8, 9 (correctness).
 3. Gaps 10, 11 (tests and CI) so the rest lands safely.
 4. Gap 6 (migrations), then 5 and 7 as scale or API growth demands.
+
+### Deploying V12 and V13
+
+V12 and V13 rename a table and drop columns, so an older `api-service` or `batch-worker` cannot run against the migrated database and a rollback means restoring the database. Deploy the migration and all three services together. V12 aborts on purpose when the data would violate a new rule, so run these first and fix anything they return:
+
+```sql
+SELECT lower(email), count(*) FROM users GROUP BY 1 HAVING count(*) > 1;
+SELECT candidate_id, count(*) FROM candidate_offers GROUP BY 1 HAVING count(*) > 1;
+SELECT id FROM candidate_scores WHERE composite_score NOT BETWEEN 0 AND 100;
+```
+
+V13 copies every resume text into `candidate_texts` inside one transaction and holds locks on `candidates` and `users` meanwhile, so run it in a quiet window on a large database. Audit rows written before V13 stored the login email in `actor_user_id`; V13 maps those to the user id and clears only the ones with no matching user.
