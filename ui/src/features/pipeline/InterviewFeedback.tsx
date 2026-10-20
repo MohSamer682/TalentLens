@@ -7,8 +7,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Card';
 import { Alert, Loader } from '@/components/ui/Feedback';
-import { InterviewPlaceText } from '@/components/InterviewPlace';
-import { KIND_LABEL } from '@/lib/pipeline';
+import { InterviewPlaceText } from '@/features/pipeline/InterviewPlace';
+import { KIND_LABEL } from '@/features/pipeline/pipeline';
 import { MainLayout } from '@/layouts/MainLayout';
 import { cn, formatRelativeDate, formatScore } from '@/lib/utils';
 

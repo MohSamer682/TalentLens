@@ -1,21 +1,24 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { refreshCurrentUser } from '@/api/client';
-import { PermissionRoute, ProtectedRoute, SessionsRoute } from '@/components/ProtectedRoute';
-import { useAuthStore } from '@/store/authStore';
+import { PermissionRoute, ProtectedRoute, SessionsRoute } from '@/features/auth/ProtectedRoute';
+import { useAuthStore } from '@/features/auth/authStore';
 import { homePath } from '@/lib/permissions';
-import Login from '@/pages/Login';
-import Register from '@/pages/Register';
-import Dashboard from '@/pages/Dashboard';
-import NewSession from '@/pages/NewSession';
-import SessionDetail from '@/pages/SessionDetail';
-import CandidateDetail from '@/pages/CandidateDetail';
-import Pipeline from '@/pages/Pipeline';
-import MyInterviews from '@/pages/MyInterviews';
-import InterviewFeedback from '@/pages/InterviewFeedback';
-import AdminUsers from '@/pages/AdminUsers';
-import AdminRoles from '@/pages/AdminRoles';
-import Analytics from '@/pages/Analytics';
+import Login from '@/features/auth/Login';
+import Register from '@/features/auth/Register';
+import { Loader } from '@/components/ui/Feedback';
+
+// Login and Register load up front; every other page is fetched when first visited
+const Dashboard = lazy(() => import('@/features/sessions/Dashboard'));
+const NewSession = lazy(() => import('@/features/sessions/NewSession'));
+const SessionDetail = lazy(() => import('@/features/sessions/SessionDetail'));
+const CandidateDetail = lazy(() => import('@/features/candidates/CandidateDetail'));
+const Pipeline = lazy(() => import('@/features/pipeline/PipelinePage'));
+const MyInterviews = lazy(() => import('@/features/pipeline/MyInterviews'));
+const InterviewFeedback = lazy(() => import('@/features/pipeline/InterviewFeedback'));
+const AdminUsers = lazy(() => import('@/features/admin/AdminUsers'));
+const AdminRoles = lazy(() => import('@/features/admin/AdminRoles'));
+const Analytics = lazy(() => import('@/features/analytics/AnalyticsPage'));
 
 function RootRedirect() {
   const user = useAuthStore((s) => s.user);
@@ -29,6 +32,7 @@ export default function App() {
   }, []);
 
   return (
+    <Suspense fallback={<Loader label="Loading…" />}>
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -123,5 +127,6 @@ export default function App() {
       <Route path="/" element={<RootRedirect />} />
       <Route path="*" element={<RootRedirect />} />
     </Routes>
+    </Suspense>
   );
 }

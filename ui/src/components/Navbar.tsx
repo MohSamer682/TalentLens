@@ -1,7 +1,7 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { LogOut, Moon, Sun } from 'lucide-react';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '@/features/auth/authStore';
 import { ROLE_LABEL, cn } from '@/lib/utils';
 import { can, canSeeSessions as userCanSeeSessions, homePath } from '@/lib/permissions';
 import { BrandMark } from '@/components/BrandMark';

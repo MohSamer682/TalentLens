@@ -7,7 +7,7 @@ import { Alert, SkeletonRows } from '@/components/ui/Feedback';
 import { Panel, PanelHeader } from '@/components/ui/Card';
 import { Segmented } from '@/components/ui/Segmented';
 import { MainLayout, PageHeader } from '@/layouts/MainLayout';
-import { formatCount, formatHours } from '@/lib/analytics';
+import { formatCount, formatHours } from '@/features/analytics/analytics';
 import { cn, formatDate } from '@/lib/utils';
 
 type Days = '30' | '90' | '365';

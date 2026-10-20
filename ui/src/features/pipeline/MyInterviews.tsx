@@ -5,8 +5,8 @@ import type { InterviewRecommendation, MyInterviewItem, MyInterviewsResponse } f
 import { Badge } from '@/components/ui/Badge';
 import { Panel } from '@/components/ui/Card';
 import { Alert, Loader } from '@/components/ui/Feedback';
-import { InterviewPlaceText } from '@/components/InterviewPlace';
-import { KIND_LABEL } from '@/lib/pipeline';
+import { InterviewPlaceText } from '@/features/pipeline/InterviewPlace';
+import { KIND_LABEL } from '@/features/pipeline/pipeline';
 import { MainLayout } from '@/layouts/MainLayout';
 import { cn } from '@/lib/utils';
 

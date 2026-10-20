@@ -1,6 +1,6 @@
 import type { ReviewStatus } from '@/types';
 import { Badge } from '@/components/ui/Badge';
-import { STAGE_LABEL, stageTone } from '@/lib/pipeline';
+import { STAGE_LABEL, stageTone } from '@/features/pipeline/pipeline';
 
 /** A candidate's real stage, worded and coloured the same on every screen. */
 export function StageBadge({

@@ -43,7 +43,7 @@ Rule: if something is saffron, it made the cut. Never use `mark` for decoration,
 
 ## Stages, places and approvals
 
-- One stage vocabulary (`src/lib/pipeline.ts`): Shortlisted, Contacted, Interviewing, Interviewed, Offer, Offer approved, Offer sent, Accepted or Declined, Joining. `StageBadge` renders it everywhere (standings, candidate page, pipeline), so screens cannot disagree. Saffron stays for the cut: the position cell and row wash cover every stage from Shortlisted on, while the badge says where the candidate is.
+- One stage vocabulary (`src/features/pipeline/pipeline.ts`): Shortlisted, Contacted, Interviewing, Interviewed, Offer, Offer approved, Offer sent, Accepted or Declined, Joining. `StageBadge` renders it everywhere (standings, candidate page, pipeline), so screens cannot disagree. Saffron stays for the cut: the position cell and row wash cover every stage from Shortlisted on, while the badge says where the candidate is.
 - The candidate status line shows only the interviews the recruiter planned (HR, technical, management), then the offer steps.
 - Interview place is HQ, Online or Other. Online shows as a real link that opens in a new tab. In list rows the row link is stretched from the title and the place sits above it (`relative z-10`), so the two links never nest.
 - Offer approvals read as a short ordered list: department director (only when the recruiter asked for it), then HR chief. Rejecting opens an inline optional note, not a modal.

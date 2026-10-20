@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { adminApi, apiErrorMessage } from '@/api/client';
 import type { User } from '@/types';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '@/features/auth/authStore';
 import { Panel } from '@/components/ui/Card';
 import { Alert, SkeletonRows } from '@/components/ui/Feedback';
 import { Pagination } from '@/components/ui/Pagination';
 import { Button } from '@/components/ui/Button';
 import { MainLayout, PageHeader } from '@/layouts/MainLayout';
-import { AdminTabs } from '@/components/AdminTabs';
+import { AdminTabs } from '@/features/admin/AdminTabs';
 import { ROLE_LABEL, formatDate, formatRelativeDate, getInitials } from '@/lib/utils';
 import { stagger } from '@/lib/motion';
 

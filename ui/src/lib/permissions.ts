@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '@/features/auth/authStore';
 import type { Permission, ScreeningSession, User } from '@/types';
 
 /** Short names for the matrix and the unsaved-changes summary; descriptions come from the server. */

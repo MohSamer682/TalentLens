@@ -78,13 +78,13 @@ assert.match(client, /candidateResume:/, 'client must expose the resume download
 
 // No page may reach back through the old axios error shape
 for (const file of [
-  'ui/src/pages/Login.tsx',
-  'ui/src/pages/Register.tsx',
-  'ui/src/pages/NewSession.tsx',
-  'ui/src/pages/SessionDetail.tsx',
-  'ui/src/pages/CandidateDetail.tsx',
-  'ui/src/pages/AdminUsers.tsx',
-  'ui/src/components/SessionCard.tsx',
+  'ui/src/features/auth/Login.tsx',
+  'ui/src/features/auth/Register.tsx',
+  'ui/src/features/sessions/NewSession.tsx',
+  'ui/src/features/sessions/SessionDetail.tsx',
+  'ui/src/features/candidates/CandidateDetail.tsx',
+  'ui/src/features/admin/AdminUsers.tsx',
+  'ui/src/features/sessions/SessionCard.tsx',
 ]) {
   assert.doesNotMatch(
     read(file),
