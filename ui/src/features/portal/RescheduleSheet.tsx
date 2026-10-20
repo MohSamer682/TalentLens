@@ -77,12 +77,17 @@ export function RescheduleSheet({ interviewId, onSent, onCancel }: { interviewId
                 className="max-w-[260px]"
                 value={value}
                 aria-invalid={shown?.field === 'times'}
+                aria-describedby={shown?.field === 'times' ? `${reasonId}-times-error` : undefined}
                 onChange={(e) => setTimes((all) => all.map((t, j) => (j === i ? e.target.value : t)))}
               />
             </div>
           ))}
         </div>
-        {shown?.field === 'times' && <p className="text-[13px] text-danger">{shown.message}</p>}
+        {shown?.field === 'times' && (
+          <p id={`${reasonId}-times-error`} role="alert" className="text-[13px] text-danger">
+            {shown.message}
+          </p>
+        )}
       </fieldset>
       {error && <Alert>{error}</Alert>}
       <div className="flex flex-wrap justify-end gap-2">

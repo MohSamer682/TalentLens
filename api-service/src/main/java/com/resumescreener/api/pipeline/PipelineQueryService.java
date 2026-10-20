@@ -64,7 +64,7 @@ public class PipelineQueryService {
         Map<String, Double> scores = new HashMap<>();
         candidateScoreRepository.findByCandidateIdIn(ids)
                 .forEach(s -> scores.putIfAbsent(s.getCandidate().getId(), s.getCompositeScore()));
-        Set<String> rescheduleRequested = new HashSet<>(rescheduleRepository.candidateIdsWithPendingRequest(ids));
+        Set<String> rescheduleRequested = new HashSet<>(rescheduleRepository.candidateIdsWithPendingRequest(ids, Instant.now()));
         Map<String, CandidateInterview> nextInterview = new HashMap<>();
         interviewRepository.findByCandidateIdInAndStatusOrderByScheduledStartAsc(ids, InterviewStatus.SCHEDULED)
                 .forEach(i -> nextInterview.putIfAbsent(i.getCandidateId(), i));

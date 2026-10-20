@@ -4,9 +4,10 @@ import type { RescheduleRequest } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { formatRelativeDate } from '@/lib/utils';
+import { toLocalInput } from './format';
 
 const slotLabel = (iso: string) =>
-  new Date(iso).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  new Date(iso).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
 
 interface RescheduleRequestCardProps {
   request: RescheduleRequest;
@@ -21,6 +22,7 @@ export function RescheduleRequestCard({ request, canManage, busy = false, onAcce
   const [other, setOther] = useState('');
   const [note, setNote] = useState('');
   const idBase = `reschedule-${request.id}`;
+  const now = Date.now();
 
   return (
     <div className="space-y-3 rounded-lg border border-warn/30 bg-warn-soft p-3 text-sm">
@@ -38,7 +40,7 @@ export function RescheduleRequestCard({ request, canManage, busy = false, onAcce
         <>
           <div className="flex flex-wrap gap-2">
             {request.proposedStarts.map((slot) => (
-              <Button key={slot} size="sm" disabled={busy} onClick={() => onAccept(request, slot)}>
+              <Button key={slot} size="sm" disabled={busy || new Date(slot).getTime() <= now} onClick={() => onAccept(request, slot)}>
                 Move to {slotLabel(slot)}
               </Button>
             ))}
@@ -56,9 +58,9 @@ export function RescheduleRequestCard({ request, canManage, busy = false, onAcce
                 <label htmlFor={`${idBase}-other`} className="block text-[13px] font-semibold">
                   New time
                 </label>
-                <Input id={`${idBase}-other`} type="datetime-local" value={other} onChange={(e) => setOther(e.target.value)} />
+                <Input id={`${idBase}-other`} type="datetime-local" min={toLocalInput(new Date(now).toISOString())} value={other} onChange={(e) => setOther(e.target.value)} />
               </div>
-              <Button size="sm" disabled={busy || !other} onClick={() => onAccept(request, new Date(other).toISOString())}>
+              <Button size="sm" disabled={busy || !other || new Date(other).getTime() <= now} onClick={() => onAccept(request, new Date(other).toISOString())}>
                 Move interview
               </Button>
             </div>

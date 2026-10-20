@@ -72,6 +72,9 @@ describe('InterviewCard', () => {
     rerender(<InterviewCard interview={{ ...base, reschedule: { ...reschedule, status: 'DECLINED', resolutionNote: 'Panel is fully booked' } }} />);
     expect(screen.getByText(/couldn't move it: Panel is fully booked/i)).toBeTruthy();
 
+    rerender(<InterviewCard interview={{ ...base, status: 'CANCELLED', reschedule }} />);
+    expect(screen.queryByText('Request sent. Your recruiter will reply here.')).toBeNull();
+
     rerender(<InterviewCard interview={{ ...base, reschedule: { ...reschedule, status: 'ACCEPTED' } }} />);
     expect(screen.getByText('Your recruiter moved this interview to the time above.')).toBeTruthy();
   });

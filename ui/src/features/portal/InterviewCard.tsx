@@ -39,6 +39,8 @@ function RequestState({ interview, onChanged }: { interview: PortalInterview; on
   const [error, setError] = useState<string | null>(null);
   const request = interview.reschedule;
   if (!request || request.status === 'WITHDRAWN') return null;
+  const live = interview.status === 'SCHEDULED' && new Date(interview.scheduledStart).getTime() > Date.now();
+  if (request.status === 'PENDING' && !live) return null;
 
   const withdraw = async () => {
     setBusy(true);
@@ -55,12 +57,18 @@ function RequestState({ interview, onChanged }: { interview: PortalInterview; on
 
   if (request.status === 'PENDING')
     return (
-      <div className="space-y-2 rounded-lg border border-info/25 bg-info-soft px-3 py-2.5 text-sm" role="status">
-        <p className="font-semibold">Request sent. Your recruiter will reply here.</p>
+      <div className="space-y-2 rounded-lg border border-info/25 bg-info-soft px-3 py-2.5 text-sm">
+        <p className="font-semibold" role="status">
+          Request sent. Your recruiter will reply here.
+        </p>
         {request.proposedStarts.length > 0 && (
           <p className="text-ink-muted">You suggested {request.proposedStarts.map((t) => formatStart(t)).join('; ')}.</p>
         )}
-        {error && <p className="text-danger">{error}</p>}
+        {error && (
+          <p className="text-danger" role="alert">
+            {error}
+          </p>
+        )}
         <Button variant="secondary" size="sm" onClick={withdraw} disabled={busy}>
           {busy ? 'Withdrawing…' : 'Withdraw request'}
         </Button>

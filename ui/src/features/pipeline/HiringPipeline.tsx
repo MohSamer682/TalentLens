@@ -658,7 +658,6 @@ export function HiringPipeline({
         busy={busy}
         onAcceptRequest={(request, start) =>
           run(async () => {
-            // A stale or answered request still reloads, so HR sees what changed
             try {
               await pipelineApi.acceptReschedule(sessionId, candidateId, request.id, start, request.version);
             } finally {
@@ -668,7 +667,6 @@ export function HiringPipeline({
         }
         onDeclineRequest={(request, note) =>
           run(async () => {
-            // A stale or answered request still reloads, so HR sees what changed
             try {
               await pipelineApi.declineReschedule(sessionId, candidateId, request.id, note, request.version);
             } finally {

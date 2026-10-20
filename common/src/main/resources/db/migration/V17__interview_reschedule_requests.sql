@@ -14,8 +14,8 @@ CREATE TABLE interview_reschedule_requests (
 );
 -- The real guard against a double submit: one open request per interview.
 CREATE UNIQUE INDEX uq_reschedule_pending_per_interview ON interview_reschedule_requests (interview_id) WHERE status = 'PENDING';
--- HR's waiting requests and the pipeline badge.
-CREATE INDEX idx_reschedule_pending_inbox ON interview_reschedule_requests (created_at) WHERE status = 'PENDING';
+-- The latest request per interview, for the portal and HR's list.
+CREATE INDEX idx_reschedule_interview_latest ON interview_reschedule_requests (interview_id, created_at DESC);
 CREATE INDEX idx_reschedule_requested_by ON interview_reschedule_requests (requested_by);
 CREATE INDEX idx_reschedule_resolved_by ON interview_reschedule_requests (resolved_by) WHERE resolved_by IS NOT NULL;
 

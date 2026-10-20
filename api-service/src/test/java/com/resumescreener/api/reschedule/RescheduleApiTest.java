@@ -223,4 +223,42 @@ class RescheduleApiTest extends ApiIntegrationTest {
         mvc.perform(get("/api/pipeline").header("Authorization", bearer(recruiter)))
                 .andExpect(jsonPath("$.data[?(@.id == '" + candidateId + "')].rescheduleRequested").value(true));
     }
+
+    @Test
+    void acceptRefusesATimeInThePast() throws Exception {
+        String id = requestId();
+        accept(id, inDays(-1), 0, recruiter).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Pick a time in the future"));
+        assertThat(stateOf(id)).isEqualTo("PENDING");
+    }
+
+    @Test
+    void acceptOnACancelledInterviewLeavesItCancelled() throws Exception {
+        String id = requestId();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(
+                "/api/sessions/" + sessionId + "/candidates/" + candidateId + "/interviews/" + interviewId).header("Authorization", bearer(recruiter)))
+                .andExpect(status().isOk());
+
+        accept(id, inDays(5), 0, recruiter).andExpect(status().isBadRequest());
+        assertThat(jdbc.queryForObject("SELECT status FROM candidate_interviews WHERE id = ?", String.class, interviewId)).isEqualTo("CANCELLED");
+        assertThat(stateOf(id)).isEqualTo("PENDING");
+    }
+
+    @Test
+    void pipelineFlagClearsOnceTheInterviewIsCancelled() throws Exception {
+        requestId();
+        jdbc.update("UPDATE candidate_interviews SET status = 'CANCELLED' WHERE id = ?", interviewId);
+        mvc.perform(get("/api/pipeline").header("Authorization", bearer(recruiter)))
+                .andExpect(jsonPath("$.data[?(@.id == '" + candidateId + "')].rescheduleRequested").value(false));
+    }
+
+    @Test
+    void answeringARequestFromAnotherCandidateIs404() throws Exception {
+        String id = requestId();
+        String other = application(user(Role.CANDIDATE));
+        mvc.perform(post("/api/sessions/" + sessionId + "/candidates/" + other + "/reschedule-requests/" + id + "/accept")
+                        .header("Authorization", bearer(recruiter)).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scheduledStart\":\"" + inDays(5) + "\",\"version\":0}"))
+                .andExpect(status().isNotFound());
+    }
 }
