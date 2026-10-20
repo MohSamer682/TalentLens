@@ -161,13 +161,13 @@ export default function AdminUsers() {
           ) : rows.length > 0 ? (
             <Panel>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[560px] text-sm">
+                <table className="w-full text-sm sm:min-w-[560px]">
                   <thead className="border-b border-line bg-sunken">
                     <tr>
                       <th scope="col" className={`${head} pl-4 sm:pl-5`}>Name</th>
-                      <th scope="col" className={head}>Role</th>
-                      <th scope="col" className={head}>Status</th>
-                      <th scope="col" className={head}>Job title</th>
+                      <th scope="col" className={`${head} hidden sm:table-cell`}>Role</th>
+                      <th scope="col" className={`${head} hidden sm:table-cell`}>Status</th>
+                      <th scope="col" className={`${head} hidden sm:table-cell`}>Job title</th>
                       <th scope="col" className={`${head} pr-4 sm:pr-5`}><span className="sr-only">Actions</span></th>
                     </tr>
                   </thead>
@@ -179,20 +179,24 @@ export default function AdminUsers() {
                             <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded bg-sunken text-[13px] font-bold text-ink-muted">
                               {getInitials(u.fullName)}
                             </span>
-                            <span className="min-w-0">
+                            <span className="min-w-0 break-words">
                               <span className="block font-semibold">
                                 {u.fullName}
                                 {u.id === me?.id && <span className="ml-1.5 font-normal text-ink-muted">(you)</span>}
                               </span>
                               <span className="block truncate text-[13px] text-ink-muted">{u.email}</span>
+                              <span className="mt-1 flex items-center gap-2 text-[13px] text-ink-muted sm:hidden">
+                                {ROLE_LABEL[u.role] ?? u.role}
+                                {u.status === 'HIDDEN' && <Badge tone="neutral">Hidden</Badge>}
+                              </span>
                             </span>
                           </div>
                         </td>
-                        <td className="px-3 py-2.5">{ROLE_LABEL[u.role] ?? u.role}</td>
-                        <td className="px-3 py-2.5">
+                        <td className="hidden px-3 py-2.5 sm:table-cell">{ROLE_LABEL[u.role] ?? u.role}</td>
+                        <td className="hidden px-3 py-2.5 sm:table-cell">
                           <Badge tone={u.status === 'ACTIVE' ? 'success' : 'neutral'}>{u.status === 'ACTIVE' ? 'Active' : 'Hidden'}</Badge>
                         </td>
-                        <td className="px-3 py-2.5 text-ink-muted">{u.headline}</td>
+                        <td className="hidden px-3 py-2.5 text-ink-muted sm:table-cell">{u.headline}</td>
                         <td className="py-2.5 pl-3 pr-4 text-right sm:pr-5">
                           <Button variant="secondary" size="sm" onClick={() => open(u.id)} aria-label={`Edit ${u.fullName}`}>
                             Edit
