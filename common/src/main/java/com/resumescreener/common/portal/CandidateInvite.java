@@ -10,6 +10,11 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.type.SqlTypes;
 
+import com.resumescreener.common.session.Candidate;
+import com.resumescreener.common.user.User;
+
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 
 /** A one-time link that lets a shortlisted candidate set a password. Only the SHA-256 of the token is kept. */
@@ -43,6 +48,23 @@ public class CandidateInvite {
 
     @Column(nullable = false)
     private Instant createdAt;
+
+    /** The raw token leaves the server once, in the link; the invite keeps only its hash. */
+    public record Issued(CandidateInvite invite, String rawToken) {
+    }
+
+    public static Issued issue(Candidate candidate, User creator, Clock clock, Duration ttl) {
+        String raw = InviteToken.generate();
+        Instant now = clock.instant();
+        CandidateInvite invite = CandidateInvite.builder()
+                .candidateId(candidate.getId())
+                .tokenHash(InviteToken.hash(raw))
+                .createdBy(creator.getId())
+                .createdAt(now)
+                .expiresAt(now.plus(ttl))
+                .build();
+        return new Issued(invite, raw);
+    }
 
     public boolean isOpen() {
         return usedAt == null && revokedAt == null;

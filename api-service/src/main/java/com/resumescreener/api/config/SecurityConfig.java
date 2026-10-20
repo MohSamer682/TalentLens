@@ -6,6 +6,7 @@ import com.resumescreener.api.auth.JwtAuthFilter;
 import com.resumescreener.api.common.ApiErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -45,6 +46,8 @@ public class SecurityConfig {
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
                 .requestMatchers("/api/client-errors").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/portal/invites/*").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/portal/invites/*/accept").permitAll()
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()

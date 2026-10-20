@@ -62,7 +62,7 @@ public class RequestIdFilter extends OncePerRequestFilter {
         int status = response.getStatus();
         String query = request.getQueryString() == null ? "" : "?" + flat(request.getQueryString());
         String line = "{} {}{} -> {} {} {}ms";
-        Object[] args = {request.getMethod(), flat(request.getRequestURI()), query, status, response.getContentType(), ms};
+        Object[] args = {request.getMethod(), flat(loggablePath(request.getRequestURI())), query, status, response.getContentType(), ms};
         if (status < 400) {
             log.info(line, args);
             return;
@@ -74,6 +74,11 @@ public class RequestIdFilter extends OncePerRequestFilter {
         Object[] withBody = java.util.Arrays.copyOf(args, args.length + 1);
         withBody[args.length] = body;
         log.warn(line + " body={}", withBody);
+    }
+
+    /** Access-link tokens are passwords in all but name, so the log shows the route, not the token. */
+    static String loggablePath(String uri) {
+        return uri.replaceFirst("^/api/portal/invites/[^/]+", "/api/portal/invites/{token}");
     }
 
     /** Request text is attacker-controlled; line breaks would let it forge log lines. */

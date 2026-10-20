@@ -72,6 +72,11 @@ public class AuthService {
         return new AuthResponse(token, mapToUserDto(user));
     }
 
+    /** Issues a session for a user whose identity was proven another way, such as a redeemed access link. */
+    public AuthResponse signIn(User user) {
+        return new AuthResponse(jwtService.generateToken(user.getEmail(), user.getRole().name()), mapToUserDto(user));
+    }
+
     /** The signed-in user as they are now, so the UI picks up a role or permission change without signing out. */
     public AuthResponse.UserDto me(String email) {
         return userRepository.findByEmailIgnoreCase(email).map(this::mapToUserDto)
