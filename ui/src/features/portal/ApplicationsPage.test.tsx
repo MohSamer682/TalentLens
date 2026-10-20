@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ApplicationsPage from './ApplicationsPage';
 import { portalApi } from '@/api/client';
@@ -34,5 +34,18 @@ describe('ApplicationsPage', () => {
     expect(link.getAttribute('href')).toBe('/portal/applications/c1');
     expect(screen.getByText('Decision in progress')).toBeTruthy();
     expect(screen.getByText('BE-204')).toBeTruthy();
+  });
+
+  it('loads the next page on request', async () => {
+    const item = (id: string, jobTitle: string) => ({ id, jobTitle, positionCode: null, stage: 'SHORTLISTED', nextInterviewAt: null });
+    api.applications
+      .mockResolvedValueOnce({ success: true, message: '', data: { content: [item('c1', 'Backend Engineer')], totalElements: 2, totalPages: 2, number: 0, size: 1 } } as never)
+      .mockResolvedValueOnce({ success: true, message: '', data: { content: [item('c2', 'Data Engineer')], totalElements: 2, totalPages: 2, number: 1, size: 1 } } as never);
+    render(<MemoryRouter><ApplicationsPage /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Show more' }));
+    expect(await screen.findByText('Data Engineer')).toBeTruthy();
+    expect(screen.getByText('Backend Engineer')).toBeTruthy();
+    expect(api.applications).toHaveBeenLastCalledWith(1);
+    expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
   });
 });

@@ -42,8 +42,10 @@ export function browserZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-/** "Africa/Cairo" reads as "Cairo time"; zones without a city keep their name. */
+/** "Africa/Cairo" reads as "Cairo time"; zones without a city show their offset or name. */
 export function zoneLabel(zone: string): string {
+  // Etc/GMT-3 is UTC+3 (the sign is inverted), so let Intl name the offset
+  if (zone.startsWith('Etc/')) return parts(new Date(), zone, { timeZoneName: 'shortOffset' })('timeZoneName');
   if (!zone.includes('/')) return zone;
   return `${zone.slice(zone.lastIndexOf('/') + 1).replace(/_/g, ' ')} time`;
 }

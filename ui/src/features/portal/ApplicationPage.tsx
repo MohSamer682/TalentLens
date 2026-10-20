@@ -43,7 +43,7 @@ export default function ApplicationPage() {
       {view && (
         <>
           <header className="mt-4 space-y-2">
-            <h1 className="text-[32px] font-bold leading-tight">{view.job.title}</h1>
+            <h1 className="break-words text-[32px] font-bold leading-tight">{view.job.title}</h1>
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone={STAGE_TONE[view.stage]}>{STAGE_LABEL[view.stage]}</Badge>
               {view.job.positionCode && <span className="font-mono text-[12px] text-ink-muted">{view.job.positionCode}</span>}

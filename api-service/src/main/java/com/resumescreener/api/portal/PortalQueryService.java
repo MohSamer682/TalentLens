@@ -31,6 +31,8 @@ public class PortalQueryService {
     /** The order rounds usually run in, which is how candidates expect to read them. */
     private static final List<InterviewKind> ROUND_ORDER = List.of(InterviewKind.HR, InterviewKind.TECHNICAL, InterviewKind.MANAGEMENT);
 
+    private static final List<StepState> RANK = List.of(StepState.SCHEDULED, StepState.DONE, StepState.CANCELLED);
+
     private final PortalRepository repository;
     private final Clock clock;
 
@@ -49,7 +51,10 @@ public class PortalQueryService {
                 steps(application.interviewPlan(), interviews), interviews, application.recruiter());
     }
 
-    /** One step per planned round, plus any round that has an interview without being planned; the latest interview decides the state. */
+    /**
+     * One step per planned round, plus any round that has an interview without being planned. A round with
+     * several interviews (cancelled and re-booked) shows its liveliest: scheduled, then done, then cancelled.
+     */
     static List<StageStep> steps(String plan, List<PortalInterview> interviews) {
         Set<InterviewKind> kinds = new LinkedHashSet<>();
         if (plan != null && !plan.isBlank()) {
@@ -57,19 +62,20 @@ public class PortalQueryService {
                 kinds.add(InterviewKind.valueOf(name.trim()));
             }
         }
-        Map<InterviewKind, StepState> latest = new EnumMap<>(InterviewKind.class);
+        Map<InterviewKind, StepState> best = new EnumMap<>(InterviewKind.class);
         for (PortalInterview interview : interviews) {
             kinds.add(interview.kind());
-            latest.put(interview.kind(), switch (interview.status()) {
+            StepState state = switch (interview.status()) {
                 case SCHEDULED -> StepState.SCHEDULED;
                 case COMPLETED -> StepState.DONE;
                 case CANCELLED -> StepState.CANCELLED;
-            });
+            };
+            best.merge(interview.kind(), state, (a, b) -> RANK.indexOf(a) <= RANK.indexOf(b) ? a : b);
         }
         List<StageStep> steps = new ArrayList<>();
         for (InterviewKind kind : ROUND_ORDER) {
             if (kinds.contains(kind)) {
-                steps.add(new StageStep(kind, latest.getOrDefault(kind, StepState.PLANNED)));
+                steps.add(new StageStep(kind, best.getOrDefault(kind, StepState.PLANNED)));
             }
         }
         return steps;

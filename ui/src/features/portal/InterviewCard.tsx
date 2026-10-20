@@ -6,14 +6,16 @@ import { cn } from '@/lib/utils';
 import { formatSlot, meetingLink } from './portal';
 
 function Place({ interview }: { interview: PortalInterview }) {
-  const link = interview.placeType === 'ONLINE' && interview.status !== 'CANCELLED' ? meetingLink(interview.location) : null;
-  const Icon = interview.placeType === 'ONLINE' ? Video : interview.placeType === 'HQ' ? Building2 : MapPin;
+  // Interviews saved before places existed hold their meeting link as plain "other" text
+  const type = interview.placeType === 'OTHER' && meetingLink(interview.location) ? 'ONLINE' : interview.placeType;
+  const link = type === 'ONLINE' && interview.status !== 'CANCELLED' ? meetingLink(interview.location) : null;
+  const Icon = type === 'ONLINE' ? Video : type === 'HQ' ? Building2 : MapPin;
   return (
     <p className="flex items-start gap-2 text-sm">
       <Icon className="mt-0.5 size-4 shrink-0 text-ink-muted" aria-hidden="true" />
-      {interview.placeType === 'HQ' && <span>At the office</span>}
-      {interview.placeType === 'OTHER' && <span className="min-w-0 whitespace-pre-line break-words">{interview.location}</span>}
-      {interview.placeType === 'ONLINE' &&
+      {type === 'HQ' && <span>At the office</span>}
+      {type === 'OTHER' && <span className="min-w-0 whitespace-pre-line break-words">{interview.location}</span>}
+      {type === 'ONLINE' &&
         (link ? (
           <span>
             Online:{' '}
@@ -34,7 +36,7 @@ export function InterviewCard({ interview }: { interview: PortalInterview }) {
   return (
     <article className={cn('plate space-y-3 p-4', cancelled && 'opacity-75')}>
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h3 className={cn('min-w-0 text-[15px] font-semibold', cancelled && 'line-through')}>
+        <h3 className={cn('min-w-0 break-words text-[15px] font-semibold', cancelled && 'line-through')}>
           {KIND_LABEL[interview.kind]} interview with {who}
         </h3>
         {cancelled && <Badge>Cancelled</Badge>}

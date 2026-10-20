@@ -13,5 +13,6 @@ describe('portal time formatting', () => {
   it('names a zone by its city', () => {
     expect(zoneLabel('America/New_York')).toBe('New York time');
     expect(zoneLabel('UTC')).toBe('UTC');
+    expect(zoneLabel('Etc/GMT-3')).toBe('GMT+3');
   });
 });

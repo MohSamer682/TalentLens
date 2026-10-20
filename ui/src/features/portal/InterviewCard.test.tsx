@@ -33,12 +33,17 @@ describe('InterviewCard', () => {
     rerender(<InterviewCard interview={{ ...base, location: 'javascript:alert(1)' }} />);
     expect(screen.queryByRole('link')).toBeNull();
 
-    rerender(<InterviewCard interview={{ ...base, placeType: 'OTHER', location: 'https://example.com' }} />);
+    rerender(<InterviewCard interview={{ ...base, placeType: 'OTHER', location: 'Cairo office, floor 3' }} />);
     expect(screen.queryByRole('link')).toBeNull();
-    expect(screen.getByText('https://example.com')).toBeTruthy();
+    expect(screen.getByText('Cairo office, floor 3')).toBeTruthy();
 
     rerender(<InterviewCard interview={{ ...base, placeType: 'HQ', location: null }} />);
     expect(screen.getByText('At the office')).toBeTruthy();
+  });
+
+  it('links an older interview whose place was saved as a plain web address', () => {
+    render(<InterviewCard interview={{ ...base, placeType: 'OTHER', location: 'https://meet.example.com/old' }} />);
+    expect(screen.getByRole('link', { name: /join the meeting/i }).getAttribute('href')).toBe('https://meet.example.com/old');
   });
 
   it('flags a cancelled interview', () => {

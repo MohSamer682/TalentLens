@@ -124,7 +124,23 @@ class PortalApplicationsApiTest extends ApiIntegrationTest {
 
     @Test
     void staffCannotUseThePortalEndpoints() throws Exception {
+        String id = application(nour, "SHORTLISTED", null);
         mvc.perform(get("/api/portal/applications").header("Authorization", bearer(recruiter))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/portal/applications/" + id).header("Authorization", bearer(recruiter))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/portal/applications/" + id)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void newestApplicationComesFirstAndPagesMove() throws Exception {
+        String older = application(nour, "SHORTLISTED", null);
+        jdbc.update("UPDATE candidates SET created_at = now() - interval '2 days' WHERE id = ?", older);
+        String newer = application(session("Platform Engineer", "PE-1"), nour, "SHORTLISTED", null);
+
+        mvc.perform(get("/api/portal/applications?size=1").header("Authorization", bearer(nour)))
+                .andExpect(jsonPath("$.data.content[0].id").value(newer))
+                .andExpect(jsonPath("$.data.totalPages").value(2));
+        mvc.perform(get("/api/portal/applications?size=1&page=1").header("Authorization", bearer(nour)))
+                .andExpect(jsonPath("$.data.content[0].id").value(older));
     }
 
     @Test
@@ -159,6 +175,22 @@ class PortalApplicationsApiTest extends ApiIntegrationTest {
 
         assertThat(view.steps().get(0).state()).isEqualTo(StepState.CANCELLED);
         assertThat(view.interviews().get(0).status().name()).isEqualTo("CANCELLED");
+    }
+
+    @Test
+    void aRebookedRoundShowsTheLiveInterview() {
+        String id = application(nour, "INTERVIEW_SCHEDULED", "HR");
+        interview(id, "HR", inDays(2), "HQ", null, "SCHEDULED");
+        interview(id, "HR", inDays(6), "HQ", null, "CANCELLED");
+
+        assertThat(portal.application(nour.getEmail(), id).steps().get(0).state()).isEqualTo(StepState.SCHEDULED);
+    }
+
+    @Test
+    void everyReviewStatusHasAStage() {
+        for (var status : com.resumescreener.common.session.ReviewStatus.values()) {
+            assertThat(PortalStage.of(status)).as(status.name()).isNotNull();
+        }
     }
 
     @Test
