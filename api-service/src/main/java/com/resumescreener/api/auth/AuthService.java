@@ -6,7 +6,11 @@ import com.resumescreener.common.user.Role;
 import com.resumescreener.common.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import com.resumescreener.api.common.ApiErrorCode;
+import com.resumescreener.api.common.ApiException;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -48,6 +52,15 @@ public class AuthService {
                             request.getEmail(), request.getPassword()
                     )
             );
+        } catch (DisabledException e) {
+            // Only someone who knows the password learns the account exists and is hidden
+            boolean passwordMatches = userRepository.findByEmailIgnoreCase(request.getEmail())
+                    .map(u -> passwordEncoder.matches(request.getPassword(), u.getPasswordHash())).orElse(false);
+            if (passwordMatches) {
+                throw new ApiException(HttpStatus.UNAUTHORIZED, ApiErrorCode.AUTHENTICATION_FAILED,
+                        "This account is disabled. Contact your administrator.", "The account is hidden");
+            }
+            throw new BadCredentialsException("Invalid email or password");
         } catch (Exception e) {
             throw new BadCredentialsException("Invalid email or password");
         }
@@ -71,6 +84,7 @@ public class AuthService {
         dto.setEmail(user.getEmail());
         dto.setFullName(user.getFullName());
         dto.setRole(user.getRole().name());
+        dto.setMustChangePassword(user.isMustChangePassword());
         dto.setPermissions(userDetailsService.permissionsOf(user).stream().map(Enum::name).sorted().toList());
         return dto;
     }

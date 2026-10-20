@@ -1,14 +1,12 @@
 package com.resumescreener.api.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.resumescreener.api.auth.PasswordChangeGate;
+import com.resumescreener.api.common.ErrorResponses;
 import com.resumescreener.api.auth.JwtAuthFilter;
-import com.resumescreener.api.common.ApiError;
 import com.resumescreener.api.common.ApiErrorCode;
-import com.resumescreener.api.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -30,8 +28,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-
-    private static final ObjectMapper ERROR_WRITER = new ObjectMapper();
 
     private final JwtAuthFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
@@ -64,7 +60,8 @@ public class SecurityConfig {
                         "The authenticated user lacks the required role"))
             )
             .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(new PasswordChangeGate(), JwtAuthFilter.class);
         
         return http.build();
     }
@@ -87,17 +84,9 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * The security filter chain runs before the dispatcher, so GlobalExceptionHandler never sees
-     * these rejections; they are serialized into the same envelope here.
-     */
     private static void writeJsonError(jakarta.servlet.http.HttpServletResponse response,
                                        HttpStatus status, ApiErrorCode code,
                                        String message, String details) throws java.io.IOException {
-        response.setStatus(status.value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding("UTF-8");
-        ERROR_WRITER.writeValue(response.getWriter(),
-                ApiResponse.failure(message, new ApiError(code, details)));
+        ErrorResponses.write(response, status, code, message, details);
     }
 }
