@@ -4,6 +4,7 @@ import type { Page, Role, RoleHistoryItem } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Feedback';
 import { formatRelativeDate } from '@/lib/utils';
+import { readable } from './roles';
 
 const ACTION_LABEL: Record<string, string> = {
   ROLE_UPDATE: 'Renamed or described',
@@ -51,7 +52,7 @@ export function RoleHistory({ role, revision }: { role: Role; revision: number }
         {items.map((item) => (
           <li key={item.id} className="border-l-2 border-line pl-3">
             <p className="text-sm font-semibold">{ACTION_LABEL[item.action] ?? item.action}</p>
-            {item.details && <p className="break-words text-[13px]">{item.details}</p>}
+            {item.details && <p className="break-words text-[13px]">{readable(item.details)}</p>}
             <p className="text-[12px] text-ink-muted">
               {item.actorEmail ?? 'System'} · {formatRelativeDate(item.occurredAt)}
             </p>

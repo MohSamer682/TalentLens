@@ -60,17 +60,13 @@ export function SignInForm({ door, emailLabel }: { door: Door; emailLabel: strin
   return (
     <>
       {error && (
-        <Alert
-          className="mb-4"
-          action={
-            error.wrongDoor && (
-              <Link to={signInPath(other.door)} className="text-sm font-semibold text-accent-text underline-offset-2 hover:underline">
-                {other.label}
-              </Link>
-            )
-          }
-        >
+        <Alert className="mb-4">
           {error.message}
+          {error.wrongDoor && (
+            <Link to={signInPath(other.door)} className="mt-1 block font-semibold text-accent-text underline-offset-2 hover:underline">
+              {other.label}
+            </Link>
+          )}
         </Alert>
       )}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>

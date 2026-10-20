@@ -60,3 +60,11 @@ describe('MoveMembersSheet', () => {
     expect(screen.queryByText('Nour Hassan')).toBeNull();
   });
 });
+
+describe('RoleHistory', () => {
+  it('names roles and permissions the way people know them', async () => {
+    const { readable } = await import('./roles');
+    expect(readable('RECRUITER -> TECHNICAL_INTERVIEWER: a@t.io')).toBe('Recruiter → Technical interviewer: a@t.io');
+    expect(readable('HR_CHIEF +SESSION_RUN -ANALYTICS_VIEW')).toBe('HR chief +Run sessions -Analytics');
+  });
+});
