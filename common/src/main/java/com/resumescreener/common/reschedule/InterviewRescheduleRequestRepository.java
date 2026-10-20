@@ -13,8 +13,8 @@ public interface InterviewRescheduleRequestRepository extends JpaRepository<Inte
 
     List<InterviewRescheduleRequest> findByInterviewIdInOrderByCreatedAtDesc(Collection<String> interviewIds);
 
-    /** Candidates with a request waiting; backs the pipeline badge through the partial pending index. */
+    /** Which of these candidates have a request waiting; the pending partial index keeps it cheap. */
     @Query("select distinct i.candidateId from InterviewRescheduleRequest r, com.resumescreener.common.session.CandidateInterview i "
-            + "where r.status = com.resumescreener.common.reschedule.RescheduleStatus.PENDING and i.id = r.interviewId")
-    List<String> candidatesWithPendingRequests();
+            + "where r.status = com.resumescreener.common.reschedule.RescheduleStatus.PENDING and i.id = r.interviewId and i.candidateId in :candidateIds")
+    List<String> candidateIdsWithPendingRequest(Collection<String> candidateIds);
 }

@@ -1,5 +1,6 @@
 package com.resumescreener.api.pipeline;
 
+import com.resumescreener.common.reschedule.InterviewRescheduleRequestRepository;
 import com.resumescreener.api.candidate.dto.PipelineCandidateDto;
 import com.resumescreener.common.session.*;
 import com.resumescreener.common.user.Role;
@@ -24,7 +25,7 @@ class PipelineQueryServiceTest {
     private final UserRepository users = mock(UserRepository.class);
     private final PipelineSupport support = mock(PipelineSupport.class);
     private final PipelineQueryService service = new PipelineQueryService(candidates, scores, interviews, offers,
-            mock(ScreeningSessionRepository.class), users, null, support);
+            mock(ScreeningSessionRepository.class), users, null, support, mock(InterviewRescheduleRequestRepository.class));
 
     @Test
     void boardLoadsOffersScoresAndInterviewsInOneQueryEach() {
