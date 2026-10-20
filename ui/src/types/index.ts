@@ -4,6 +4,8 @@ export type ApiErrorCode =
   | 'ACCESS_DENIED'
   | 'NOT_FOUND'
   | 'CONFLICT'
+  | 'GONE'
+  | 'RATE_LIMITED'
   | 'PASSWORD_CHANGE_REQUIRED'
   | 'MINIO_UNAVAILABLE'
   | 'BATCH_WORKER_UNAVAILABLE'
@@ -86,7 +88,8 @@ export type Role =
   | 'HR_INTERVIEWER'
   | 'DEPARTMENT_DIRECTOR'
   | 'CEO'
-  | 'CHAIRMAN';
+  | 'CHAIRMAN'
+  | 'CANDIDATE';
 
 export type Permission =
   | 'SESSION_RUN'
@@ -538,4 +541,20 @@ export interface AnalyticsOverview {
     offers?: number;
     shortlistToOfferRate?: number | null;
   }[];
+}
+
+export interface PortalAccess {
+  account?: { email: string; createdAt: string; mustChangePassword: boolean; active: boolean };
+  invite?: { createdAt: string; expiresAt: string };
+}
+
+export interface IssuedInvite {
+  url: string;
+  expiresAt: string;
+}
+
+export interface InvitePreview {
+  jobTitle: string;
+  candidateName: string;
+  accountExists: boolean;
 }

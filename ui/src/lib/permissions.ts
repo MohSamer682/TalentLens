@@ -52,13 +52,22 @@ export function canSeeSessions(user: User | null | undefined): boolean {
   return can(user, 'SESSION_RUN') || can(user, 'SESSION_VIEW_ALL');
 }
 
-/** A temporary password must be replaced before anything else loads. */
+export function isCandidate(user: User | null | undefined): boolean {
+  return user?.role === 'CANDIDATE';
+}
+
+const CANDIDATE_PAGES = ['/portal', '/profile'];
+
+/** A temporary password must be replaced before anything else loads; candidates stay in the portal. */
 export function forcedPath(user: User | null | undefined, pathname: string): string | null {
-  return user?.mustChangePassword && pathname !== '/profile/password' ? '/profile/password' : null;
+  if (user?.mustChangePassword && pathname !== '/profile/password') return '/profile/password';
+  if (isCandidate(user) && !CANDIDATE_PAGES.some((p) => pathname === p || pathname.startsWith(p + '/'))) return '/portal';
+  return null;
 }
 
 /** Where a user lands: sessions for recruiters, My interviews for people who only interview. */
 export function homePath(user: User | null | undefined): string {
+  if (isCandidate(user)) return '/portal';
   if (canSeeSessions(user)) return '/dashboard';
   if (can(user, 'INTERVIEW_FEEDBACK')) return '/interviews';
   if (can(user, 'PIPELINE_MANAGE') || can(user, 'OFFER_APPROVE')) return '/pipeline';

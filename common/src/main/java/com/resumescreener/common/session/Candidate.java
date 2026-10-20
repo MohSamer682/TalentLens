@@ -53,6 +53,9 @@ public class Candidate {
     @Column(name = "interview_plan", length = 64)
     private String interviewPlan;
 
+    /** The candidate's portal sign-in, once they have one */
+    private String accountUserId;
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {

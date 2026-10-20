@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/authStore';
 import type {
+  InvitePreview,
+  IssuedInvite,
+  PortalAccess,
   AnalyticsOverview,
   ApiError,
   ApiResponse,
@@ -326,6 +329,21 @@ export const profileApi = {
   update: (data: ProfileFields & { fullName: string; version: number }) => api.put<AdminUser>('/me/profile', data),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.put<null>('/me/password', { currentPassword, newPassword }),
+};
+
+export const portalApi = {
+  access: (sessionId: string, candidateId: string) =>
+    api.get<PortalAccess>(`/sessions/${sessionId}/candidates/${candidateId}/portal`),
+  issueInvite: (sessionId: string, candidateId: string) =>
+    api.post<IssuedInvite>(`/sessions/${sessionId}/candidates/${candidateId}/portal/invites`),
+  revokeInvite: (sessionId: string, candidateId: string) =>
+    api.delete<null>(`/sessions/${sessionId}/candidates/${candidateId}/portal/invites`),
+  createAccount: (sessionId: string, candidateId: string, temporaryPassword: string) =>
+    api.post<PortalAccess>(`/sessions/${sessionId}/candidates/${candidateId}/portal/account`, { temporaryPassword }),
+  // The token goes in the body so it never shows up in a proxy or access log
+  preview: (token: string) => api.post<InvitePreview>('/portal/invites/preview', { token }),
+  accept: (token: string, password: string) => api.post<AuthResponse>('/portal/invites/accept', { token, password }),
+  claim: (token: string) => api.post<null>('/portal/invites/claim', { token }),
 };
 
 export const adminApi = {

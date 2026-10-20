@@ -18,7 +18,8 @@ import java.util.UUID;
 /** The whole API with its real security chain, over one Postgres shared by every subclass. */
 @SpringBootTest(properties = {
         "jwt.secret=integration-test-secret-integration-test-secret",
-        "minio.access-key=test", "minio.secret-key=test", "batch-worker.shared-secret=test"
+        "minio.access-key=test", "minio.secret-key=test", "batch-worker.shared-secret=test",
+        "app.portal.invite-requests-per-minute=100000"
 })
 @AutoConfigureMockMvc
 public abstract class ApiIntegrationTest {

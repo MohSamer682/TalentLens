@@ -24,6 +24,11 @@ class PermissionTest {
     }
 
     @Test
+    void candidatesNeverHoldPermissions() {
+        assertThat(Permission.effective(Role.CANDIDATE, Set.of(Permission.SESSION_RUN, Permission.INTERVIEW_FEEDBACK))).isEmpty();
+    }
+
+    @Test
     void everyPermissionHasADescription() {
         for (Permission p : Permission.values()) {
             assertThat(p.description()).isNotBlank();

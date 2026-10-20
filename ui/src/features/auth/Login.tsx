@@ -24,7 +24,8 @@ export default function Login() {
   const location = useLocation();
   const login = useAuthStore((s) => s.login);
 
-  const from = (location.state as { from?: Location })?.from?.pathname || '/dashboard';
+  const back = (location.state as { from?: Location })?.from;
+  const from = back?.pathname ? back.pathname + (back.search ?? '') + (back.hash ?? '') : '/dashboard';
 
   const {
     register,

@@ -3,12 +3,13 @@ import { Link, useParams } from 'react-router-dom';
 import { Check, FileText, Loader2, Mail } from 'lucide-react';
 import { apiErrorMessage, candidatesApi, sessionsApi } from '@/api/client';
 import { useAuthStore } from '@/features/auth/authStore';
-import { canReviewSession } from '@/lib/permissions';
+import { can, canReviewSession } from '@/lib/permissions';
 import type { CandidateScore, ReviewStatus, ScreeningSession } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Panel, PanelHeader } from '@/components/ui/Card';
 import { Alert, Loader } from '@/components/ui/Feedback';
 import { CandidateNotes } from '@/features/candidates/CandidateNotes';
+import { PortalAccessPanel } from '@/features/candidates/PortalAccessPanel';
 import { HiringPipeline } from '@/features/pipeline/HiringPipeline';
 import { StageBadge } from '@/features/pipeline/StageBadge';
 import { MainLayout } from '@/layouts/MainLayout';
@@ -120,6 +121,7 @@ export default function CandidateDetail() {
   });
   const isShortlistedOrBeyond = score.reviewStatus !== 'NONE';
   const canReview = !!session && canReviewSession(me, session);
+  const canManagePortal = !!session && can(me, 'PIPELINE_MANAGE') && (me?.role === 'ADMIN' || session.ownerId === me?.id);
   const strengths = toLines(score.strengths);
   const gaps = toLines(score.gaps);
 
@@ -239,6 +241,13 @@ export default function CandidateDetail() {
         {/* Aside Column */}
         <aside className="flex-[1_1_340px] min-w-0 space-y-6">
           {/* 1. Candidate Notes Plate */}
+          <PortalAccessPanel
+            sessionId={sessionId!}
+            candidateId={candidateId!}
+            stage={score.reviewStatus}
+            email={score.email}
+            canManage={canManagePortal}
+          />
           <CandidateNotes sessionId={sessionId!} candidateId={candidateId!} />
 
           {/* 2. Score Breakdown Plate */}

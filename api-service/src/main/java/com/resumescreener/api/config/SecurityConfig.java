@@ -6,6 +6,10 @@ import com.resumescreener.api.auth.JwtAuthFilter;
 import com.resumescreener.api.common.ApiErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authorization.AuthenticatedAuthorizationManager;
+import org.springframework.security.authorization.AuthorityAuthorizationManager;
+import org.springframework.security.authorization.AuthorizationManagers;
 import org.springframework.http.HttpStatus;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -40,6 +44,9 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.POST, "/api/portal/invites/preview", "/api/portal/invites/accept").permitAll()
+                .requestMatchers("/api/portal/**").hasRole("CANDIDATE")
+                .requestMatchers("/api/me/**").authenticated()
                 .requestMatchers("/api/auth/me").authenticated()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
@@ -47,6 +54,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/client-errors").permitAll()
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                // Every other API route is staff only, so an endpoint added later is closed to candidates by default
+                .requestMatchers("/api/**").access(AuthorizationManagers.allOf(AuthenticatedAuthorizationManager.authenticated(),
+                        AuthorizationManagers.not(AuthorityAuthorizationManager.hasRole("CANDIDATE"))))
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex

@@ -75,6 +75,27 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void uniqueViolationIs409() {
+        ResponseEntity<ApiResponse<Void>> response = handler.handleDataIntegrity(
+                new org.springframework.dao.DataIntegrityViolationException("could not execute statement",
+                        new java.sql.SQLException("duplicate key value violates unique constraint \"uq_users_email_lower\"", "23505")));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody().getError().getCode()).isEqualTo(ApiErrorCode.CONFLICT);
+        assertThat(response.getBody().getError().getDetails()).doesNotContain("uq_users_email_lower");
+    }
+
+    @Test
+    void lockFailureIs409WithoutSql() {
+        ResponseEntity<ApiResponse<Void>> response = handler.handlePessimisticLock(
+                new org.springframework.dao.CannotAcquireLockException("could not execute statement [ERROR: deadlock detected] [update candidate_invites set ...]"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody().getMessage()).doesNotContain("candidate_invites");
+        assertThat(response.getBody().getError().getDetails()).doesNotContain("candidate_invites");
+    }
+
+    @Test
     void dataIntegrityViolationDoesNotLeakSql() {
         ResponseEntity<ApiResponse<Void>> response = handler.handleDataIntegrity(
                 new org.springframework.dao.DataIntegrityViolationException(

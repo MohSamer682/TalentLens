@@ -50,6 +50,7 @@ public class AdminUserService {
     @Transactional
     public ProfileView create(CreateUserRequest request, String actorEmail) {
         requireFreeEmail(request.email(), null);
+        guardRoleKind(Role.RECRUITER, request.role());
         User user = User.builder().email(request.email().trim()).fullName(request.fullName().trim()).role(request.role())
                 .passwordHash(passwordEncoder.encode(request.temporaryPassword())).mustChangePassword(true).build();
         user = userRepository.saveAndFlush(user);
@@ -67,6 +68,7 @@ public class AdminUserService {
         ProfileService.requireVersion(user, request.version());
         Role oldRole = user.getRole();
         if (request.role() != oldRole) {
+            guardRoleKind(oldRole, request.role());
             guardNotSelf(actor, user);
             if (oldRole == Role.ADMIN) guardLosingAdmin(user);
             user.setRole(request.role());
@@ -87,6 +89,7 @@ public class AdminUserService {
         User user = byId(id);
         guardNotSelf(actor, user);
         Role oldRole = user.getRole();
+        guardRoleKind(oldRole, role);
         if (oldRole == Role.ADMIN && role != Role.ADMIN) guardLosingAdmin(user);
         user.setRole(role);
         userRepository.save(user);
@@ -140,6 +143,13 @@ public class AdminUserService {
     void guardNotSelf(User actor, User target) {
         if (actor.getId().equals(target.getId())) {
             throw ApiException.validation("You can't do that to your own account", "Rejected for the calling user " + actor.getId());
+        }
+    }
+
+    /** Candidates come only through the portal, and portal accounts never become staff, or the other way round. */
+    static void guardRoleKind(Role from, Role to) {
+        if ((from == Role.CANDIDATE) != (to == Role.CANDIDATE)) {
+            throw ApiException.validation("Candidate and staff accounts can't switch roles", from + " -> " + to);
         }
     }
 

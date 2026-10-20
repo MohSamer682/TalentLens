@@ -32,7 +32,7 @@ public class RoleService {
         List<RolesResponse.PermissionDto> permissions = Arrays.stream(Permission.values())
                 .map(p -> new RolesResponse.PermissionDto(p.name(), p.description(), p.adminOnly()))
                 .toList();
-        List<RoleDto> roles = Arrays.stream(Role.values()).map(this::toDto).toList();
+        List<RoleDto> roles = Arrays.stream(Role.values()).filter(r -> r != Role.CANDIDATE).map(this::toDto).toList();
         return new RolesResponse(permissions, roles);
     }
 
@@ -42,6 +42,9 @@ public class RoleService {
         if (role == Role.ADMIN) {
             throw ApiException.validation("The admin role always has every permission",
                     "The ADMIN row cannot be edited");
+        }
+        if (role == Role.CANDIDATE) {
+            throw ApiException.validation("Candidates can't hold permissions", "The CANDIDATE row cannot be edited");
         }
         Set<Permission> adminOnly = requested.stream().filter(Permission::adminOnly).collect(Collectors.toSet());
         if (!adminOnly.isEmpty()) {

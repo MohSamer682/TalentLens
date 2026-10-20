@@ -203,6 +203,26 @@ class AdminUserApiTest extends ApiIntegrationTest {
     }
 
     @Test
+    void cannotAssignCandidateRoleToStaff() throws Exception {
+        mvc.perform(post("/api/admin/users").header("Authorization", token).contentType(MediaType.APPLICATION_JSON)
+                        .content(json("{'email':'c-" + UUID.randomUUID() + "@t.io','fullName':'C','role':'CANDIDATE','temporaryPassword':'TempPass1234'}")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Candidate and staff accounts can't switch roles"));
+
+        User staff = user(Role.RECRUITER);
+        mvc.perform(patch("/api/admin/users/" + staff.getId() + "/role").header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON).content(json("{'role':'CANDIDATE'}")))
+                .andExpect(status().isBadRequest());
+
+        User candidate = user(Role.CANDIDATE);
+        mvc.perform(put("/api/admin/users/" + candidate.getId()).header("Authorization", token).contentType(MediaType.APPLICATION_JSON)
+                        .content(json("{'fullName':'C','email':'" + candidate.getEmail() + "','role':'RECRUITER','version':0}")))
+                .andExpect(status().isBadRequest());
+        assertThat(users.findById(candidate.getId()).orElseThrow().getRole()).isEqualTo(Role.CANDIDATE);
+        assertThat(users.findById(staff.getId()).orElseThrow().getRole()).isEqualTo(Role.RECRUITER);
+    }
+
+    @Test
     void nonAdminIsRefused() throws Exception {
         mvc.perform(get("/api/admin/users").header("Authorization", bearer(user(Role.RECRUITER))))
                 .andExpect(status().isForbidden());

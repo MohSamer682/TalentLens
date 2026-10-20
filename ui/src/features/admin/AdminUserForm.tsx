@@ -8,7 +8,7 @@ import { profileSchema } from '@/features/profile/profile';
 import { Field, Input, Textarea } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Card';
-import { ROLE_LABEL, formatDate } from '@/lib/utils';
+import { ROLE_LABEL, STAFF_ROLES, formatDate } from '@/lib/utils';
 
 const userSchema = profileSchema.extend({
   email: z.string().trim().email('Enter a valid email address'),
@@ -29,6 +29,7 @@ type Props = {
 /** Create (user is null) or edit one account. The server repeats every rule shown here. */
 export function AdminUserForm({ user, isMe, onSave, onClose, onStatus, onResetPassword, onDelete }: Props) {
   const creating = !user;
+  const isPortalAccount = user?.role === 'CANDIDATE';
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [tempPassword, setTempPassword] = useState('');
@@ -91,14 +92,18 @@ export function AdminUserForm({ user, isMe, onSave, onClose, onStatus, onResetPa
           <Input id="u-email" type="email" autoComplete="off" {...field('email')} {...register('email')} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="u-role" label="Role" hint={isMe ? "You can't change your own role." : undefined}>
+          <Field
+            id="u-role"
+            label="Role"
+            hint={isMe ? "You can't change your own role." : isPortalAccount ? 'Candidate accounts keep their role.' : undefined}
+          >
             <select
               id="u-role"
-              disabled={isMe}
+              disabled={isMe || isPortalAccount}
               className="h-10 w-full rounded-md border border-line bg-surface px-3 text-[15px] text-ink focus:border-accent-text focus:outline-none focus:ring-2 focus:ring-accent-text/25 disabled:bg-sunken disabled:text-ink-muted dark:bg-sunken"
               {...register('role')}
             >
-              {(Object.keys(ROLE_LABEL) as Role[]).map((r) => (
+              {(isPortalAccount ? (['CANDIDATE'] as Role[]) : STAFF_ROLES).map((r) => (
                 <option key={r} value={r}>
                   {ROLE_LABEL[r]}
                 </option>

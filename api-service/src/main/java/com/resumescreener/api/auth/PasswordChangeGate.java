@@ -21,11 +21,12 @@ public class PasswordChangeGate extends OncePerRequestFilter {
 
     private static final Set<String> ALLOWED = Set.of("GET /api/auth/me", "GET /api/me/profile", "PUT /api/me/password");
 
-    /** Signing in or up starts over, whatever token the browser still sends. */
+    /** Signing in or up starts over, whatever token the browser still sends; opening an access link needs no account. */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String uri = request.getRequestURI();
-        return uri.equals("/api/auth/login") || uri.equals("/api/auth/register");
+        return uri.equals("/api/auth/login") || uri.equals("/api/auth/register")
+                || uri.equals("/api/portal/invites/preview") || uri.equals("/api/portal/invites/accept");
     }
 
     @Override
