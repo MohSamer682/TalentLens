@@ -2,7 +2,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { LogOut, Moon, Sun } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/authStore';
-import { ROLE_LABEL, cn } from '@/lib/utils';
+import { ROLE_LABEL, cn, getInitials } from '@/lib/utils';
 import { can, canSeeSessions as userCanSeeSessions, homePath } from '@/lib/permissions';
 import { BrandMark } from '@/components/BrandMark';
 
@@ -27,7 +27,7 @@ export function Navbar() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate(user?.role === 'CANDIDATE' ? '/login' : '/admins');
   };
 
   const canSeeSessions = userCanSeeSessions(user);
@@ -77,10 +77,15 @@ export function Navbar() {
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
           {user && (
-            <div className="hidden text-right leading-tight sm:block">
-              <p className="text-sm font-semibold text-ink">{user.fullName}</p>
-              <p className="text-[12.5px] text-ink-muted">{ROLE_LABEL[user.role] ?? user.role}</p>
-            </div>
+            <Link to="/profile" aria-label="My profile" className="rounded-md px-1 text-right leading-tight hover:bg-surface-raised sm:px-2">
+              <span aria-hidden="true" className="flex size-8 items-center justify-center rounded-full bg-sunken text-[12px] font-bold text-ink-muted sm:hidden">
+                {getInitials(user.fullName)}
+              </span>
+              <span className="hidden sm:block">
+                <span className="block text-sm font-semibold text-ink">{user.fullName}</span>
+                <span className="block text-[12.5px] text-ink-muted">{ROLE_LABEL[user.role] ?? user.role}</span>
+              </span>
+            </Link>
           )}
           <button
             type="button"

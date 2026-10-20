@@ -35,6 +35,7 @@ public class AuditService {
         AuditEvent event = AuditEvent.builder()
                 .occurredAt(Instant.now())
                 .actorUserId(actorId())
+                .actorEmail(MDC.get(RequestIdFilter.MDC_USER_ID))
                 .action(action)
                 .targetType(targetType)
                 .targetId(targetId)

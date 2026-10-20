@@ -11,7 +11,11 @@ export const ROLE_LABEL: Record<Role, string> = {
   DEPARTMENT_DIRECTOR: 'Department director',
   CEO: 'CEO',
   CHAIRMAN: 'Chairman',
+  CANDIDATE: 'Candidate',
 };
+
+/** Roles an admin can give; candidate accounts come only from the portal. */
+export const STAFF_ROLES = (Object.keys(ROLE_LABEL) as Role[]).filter((r) => r !== 'CANDIDATE');
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

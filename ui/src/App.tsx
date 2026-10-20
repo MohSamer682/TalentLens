@@ -1,10 +1,11 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { refreshCurrentUser } from '@/api/client';
-import { PermissionRoute, ProtectedRoute, SessionsRoute } from '@/features/auth/ProtectedRoute';
+import { CandidateRoute, PermissionRoute, ProtectedRoute, SessionsRoute } from '@/features/auth/ProtectedRoute';
 import { useAuthStore } from '@/features/auth/authStore';
-import { homePath } from '@/lib/permissions';
+import { homePath, signInPath } from '@/lib/permissions';
 import Login from '@/features/auth/Login';
+import StaffLogin from '@/features/auth/StaffLogin';
 import Register from '@/features/auth/Register';
 import { Loader } from '@/components/ui/Feedback';
 
@@ -17,12 +18,19 @@ const Pipeline = lazy(() => import('@/features/pipeline/PipelinePage'));
 const MyInterviews = lazy(() => import('@/features/pipeline/MyInterviews'));
 const InterviewFeedback = lazy(() => import('@/features/pipeline/InterviewFeedback'));
 const AdminUsers = lazy(() => import('@/features/admin/AdminUsers'));
-const AdminRoles = lazy(() => import('@/features/admin/AdminRoles'));
+const RolesOverview = lazy(() => import('@/features/admin/roles/RolesOverview'));
+const RoleDetail = lazy(() => import('@/features/admin/roles/RoleDetail'));
 const Analytics = lazy(() => import('@/features/analytics/AnalyticsPage'));
+const ProfilePage = lazy(() => import('@/features/profile/ProfilePage'));
+const PasswordPage = lazy(() => import('@/features/profile/PasswordPage'));
+const InvitePage = lazy(() => import('@/features/portal/InvitePage'));
+const ApplicationsPage = lazy(() => import('@/features/portal/ApplicationsPage'));
+const ApplicationPage = lazy(() => import('@/features/portal/ApplicationPage'));
 
 function RootRedirect() {
   const user = useAuthStore((s) => s.user);
-  return <Navigate to={user ? homePath(user) : '/login'} replace />;
+  const door = useAuthStore((s) => s.door);
+  return <Navigate to={user ? homePath(user) : signInPath(door)} replace />;
 }
 
 export default function App() {
@@ -35,7 +43,25 @@ export default function App() {
     <Suspense fallback={<Loader label="Loading…" />}>
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/admins" element={<StaffLogin />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/invite" element={<InvitePage />} />
+      <Route
+        path="/portal"
+        element={
+          <CandidateRoute>
+            <ApplicationsPage />
+          </CandidateRoute>
+        }
+      />
+      <Route
+        path="/portal/applications/:id"
+        element={
+          <CandidateRoute>
+            <ApplicationPage />
+          </CandidateRoute>
+        }
+      />
       <Route
         path="/dashboard"
         element={
@@ -112,7 +138,15 @@ export default function App() {
         path="/admin/roles"
         element={
           <PermissionRoute permission="ROLE_MANAGE">
-            <AdminRoles />
+            <RolesOverview />
+          </PermissionRoute>
+        }
+      />
+      <Route
+        path="/admin/roles/:role"
+        element={
+          <PermissionRoute permission="ROLE_MANAGE">
+            <RoleDetail />
           </PermissionRoute>
         }
       />
@@ -122,6 +156,22 @@ export default function App() {
           <PermissionRoute permission="ANALYTICS_VIEW">
             <Analytics />
           </PermissionRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile/password"
+        element={
+          <ProtectedRoute>
+            <PasswordPage />
+          </ProtectedRoute>
         }
       />
       <Route path="/" element={<RootRedirect />} />

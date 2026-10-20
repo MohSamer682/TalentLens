@@ -5,7 +5,7 @@ import { BrandMark } from '@/components/BrandMark';
 export function AuthLayout({ title, subtitle, children, footer }: { title: string; subtitle: string; children: ReactNode; footer: ReactNode }) {
   return (
     <div className="min-h-screen bg-ground">
-      <header className="bg-pitch text-white">
+      <header className="border-b border-line glass text-ink">
         <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-2 px-4 sm:px-6">
           <BrandMark size={36} />
           <span className="font-display text-[17px] font-bold tracking-tight">TalentLens</span>

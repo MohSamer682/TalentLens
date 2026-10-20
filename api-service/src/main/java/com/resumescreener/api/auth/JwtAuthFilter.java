@@ -10,6 +10,7 @@ import org.slf4j.MDC;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -37,8 +38,19 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         
         if (jwtService.isTokenValid(jwt)) {
             String username = jwtService.extractUsername(jwt);
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            
+            UserDetails userDetails;
+            try {
+                userDetails = userDetailsService.loadUserByUsername(username);
+            } catch (UsernameNotFoundException e) {
+                userDetails = null;
+            }
+            // A deleted or hidden account stays anonymous, so the entry point answers 401 on its next call.
+            // So does a token minted for the other kind of account, which ends old sessions when the kind changes.
+            if (userDetails == null || !userDetails.isEnabled() || !jwtService.isFor(jwt, portalOf(userDetails))) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                     userDetails, null, userDetails.getAuthorities()
             );
@@ -48,5 +60,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
         
         filterChain.doFilter(request, response);
+    }
+
+    private static Portal portalOf(UserDetails user) {
+        boolean candidate = user.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_" + com.resumescreener.common.user.Role.CANDIDATE.name()));
+        return candidate ? Portal.CANDIDATE : Portal.STAFF;
     }
 }

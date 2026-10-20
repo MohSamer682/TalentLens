@@ -12,6 +12,8 @@ public interface AuditEventRepository extends JpaRepository<AuditEvent, String> 
 
     Page<AuditEvent> findByAction(String action, Pageable pageable);
 
+    Page<AuditEvent> findByTargetTypeAndTargetIdOrderByOccurredAtDesc(String targetType, String targetId, Pageable pageable);
+
     @Query("SELECT a FROM AuditEvent a WHERE " +
            "(:userId IS NULL OR a.actorUserId = :userId) AND " +
            "(:action IS NULL OR a.action = :action) " +

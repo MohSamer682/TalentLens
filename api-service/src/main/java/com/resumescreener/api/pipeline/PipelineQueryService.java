@@ -5,6 +5,7 @@ import com.resumescreener.api.common.Authorities;
 import com.resumescreener.api.upload.MinioUploadService;
 import com.resumescreener.api.candidate.dto.InterviewDetailDto;
 import com.resumescreener.api.candidate.dto.PipelineCandidateDto;
+import com.resumescreener.common.reschedule.InterviewRescheduleRequestRepository;
 import com.resumescreener.common.session.*;
 import com.resumescreener.common.user.Permission;
 import com.resumescreener.common.user.Role;
@@ -36,6 +37,7 @@ public class PipelineQueryService {
     private final UserRepository userRepository;
     private final MinioUploadService uploadService;
     private final PipelineSupport support;
+    private final InterviewRescheduleRequestRepository rescheduleRepository;
 
 
     @Transactional(readOnly = true)
@@ -62,6 +64,7 @@ public class PipelineQueryService {
         Map<String, Double> scores = new HashMap<>();
         candidateScoreRepository.findByCandidateIdIn(ids)
                 .forEach(s -> scores.putIfAbsent(s.getCandidate().getId(), s.getCompositeScore()));
+        Set<String> rescheduleRequested = new HashSet<>(rescheduleRepository.candidateIdsWithPendingRequest(ids, Instant.now()));
         Map<String, CandidateInterview> nextInterview = new HashMap<>();
         interviewRepository.findByCandidateIdInAndStatusOrderByScheduledStartAsc(ids, InterviewStatus.SCHEDULED)
                 .forEach(i -> nextInterview.putIfAbsent(i.getCandidateId(), i));
@@ -98,7 +101,8 @@ public class PipelineQueryService {
                     offer != null ? offer.getFileName() : null,
                     offer != null && offer.getUploadedBy() != null ? offer.getUploadedBy().getFullName() : null,
                     offer != null && offer.getUploadedBy() != null ? offer.getUploadedBy().getId() : null,
-                    offerStep
+                    offerStep,
+                    rescheduleRequested.contains(c.getId())
             ));
         }
 
@@ -207,7 +211,7 @@ public class PipelineQueryService {
                     case HR -> List.of(Role.HR_INTERVIEWER);
                     case MANAGEMENT -> List.of(Role.DEPARTMENT_DIRECTOR, Role.CEO, Role.CHAIRMAN);
                 };
-        return userRepository.findByRoleIn(roles).stream()
+        return userRepository.findByRoleInAndStatus(roles, com.resumescreener.common.user.UserStatus.ACTIVE).stream()
                 .map(u -> Map.of(
                         "id", u.getId(),
                         "name", u.getFullName(),

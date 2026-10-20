@@ -1,14 +1,16 @@
 package com.resumescreener.api.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.resumescreener.api.auth.PasswordChangeGate;
+import com.resumescreener.api.common.ErrorResponses;
 import com.resumescreener.api.auth.JwtAuthFilter;
-import com.resumescreener.api.common.ApiError;
 import com.resumescreener.api.common.ApiErrorCode;
-import com.resumescreener.api.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authorization.AuthenticatedAuthorizationManager;
+import org.springframework.security.authorization.AuthorityAuthorizationManager;
+import org.springframework.security.authorization.AuthorizationManagers;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -31,8 +33,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private static final ObjectMapper ERROR_WRITER = new ObjectMapper();
-
     private final JwtAuthFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
     private final org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource;
@@ -44,13 +44,20 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.POST, "/api/portal/invites/preview", "/api/portal/invites/accept").permitAll()
+                .requestMatchers("/api/portal/**").hasRole("CANDIDATE")
+                .requestMatchers("/api/me/**").authenticated()
                 .requestMatchers("/api/auth/me").authenticated()
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/admins/auth/login").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
                 .requestMatchers("/api/client-errors").permitAll()
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                // Every other API route is staff only, so an endpoint added later is closed to candidates by default
+                .requestMatchers("/api/**").access(AuthorizationManagers.allOf(AuthenticatedAuthorizationManager.authenticated(),
+                        AuthorizationManagers.not(AuthorityAuthorizationManager.hasRole("CANDIDATE"))))
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
@@ -64,7 +71,8 @@ public class SecurityConfig {
                         "The authenticated user lacks the required role"))
             )
             .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(new PasswordChangeGate(), JwtAuthFilter.class);
         
         return http.build();
     }
@@ -87,17 +95,9 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * The security filter chain runs before the dispatcher, so GlobalExceptionHandler never sees
-     * these rejections; they are serialized into the same envelope here.
-     */
     private static void writeJsonError(jakarta.servlet.http.HttpServletResponse response,
                                        HttpStatus status, ApiErrorCode code,
                                        String message, String details) throws java.io.IOException {
-        response.setStatus(status.value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding("UTF-8");
-        ERROR_WRITER.writeValue(response.getWriter(),
-                ApiResponse.failure(message, new ApiError(code, details)));
+        ErrorResponses.write(response, status, code, message, details);
     }
 }

@@ -24,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /** Against the real V1..V10 migrations on an empty database: replacing grants must leave exactly the new set in the table. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(RoleService.class)
+@Import({RoleService.class, com.resumescreener.api.config.ClockConfig.class})
 @Testcontainers
 class RoleServiceDatabaseTest {
 
@@ -41,10 +41,15 @@ class RoleServiceDatabaseTest {
     @Autowired RoleService service;
     @Autowired RolePermissionRepository grants;
     @MockBean AuditService audit;
+    @MockBean com.resumescreener.api.profile.AdminUserService adminUsers;
+    @Autowired com.resumescreener.common.user.UserRepository users;
 
     @Test
     void replacingGrantsKeepsTheOnesThatStay() {
-        service.update(Role.HR_CHIEF, Set.of(Permission.SESSION_RUN, Permission.SESSION_VIEW_ALL, Permission.CANDIDATE_REVIEW));
+        String admin = users.save(com.resumescreener.common.user.User.builder().email("a@t.io").fullName("A").passwordHash("h").role(Role.ADMIN).build()).getEmail();
+        service.update(Role.HR_CHIEF, Set.of(Permission.SESSION_RUN, Permission.SESSION_VIEW_ALL, Permission.CANDIDATE_REVIEW),
+                service.detail(Role.HR_CHIEF).version(), admin);
+        assertThat(service.detail(Role.HR_CHIEF).version()).isEqualTo(1);
 
         assertThat(grants.findByRole(Role.HR_CHIEF)).extracting(RolePermission::getPermission)
                 .containsExactlyInAnyOrder(Permission.SESSION_RUN, Permission.SESSION_VIEW_ALL, Permission.CANDIDATE_REVIEW);

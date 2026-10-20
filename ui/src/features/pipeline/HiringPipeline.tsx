@@ -5,6 +5,7 @@ import { apiErrorMessage, pipelineApi } from '@/api/client';
 import { useAuthStore } from '@/features/auth/authStore';
 import { hasPermission } from '@/lib/permissions';
 import type {
+  RescheduleRequest,
   CandidateInterview,
   CandidateOffer,
   CandidateStageEvent,
@@ -59,6 +60,7 @@ export function HiringPipeline({
   const canApprove = hasPermission(me, 'OFFER_APPROVE');
 
   const [interviews, setInterviews] = useState<CandidateInterview[]>([]);
+  const [requests, setRequests] = useState<RescheduleRequest[]>([]);
   const [timeline, setTimeline] = useState<CandidateStageEvent[]>([]);
   const [offer, setOffer] = useState<CandidateOffer | null>(null);
   const [plan, setPlan] = useState<InterviewKind[]>([]);
@@ -103,12 +105,14 @@ export function HiringPipeline({
 
   const reloadData = async () => {
     try {
-      const [tlRes, intRes, offRes, planRes] = await Promise.all([
+      const [tlRes, intRes, offRes, planRes, reqRes] = await Promise.all([
         pipelineApi.getTimeline(sessionId, candidateId),
         pipelineApi.getInterviews(sessionId, candidateId),
         pipelineApi.getOffer(sessionId, candidateId).catch(() => ({ data: null })),
         pipelineApi.getInterviewPlan(sessionId, candidateId).catch(() => ({ data: [] as InterviewKind[] })),
+        pipelineApi.rescheduleRequests(sessionId, candidateId).catch(() => ({ data: [] as RescheduleRequest[] })),
       ]);
+      setRequests(reqRes.data);
       setTimeline(tlRes.data);
       setInterviews(intRes.data);
       setOffer(offRes.data);
@@ -650,6 +654,26 @@ export function HiringPipeline({
           setRescheduleLocation(item.location || '');
         }}
         onCancel={handleCancelInterview}
+        requests={requests}
+        busy={busy}
+        onAcceptRequest={(request, start) =>
+          run(async () => {
+            try {
+              await pipelineApi.acceptReschedule(sessionId, candidateId, request.id, start, request.version);
+            } finally {
+              await reloadData();
+            }
+          }, 'Could not move the interview')
+        }
+        onDeclineRequest={(request, note) =>
+          run(async () => {
+            try {
+              await pipelineApi.declineReschedule(sessionId, candidateId, request.id, note, request.version);
+            } finally {
+              await reloadData();
+            }
+          }, 'Could not decline the request')
+        }
       />
 
       {(stageIdx >= STAGE_ORDER.OFFER || offer) && (

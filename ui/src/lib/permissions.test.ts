@@ -7,7 +7,9 @@ import {
   canSwitchScope,
   defaultScope,
   diffGrants,
+  forcedPath,
   homePath,
+  isCandidate,
 } from './permissions';
 import type { Permission, User } from '@/types';
 
@@ -56,7 +58,8 @@ describe('homePath', () => {
   });
   it('lets an HR chief see sessions', () =>
     expect(canSeeSessions(user('HR_CHIEF', ['SESSION_VIEW_ALL']))).toBe(true));
-  it('signs out a user with no rights', () => expect(homePath(user('RECRUITER', []))).toBe('/login'));
+  it('sends a staff user with no rights to the staff sign-in', () => expect(homePath(user('RECRUITER', []))).toBe('/admins'));
+  it('sends nobody to the candidate sign-in', () => expect(homePath(null)).toBe('/login'));
 });
 
 describe('canChangeSession', () => {
@@ -89,5 +92,35 @@ describe('defaultScope & canSwitchScope', () => {
     expect(defaultScope(user('ADMIN', ALL))).toBe('MINE');
     expect(canSwitchScope(user('ADMIN', ALL))).toBe(true);
     expect(defaultScope(user('RECRUITER', ['SESSION_RUN', 'CANDIDATE_REVIEW']))).toBe('MINE');
+  });
+});
+
+describe('forcedPath', () => {
+  it('sends a user with a temporary password to choose a new one', () => {
+    expect(forcedPath({ ...user('RECRUITER', ['SESSION_RUN']), mustChangePassword: true }, '/dashboard')).toBe('/profile/password');
+  });
+  it('lets them stay on the password page', () => {
+    expect(forcedPath({ ...user('RECRUITER', ['SESSION_RUN']), mustChangePassword: true }, '/profile/password')).toBeNull();
+  });
+  it('leaves everyone else alone', () => {
+    expect(forcedPath(user('RECRUITER', ['SESSION_RUN']), '/dashboard')).toBeNull();
+  });
+});
+
+describe('candidates', () => {
+  const candidate = user('CANDIDATE', []);
+  it('homePath sends candidates to /portal', () => expect(homePath(candidate)).toBe('/portal'));
+  it('keeps candidates inside the portal and their profile', () => {
+    expect(forcedPath(candidate, '/dashboard')).toBe('/portal');
+    expect(forcedPath(candidate, '/portal')).toBeNull();
+    expect(forcedPath(candidate, '/portal/applications/a1')).toBeNull();
+    expect(forcedPath(candidate, '/profile')).toBeNull();
+  });
+  it('still asks a candidate with a temporary password to change it first', () =>
+    expect(forcedPath({ ...candidate, mustChangePassword: true }, '/portal')).toBe('/profile/password'));
+  it('isCandidate', () => {
+    expect(isCandidate(candidate)).toBe(true);
+    expect(isCandidate(user('RECRUITER', ['SESSION_RUN']))).toBe(false);
+    expect(isCandidate(null)).toBe(false);
   });
 });

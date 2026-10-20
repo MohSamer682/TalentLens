@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/features/auth/authStore';
+import { useAuthStore, type Door } from '@/features/auth/authStore';
 import type { Permission, ScreeningSession, User } from '@/types';
 
 /** Short names for the matrix and the unsaved-changes summary; descriptions come from the server. */
@@ -52,14 +52,33 @@ export function canSeeSessions(user: User | null | undefined): boolean {
   return can(user, 'SESSION_RUN') || can(user, 'SESSION_VIEW_ALL');
 }
 
+export function isCandidate(user: User | null | undefined): boolean {
+  return user?.role === 'CANDIDATE';
+}
+
+const CANDIDATE_PAGES = ['/portal', '/profile'];
+
+/** A temporary password must be replaced before anything else loads; candidates stay in the portal. */
+export function forcedPath(user: User | null | undefined, pathname: string): string | null {
+  if (user?.mustChangePassword && pathname !== '/profile/password') return '/profile/password';
+  if (isCandidate(user) && !CANDIDATE_PAGES.some((p) => pathname === p || pathname.startsWith(p + '/'))) return '/portal';
+  return null;
+}
+
 /** Where a user lands: sessions for recruiters, My interviews for people who only interview. */
 export function homePath(user: User | null | undefined): string {
+  if (isCandidate(user)) return '/portal';
   if (canSeeSessions(user)) return '/dashboard';
   if (can(user, 'INTERVIEW_FEEDBACK')) return '/interviews';
   if (can(user, 'PIPELINE_MANAGE') || can(user, 'OFFER_APPROVE')) return '/pipeline';
   if (can(user, 'ANALYTICS_VIEW')) return '/analytics';
   if (can(user, 'USER_MANAGE') || can(user, 'ROLE_MANAGE')) return '/admin/users';
-  return '/login';
+  return signInPath(user ? 'staff' : 'candidate');
+}
+
+/** Staff sign in at /admins, candidates at /login. */
+export function signInPath(door: Door): string {
+  return door === 'candidate' ? '/login' : '/admins';
 }
 
 /** Only users with both rights get the Mine / All recruiters switch. */

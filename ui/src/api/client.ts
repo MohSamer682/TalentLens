@@ -1,6 +1,12 @@
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/authStore';
 import type {
+  ApplicationSummary,
+  ApplicationView,
+  RescheduleRequest,
+  InvitePreview,
+  IssuedInvite,
+  PortalAccess,
   AnalyticsOverview,
   ApiError,
   ApiResponse,
@@ -30,6 +36,7 @@ import type {
   ReviewStatus,
   Role,
   RoleInfo,
+  RoleHistoryItem,
   RolesCatalog,
   ScoringScope,
   ScreeningSession,
@@ -37,6 +44,11 @@ import type {
   UploadJdResponse,
   UploadResumesResponse,
   User,
+  AdminUser,
+  ProfileFields,
+  UserFormValues,
+  UserRow,
+  UserStatus,
 } from '@/types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
@@ -117,9 +129,11 @@ api.interceptors.response.use(
   },
   (error) => {
     logExchange(error.config, error.response, error.message);
-    if (error.response?.status === 401) {
-      useAuthStore.getState().logout();
-      window.location.href = '/login';
+    // A failed sign-in is a 401 too; only an expired or revoked session sends the user back to their sign-in page
+    if (error.response?.status === 401 && useAuthStore.getState().token) {
+      const { door, logout } = useAuthStore.getState();
+      logout();
+      window.location.href = door === 'candidate' ? '/login' : '/admins';
     }
 
     const body = error.response?.data;
@@ -131,8 +145,7 @@ api.interceptors.response.use(
           error.response?.status
         );
       reportClientError(apiErr, requestSummary(error));
-      // A 403 usually means an admin changed this role's permissions; pick up the new set.
-      if (apiErr.code === 'ACCESS_DENIED') void refreshCurrentUser();
+      if (refreshesUser(apiErr.code)) void refreshCurrentUser();
       return Promise.reject(apiErr);
     }
 
@@ -167,11 +180,15 @@ export function apiErrorDetails(error: unknown): string | undefined {
 
 export const authApi = {
   login: (data: LoginRequest) => api.post<AuthResponse>('/auth/login', data),
+  staffLogin: (data: LoginRequest) => api.post<AuthResponse>('/admins/auth/login', data),
   register: (data: RegisterRequest) => api.post<AuthResponse>('/auth/register', data),
   me: () => api.get<User>('/auth/me'),
 };
 
 /** Replaces the stored user with the server's current role and permissions. */
+/** A 403 usually means an admin changed this role's permissions or set a temporary password; pick up the new state. */
+export const refreshesUser = (code: string) => code === 'ACCESS_DENIED' || code === 'PASSWORD_CHANGE_REQUIRED';
+
 export async function refreshCurrentUser() {
   if (!useAuthStore.getState().token) return;
   try {
@@ -302,6 +319,18 @@ export const pipelineApi = {
     api.get<{ url: string }>(`/sessions/${sessionId}/candidates/${candidateId}/offer/download`),
   approveOffer: (sessionId: string, candidateId: string) =>
     api.post<CandidateOffer>(`/sessions/${sessionId}/candidates/${candidateId}/offer/approve`),
+  rescheduleRequests: (sessionId: string, candidateId: string) =>
+    api.get<RescheduleRequest[]>(`/sessions/${sessionId}/candidates/${candidateId}/reschedule-requests`),
+  acceptReschedule: (sessionId: string, candidateId: string, requestId: string, scheduledStart: string, version: number) =>
+    api.post<RescheduleRequest>(`/sessions/${sessionId}/candidates/${candidateId}/reschedule-requests/${requestId}/accept`, {
+      scheduledStart,
+      version,
+    }),
+  declineReschedule: (sessionId: string, candidateId: string, requestId: string, note: string, version: number) =>
+    api.post<RescheduleRequest>(`/sessions/${sessionId}/candidates/${candidateId}/reschedule-requests/${requestId}/decline`, {
+      note,
+      version,
+    }),
   getPipeline: (awaitingApprovalOnly?: boolean) =>
     api.get<PipelineCandidate[]>('/pipeline', { params: { awaitingApprovalOnly } }),
   getInterviewers: (kind?: InterviewKind) =>
@@ -314,14 +343,56 @@ export const analyticsApi = {
   overview: (days: 30 | 90 | 365) => api.get<AnalyticsOverview>('/analytics/overview', { params: { days } }),
 };
 
+export const profileApi = {
+  get: () => api.get<AdminUser>('/me/profile'),
+  update: (data: ProfileFields & { fullName: string; version: number }) => api.put<AdminUser>('/me/profile', data),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.put<null>('/me/password', { currentPassword, newPassword }),
+};
+
+export const portalApi = {
+  access: (sessionId: string, candidateId: string) =>
+    api.get<PortalAccess>(`/sessions/${sessionId}/candidates/${candidateId}/portal`),
+  issueInvite: (sessionId: string, candidateId: string) =>
+    api.post<IssuedInvite>(`/sessions/${sessionId}/candidates/${candidateId}/portal/invites`),
+  revokeInvite: (sessionId: string, candidateId: string) =>
+    api.delete<null>(`/sessions/${sessionId}/candidates/${candidateId}/portal/invites`),
+  createAccount: (sessionId: string, candidateId: string, temporaryPassword: string) =>
+    api.post<PortalAccess>(`/sessions/${sessionId}/candidates/${candidateId}/portal/account`, { temporaryPassword }),
+  // The token goes in the body so it never shows up in a proxy or access log
+  preview: (token: string) => api.post<InvitePreview>('/portal/invites/preview', { token }),
+  accept: (token: string, password: string) => api.post<AuthResponse>('/portal/invites/accept', { token, password }),
+  claim: (token: string) => api.post<null>('/portal/invites/claim', { token }),
+  applications: (page = 0) => api.get<Page<ApplicationSummary>>('/portal/applications', { params: { page, size: 20 } }),
+  application: (id: string) => api.get<ApplicationView>(`/portal/applications/${encodeURIComponent(id)}`),
+  requestReschedule: (interviewId: string, reason: string, proposedStarts: string[]) =>
+    api.post<RescheduleRequest>(`/portal/interviews/${encodeURIComponent(interviewId)}/reschedule-requests`, { reason, proposedStarts }),
+  withdrawReschedule: (requestId: string) =>
+    api.post<RescheduleRequest>(`/portal/reschedule-requests/${encodeURIComponent(requestId)}/withdraw`),
+};
+
 export const adminApi = {
-  listUsers: (page = 0, size = 20) =>
-    api.get<Page<User>>('/admin/users', { params: { page, size } }),
+  listUsers: (params: { page?: number; size?: number; q?: string; status?: UserStatus; role?: Role } = {}) =>
+    api.get<Page<UserRow>>('/admin/users', { params: { size: 20, ...params } }),
+  getUser: (id: string) => api.get<AdminUser>(`/admin/users/${id}`),
+  createUser: (data: UserFormValues) => api.post<AdminUser>('/admin/users', data),
+  updateUser: (id: string, data: UserFormValues & { version: number }) => api.put<AdminUser>(`/admin/users/${id}`, data),
+  setStatus: (id: string, status: UserStatus) => api.patch<AdminUser>(`/admin/users/${id}/status`, { status }),
+  resetPassword: (id: string, temporaryPassword: string) =>
+    api.post<AdminUser>(`/admin/users/${id}/password`, { temporaryPassword }),
+  deleteUser: (id: string) => api.delete<null>(`/admin/users/${id}`),
   updateRole: (userId: string, role: Role) =>
     api.patch<User>(`/admin/users/${userId}/role`, { role }),
   roles: () => api.get<RolesCatalog>('/admin/roles'),
-  updatePermissions: (role: Role, permissions: Permission[]) =>
-    api.put<RoleInfo>(`/admin/roles/${role}/permissions`, { permissions }),
+  role: (role: Role) => api.get<RoleInfo>(`/admin/roles/${role}`),
+  renameRole: (role: Role, data: { name: string; description: string; version: number }) =>
+    api.patch<RoleInfo>(`/admin/roles/${role}`, data),
+  updatePermissions: (role: Role, permissions: Permission[], version: number) =>
+    api.put<RoleInfo>(`/admin/roles/${role}/permissions`, { permissions, version }),
+  roleMembers: (role: Role, params: { q?: string; page?: number; size?: number } = {}) =>
+    api.get<Page<UserRow>>(`/admin/roles/${role}/members`, { params: { size: 20, ...params } }),
+  moveMembers: (role: Role, userIds: string[]) => api.post<RoleInfo>(`/admin/roles/${role}/members`, { userIds }),
+  roleHistory: (role: Role, page = 0) => api.get<Page<RoleHistoryItem>>(`/admin/roles/${role}/history`, { params: { page, size: 20 } }),
 };
 
 /** "METHOD url -> status body" so the server log shows what the browser actually received. */

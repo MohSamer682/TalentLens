@@ -3,6 +3,11 @@ export type ApiErrorCode =
   | 'AUTHENTICATION_FAILED'
   | 'ACCESS_DENIED'
   | 'NOT_FOUND'
+  | 'CONFLICT'
+  | 'GONE'
+  | 'RATE_LIMITED'
+  | 'WRONG_PORTAL'
+  | 'PASSWORD_CHANGE_REQUIRED'
   | 'MINIO_UNAVAILABLE'
   | 'BATCH_WORKER_UNAVAILABLE'
   | 'LLM_CONFIGURATION_ERROR'
@@ -84,7 +89,8 @@ export type Role =
   | 'HR_INTERVIEWER'
   | 'DEPARTMENT_DIRECTOR'
   | 'CEO'
-  | 'CHAIRMAN';
+  | 'CHAIRMAN'
+  | 'CANDIDATE';
 
 export type Permission =
   | 'SESSION_RUN'
@@ -106,13 +112,70 @@ export interface User {
   createdAt: string;
   /** Only on the signed-in user (login, register, /auth/me) */
   permissions?: Permission[];
+  mustChangePassword?: boolean;
+}
+
+export type UserStatus = 'ACTIVE' | 'HIDDEN';
+
+export interface ProfileFields {
+  phone?: string;
+  headline?: string;
+  department?: string;
+  location?: string;
+  bio?: string;
+}
+
+/** A user with their profile, as the profile and admin user endpoints return it */
+export interface AdminUser extends ProfileFields {
+  id: string;
+  email: string;
+  fullName: string;
+  role: Role;
+  status: UserStatus;
+  mustChangePassword: boolean;
+  createdAt: string;
+  version: number;
+}
+
+export interface UserRow {
+  id: string;
+  email: string;
+  fullName: string;
+  role: Role;
+  status: UserStatus;
+  headline?: string;
+  createdAt: string;
+}
+
+export interface UserFormValues extends ProfileFields {
+  email: string;
+  fullName: string;
+  role: Role;
+  temporaryPassword?: string;
 }
 
 export interface RoleInfo {
   role: Role;
+  name: string;
+  description: string | null;
+  kind: 'STAFF' | 'CANDIDATE';
   permissions: Permission[];
+  /** False for Admin (every permission) and Candidate (none) */
   editable: boolean;
-  userCount: number;
+  /** Active accounts only */
+  memberCount: number;
+  /** What the workflow relies on this role for; fixed in code */
+  uses: string[];
+  version: number;
+  updatedAt: string | null;
+}
+
+export interface RoleHistoryItem {
+  id: string;
+  action: 'ROLE_UPDATE' | 'ROLE_PERMISSIONS_CHANGE' | 'ROLE_MEMBERS_MOVED' | string;
+  actorEmail: string | null;
+  details: string | null;
+  occurredAt: string;
 }
 
 export interface RolesCatalog {
@@ -296,6 +359,8 @@ export interface PipelineCandidate {
   offerUploadedById?: string;
   /** Who must act on the offer next; null when no approval is pending */
   offerStep?: 'DIRECTOR' | 'HR_CHIEF' | 'REJECTED' | null;
+  /** The candidate asked to move an interview and nobody has answered yet */
+  rescheduleRequested?: boolean;
 }
 
 export interface MyInterviewItem {
@@ -496,4 +561,82 @@ export interface AnalyticsOverview {
     offers?: number;
     shortlistToOfferRate?: number | null;
   }[];
+}
+
+export interface PortalAccess {
+  account?: { email: string; createdAt: string; mustChangePassword: boolean; active: boolean };
+  invite?: { createdAt: string; expiresAt: string };
+}
+
+export interface IssuedInvite {
+  url: string;
+  expiresAt: string;
+}
+
+export interface InvitePreview {
+  jobTitle: string;
+  candidateName: string;
+  accountExists: boolean;
+}
+
+export type PortalStage = 'APPLIED' | 'SHORTLISTED' | 'INTERVIEWING' | 'DECISION_PENDING' | 'OFFER' | 'ACCEPTED' | 'JOINING' | 'CLOSED';
+export type StepState = 'PLANNED' | 'SCHEDULED' | 'DONE' | 'CANCELLED';
+
+export interface StageStep {
+  kind: InterviewKind;
+  state: StepState;
+}
+
+export interface PortalInterview {
+  id: string;
+  kind: InterviewKind;
+  interviewerName: string;
+  interviewerHeadline: string | null;
+  scheduledStart: string;
+  durationMinutes: number;
+  placeType: InterviewPlaceType;
+  location: string | null;
+  status: InterviewStatus;
+  /** The latest reschedule request on this interview, if the candidate ever made one */
+  reschedule: PortalReschedule | null;
+}
+
+export type RescheduleStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'WITHDRAWN';
+
+export interface PortalReschedule {
+  id: string;
+  status: RescheduleStatus;
+  proposedStarts: string[];
+  resolutionNote: string | null;
+  createdAt: string;
+}
+
+export interface RescheduleRequest {
+  id: string;
+  interviewId: string;
+  status: RescheduleStatus;
+  reason: string;
+  proposedStarts: string[];
+  resolutionNote: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  version: number;
+  requestedByName: string;
+}
+
+export interface ApplicationSummary {
+  id: string;
+  jobTitle: string;
+  positionCode: string | null;
+  stage: PortalStage;
+  nextInterviewAt: string | null;
+}
+
+export interface ApplicationView {
+  id: string;
+  job: JobDetails;
+  stage: PortalStage;
+  steps: StageStep[];
+  interviews: PortalInterview[];
+  recruiter: { name: string; headline: string | null };
 }

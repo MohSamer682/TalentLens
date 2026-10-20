@@ -112,7 +112,7 @@ docker compose up -d --build
 | **MinIO Console** | `http://localhost:9001` | S3 Object storage browser |
 | **Adminer** | `http://localhost:8085` | PostgreSQL database administration |
 
-> **First Login:** The initial account registered via `/register` automatically receives the `ADMIN` role. Subsequent accounts register as `RECRUITER` by default and can be assigned roles by the administrator.
+> **First Login:** Set `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` in `.env`. On start-up, while no active admin exists, the API creates that admin, who signs in at `/admins` and picks a new password. Staff accounts are then created by an admin under `/admin/users`. Public sign-up at `/register` creates candidate accounts only, and candidates sign in at `/login`.
 
 ---
 
