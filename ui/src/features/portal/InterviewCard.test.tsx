@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { InterviewCard } from './InterviewCard';
 import type { PortalInterview } from '@/types';
 
@@ -10,11 +10,12 @@ const base: PortalInterview = {
   kind: 'TECHNICAL',
   interviewerName: 'Sara Adel',
   interviewerHeadline: 'Senior Backend Engineer',
-  scheduledStart: '2026-10-28T08:00:00Z',
+  scheduledStart: new Date(Date.now() + 3 * 86_400_000).toISOString(),
   durationMinutes: 60,
   placeType: 'ONLINE',
   location: 'https://meet.example.com/abc',
   status: 'SCHEDULED',
+  reschedule: null,
 };
 
 describe('InterviewCard', () => {
@@ -50,5 +51,28 @@ describe('InterviewCard', () => {
     render(<InterviewCard interview={{ ...base, status: 'CANCELLED' }} />);
     expect(screen.getByText('Cancelled')).toBeTruthy();
     expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  it('offers a reschedule only for an upcoming interview without an open request', () => {
+    const { rerender } = render(<InterviewCard interview={base} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Request a different time' }));
+    expect(screen.getByLabelText('Why do you need to move it?')).toBeTruthy();
+
+    rerender(<InterviewCard interview={{ ...base, scheduledStart: '2020-01-01T08:00:00Z' }} />);
+    expect(screen.queryByRole('button', { name: 'Request a different time' })).toBeNull();
+  });
+
+  it('shows where a request stands', () => {
+    const reschedule = { id: 'r1', status: 'PENDING' as const, proposedStarts: [], resolutionNote: null, createdAt: '2026-10-20T10:00:00Z' };
+    const { rerender } = render(<InterviewCard interview={{ ...base, reschedule }} />);
+    expect(screen.getByText('Request sent. Your recruiter will reply here.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Request a different time' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Withdraw request' })).toBeTruthy();
+
+    rerender(<InterviewCard interview={{ ...base, reschedule: { ...reschedule, status: 'DECLINED', resolutionNote: 'Panel is fully booked' } }} />);
+    expect(screen.getByText(/couldn't move it: Panel is fully booked/i)).toBeTruthy();
+
+    rerender(<InterviewCard interview={{ ...base, reschedule: { ...reschedule, status: 'ACCEPTED' } }} />);
+    expect(screen.getByText('Your recruiter moved this interview to the time above.')).toBeTruthy();
   });
 });

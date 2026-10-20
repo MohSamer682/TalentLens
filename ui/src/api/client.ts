@@ -3,6 +3,7 @@ import { useAuthStore } from '@/features/auth/authStore';
 import type {
   ApplicationSummary,
   ApplicationView,
+  RescheduleRequest,
   InvitePreview,
   IssuedInvite,
   PortalAccess,
@@ -314,6 +315,18 @@ export const pipelineApi = {
     api.get<{ url: string }>(`/sessions/${sessionId}/candidates/${candidateId}/offer/download`),
   approveOffer: (sessionId: string, candidateId: string) =>
     api.post<CandidateOffer>(`/sessions/${sessionId}/candidates/${candidateId}/offer/approve`),
+  rescheduleRequests: (sessionId: string, candidateId: string) =>
+    api.get<RescheduleRequest[]>(`/sessions/${sessionId}/candidates/${candidateId}/reschedule-requests`),
+  acceptReschedule: (sessionId: string, candidateId: string, requestId: string, scheduledStart: string, version: number) =>
+    api.post<RescheduleRequest>(`/sessions/${sessionId}/candidates/${candidateId}/reschedule-requests/${requestId}/accept`, {
+      scheduledStart,
+      version,
+    }),
+  declineReschedule: (sessionId: string, candidateId: string, requestId: string, note: string, version: number) =>
+    api.post<RescheduleRequest>(`/sessions/${sessionId}/candidates/${candidateId}/reschedule-requests/${requestId}/decline`, {
+      note,
+      version,
+    }),
   getPipeline: (awaitingApprovalOnly?: boolean) =>
     api.get<PipelineCandidate[]>('/pipeline', { params: { awaitingApprovalOnly } }),
   getInterviewers: (kind?: InterviewKind) =>
@@ -348,6 +361,10 @@ export const portalApi = {
   claim: (token: string) => api.post<null>('/portal/invites/claim', { token }),
   applications: (page = 0) => api.get<Page<ApplicationSummary>>('/portal/applications', { params: { page, size: 20 } }),
   application: (id: string) => api.get<ApplicationView>(`/portal/applications/${encodeURIComponent(id)}`),
+  requestReschedule: (interviewId: string, reason: string, proposedStarts: string[]) =>
+    api.post<RescheduleRequest>(`/portal/interviews/${encodeURIComponent(interviewId)}/reschedule-requests`, { reason, proposedStarts }),
+  withdrawReschedule: (requestId: string) =>
+    api.post<RescheduleRequest>(`/portal/reschedule-requests/${encodeURIComponent(requestId)}/withdraw`),
 };
 
 export const adminApi = {
