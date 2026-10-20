@@ -22,6 +22,11 @@ public interface ScreeningSessionRepository extends JpaRepository<ScreeningSessi
             + "where s.id = :id and s.status <> com.resumescreener.common.session.SessionStatus.RUNNING")
     int markRunning(@Param("id") String id);
 
+    /** Single DELETE: the database cascades to candidates, scores, weights and jobs (V13). */
+    @Modifying
+    @Query("delete from ScreeningSession s where s.id = :id")
+    int deleteByIdDirect(@Param("id") String id);
+
     List<ScreeningSession> findByStatus(SessionStatus status);
 
     @EntityGraph(attributePaths = {"weights"})

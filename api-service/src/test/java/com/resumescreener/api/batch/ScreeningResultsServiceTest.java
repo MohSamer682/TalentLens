@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class BatchControllerTest {
+class ScreeningResultsServiceTest {
 
     @Test
     void getCandidatesReturnsPersistedScoreRows() {
@@ -43,8 +43,7 @@ class BatchControllerTest {
                 .cultureFit(55.0)
                 .compositeScore(78.25)
                 .build();
-        BatchController controller = new BatchController(
-                null,
+        ScreeningResultsService controller = new ScreeningResultsService(
                 new AuthorizingSessionService(),
                 candidateRepositoryThatMustNotServeScores(),
                 candidateScoreRepositoryReturning(score),
@@ -52,18 +51,10 @@ class BatchControllerTest {
                 null
         );
 
-        ResponseEntity<ApiResponse<Page<CandidateResultDto>>> response = controller.getCandidates(
-                "session-1",
-                null,
-                PageRequest.of(0, 20),
-                new TestingAuthenticationToken("recruiter@example.com", null)
-        );
+        Page<CandidateResultDto> page = controller.getCandidates(
+                "session-1", null, PageRequest.of(0, 20), "recruiter@example.com");
 
-        ApiResponse<Page<CandidateResultDto>> envelope = response.getBody();
-        assertTrue(envelope.isSuccess());
-        assertEquals("Candidates loaded", envelope.getMessage());
-
-        CandidateResultDto dto = envelope.getData().getContent().get(0);
+        CandidateResultDto dto = page.getContent().get(0);
         assertEquals("candidate-1", dto.getId());
         assertEquals(2, dto.getRank());
         assertEquals("Jane Candidate", dto.getName());
@@ -87,11 +78,11 @@ class BatchControllerTest {
                 CandidateScoreRepository.class.getClassLoader(),
                 new Class<?>[]{CandidateScoreRepository.class},
                 (proxy, method, args) -> "findByCandidateId".equals(method.getName()) ? List.of(score) : null);
-        BatchController controller = new BatchController(
-                null, new AuthorizingSessionService(), null, scores, null, null);
+        ScreeningResultsService controller = new ScreeningResultsService(
+                new AuthorizingSessionService(), null, scores, null, null);
 
         assertThrows(ApiException.class, () -> controller.getCandidateDetail(
-                "session-1", "candidate-9", new TestingAuthenticationToken("recruiter@example.com", null)));
+                "session-1", "candidate-9", "recruiter@example.com"));
     }
 
     private static CandidateRepository candidateRepositoryThatMustNotServeScores() {

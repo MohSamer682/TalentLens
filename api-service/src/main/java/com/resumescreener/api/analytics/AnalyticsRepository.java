@@ -186,114 +186,41 @@ public class AnalyticsRepository {
     }
 
     private List<StageWait> stageWaits(MapSqlParameterSource p) {
-        Double scMed = queryWaitMed(p, "SHORTLISTED", "CONTACTED");
-        Double scP90 = queryWaitP90(p, "SHORTLISTED", "CONTACTED");
-
-        Double ciMed = queryWaitMed(p, "CONTACTED", "INTERVIEW_SCHEDULED");
-        Double ciP90 = queryWaitP90(p, "CONTACTED", "INTERVIEW_SCHEDULED");
-
-        Double ifMed = queryInterviewFeedbackWaitMed(p);
-        Double ifP90 = queryInterviewFeedbackWaitP90(p);
-
-        Double ioMed = queryWaitMed(p, "INTERVIEWED", "OFFER");
-        Double ioP90 = queryWaitP90(p, "INTERVIEWED", "OFFER");
-
-        Double oaMed = queryOfferWaitMed(p);
-        Double oaP90 = queryOfferWaitP90(p);
-
+        String stageEvents = """
+                candidate_stage_events e1
+                  JOIN candidate_stage_events e2 ON e2.candidate_id = e1.candidate_id AND e2.created_at > e1.created_at
+                  JOIN candidates c ON c.id = e1.candidate_id
+                  JOIN screening_sessions s ON s.id = c.session_id""";
+        String stageGap = "EXTRACT(EPOCH FROM (e2.created_at - e1.created_at)) / 86400";
         return List.of(
-                new StageWait("SHORTLISTED_TO_CONTACTED", "Shortlisted to Contacted", scMed, scP90),
-                new StageWait("CONTACTED_TO_INTERVIEW", "Contacted to first interview", ciMed, ciP90),
-                new StageWait("INTERVIEW_TO_FEEDBACK", "Interview to feedback", ifMed, ifP90),
-                new StageWait("INTERVIEWED_TO_OFFER", "Interviewed to Offer", ioMed, ioP90),
-                new StageWait("OFFER_TO_APPROVED", "Offer to Approved", oaMed, oaP90)
-        );
+                wait(p, "SHORTLISTED_TO_CONTACTED", "Shortlisted to Contacted", stageEvents, stageGap,
+                        "e1.stage = 'SHORTLISTED' AND e2.stage = 'CONTACTED'"),
+                wait(p, "CONTACTED_TO_INTERVIEW", "Contacted to first interview", stageEvents, stageGap,
+                        "e1.stage = 'CONTACTED' AND e2.stage = 'INTERVIEW_SCHEDULED'"),
+                wait(p, "INTERVIEW_TO_FEEDBACK", "Interview to feedback", """
+                        candidate_interviews i
+                          JOIN candidates c ON c.id = i.candidate_id
+                          JOIN screening_sessions s ON s.id = c.session_id""",
+                        "EXTRACT(EPOCH FROM (i.feedback_submitted_at - i.scheduled_start)) / 86400",
+                        "i.status = 'COMPLETED' AND i.feedback_submitted_at IS NOT NULL"),
+                wait(p, "INTERVIEWED_TO_OFFER", "Interviewed to Offer", stageEvents, stageGap,
+                        "e1.stage = 'INTERVIEWED' AND e2.stage = 'OFFER'"),
+                wait(p, "OFFER_TO_APPROVED", "Offer to Approved", """
+                        candidate_offers o
+                          JOIN candidates c ON c.id = o.candidate_id
+                          JOIN screening_sessions s ON s.id = c.session_id""",
+                        "EXTRACT(EPOCH FROM (o.approved_at - o.uploaded_at)) / 86400",
+                        "o.approved_at IS NOT NULL"));
     }
 
-    private Double queryWaitMed(MapSqlParameterSource p, String fromStage, String toStage) {
-        try {
-            return jdbc.queryForObject("""
-                    SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (e2.created_at - e1.created_at)) / 86400)
-                      FROM candidate_stage_events e1
-                      JOIN candidate_stage_events e2 ON e2.candidate_id = e1.candidate_id AND e2.created_at > e1.created_at
-                      JOIN candidates c ON c.id = e1.candidate_id
-                      JOIN screening_sessions s ON s.id = c.session_id
-                     WHERE e1.stage = '%s' AND e2.stage = '%s' AND %s
-                    """.formatted(fromStage, toStage, IN_PERIOD), p, Double.class);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private Double queryWaitP90(MapSqlParameterSource p, String fromStage, String toStage) {
-        try {
-            return jdbc.queryForObject("""
-                    SELECT percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (e2.created_at - e1.created_at)) / 86400)
-                      FROM candidate_stage_events e1
-                      JOIN candidate_stage_events e2 ON e2.candidate_id = e1.candidate_id AND e2.created_at > e1.created_at
-                      JOIN candidates c ON c.id = e1.candidate_id
-                      JOIN screening_sessions s ON s.id = c.session_id
-                     WHERE e1.stage = '%s' AND e2.stage = '%s' AND %s
-                    """.formatted(fromStage, toStage, IN_PERIOD), p, Double.class);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private Double queryInterviewFeedbackWaitMed(MapSqlParameterSource p) {
-        try {
-            return jdbc.queryForObject("""
-                    SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (i.feedback_submitted_at - i.scheduled_start)) / 86400)
-                      FROM candidate_interviews i
-                      JOIN candidates c ON c.id = i.candidate_id
-                      JOIN screening_sessions s ON s.id = c.session_id
-                     WHERE i.status = 'COMPLETED' AND i.feedback_submitted_at IS NOT NULL AND %s
-                    """.formatted(IN_PERIOD), p, Double.class);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private Double queryInterviewFeedbackWaitP90(MapSqlParameterSource p) {
-        try {
-            return jdbc.queryForObject("""
-                    SELECT percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (i.feedback_submitted_at - i.scheduled_start)) / 86400)
-                      FROM candidate_interviews i
-                      JOIN candidates c ON c.id = i.candidate_id
-                      JOIN screening_sessions s ON s.id = c.session_id
-                     WHERE i.status = 'COMPLETED' AND i.feedback_submitted_at IS NOT NULL AND %s
-                    """.formatted(IN_PERIOD), p, Double.class);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private Double queryOfferWaitMed(MapSqlParameterSource p) {
-        try {
-            return jdbc.queryForObject("""
-                    SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (o.approved_at - o.uploaded_at)) / 86400)
-                      FROM candidate_offers o
-                      JOIN candidates c ON c.id = o.candidate_id
-                      JOIN screening_sessions s ON s.id = c.session_id
-                     WHERE o.approved_at IS NOT NULL AND %s
-                    """.formatted(IN_PERIOD), p, Double.class);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private Double queryOfferWaitP90(MapSqlParameterSource p) {
-        try {
-            return jdbc.queryForObject("""
-                    SELECT percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (o.approved_at - o.uploaded_at)) / 86400)
-                      FROM candidate_offers o
-                      JOIN candidates c ON c.id = o.candidate_id
-                      JOIN screening_sessions s ON s.id = c.session_id
-                     WHERE o.approved_at IS NOT NULL AND %s
-                    """.formatted(IN_PERIOD), p, Double.class);
-        } catch (Exception e) {
-            return null;
-        }
+    /** Median and 90th percentile of {@code days}, in one pass. Both are null when nothing falls in the period. */
+    private StageWait wait(MapSqlParameterSource p, String key, String label, String from, String days, String where) {
+        return jdbc.queryForObject("""
+                SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY d) AS med,
+                       percentile_cont(0.9) WITHIN GROUP (ORDER BY d) AS p90
+                  FROM (SELECT %s AS d FROM %s WHERE %s AND %s) t
+                """.formatted(days, from, where, IN_PERIOD), p,
+                (rs, i) -> new StageWait(key, label, nullableDouble(rs, "med"), nullableDouble(rs, "p90")));
     }
 
     /** Every week of the period is present, with zeros where nothing happened. */

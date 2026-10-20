@@ -37,8 +37,10 @@ class PipelineServiceTest {
     private final ScreeningSessionRepository sessions = mock(ScreeningSessionRepository.class);
     private final UserRepository users = mock(UserRepository.class);
     private final SessionService sessionService = mock(SessionService.class);
-    private final PipelineService service = new PipelineService(candidates, mock(CandidateScoreRepository.class), interviews,
-            offers, events, sessionService, sessions, users, mock(AuditService.class), mock(MinioUploadService.class));
+    private final AuditService audit = mock(AuditService.class);
+    private final PipelineSupport support = new PipelineSupport(candidates, events, sessions, users, sessionService, audit);
+    private final PipelineService service = new PipelineService(candidates, interviews, events, users, sessionService, audit, support);
+    private final OfferService offerService = new OfferService(candidates, offers, sessionService, audit, mock(MinioUploadService.class), support);
 
     private final User recruiter = user("r1", "recruiter@x.com", Role.RECRUITER);
     private final User director = user("d1", "director@x.com", Role.DEPARTMENT_DIRECTOR);
@@ -155,13 +157,13 @@ class PipelineServiceTest {
         CandidateOffer o = offer(true);
         candidate(ReviewStatus.OFFER, null);
 
-        assertThrows(ApiException.class, () -> service.approveOffer("s1", "c1", "chief@x.com"), "HR chief cannot skip the director");
-        service.approveOffer("s1", "c1", "director@x.com");
+        assertThrows(ApiException.class, () -> offerService.approveOffer("s1", "c1", "chief@x.com"), "HR chief cannot skip the director");
+        offerService.approveOffer("s1", "c1", "director@x.com");
         assertNotNull(o.getDirectorApprovedAt());
         assertNull(o.getApprovedAt());
 
-        assertThrows(ApiException.class, () -> service.approveOffer("s1", "c1", "director@x.com"), "director cannot give the final approval");
-        service.approveOffer("s1", "c1", "chief@x.com");
+        assertThrows(ApiException.class, () -> offerService.approveOffer("s1", "c1", "director@x.com"), "director cannot give the final approval");
+        offerService.approveOffer("s1", "c1", "chief@x.com");
         assertNotNull(o.getApprovedAt());
     }
 
@@ -169,7 +171,7 @@ class PipelineServiceTest {
     void withoutTheDirectorStepTheHrChiefApprovesAlone() {
         CandidateOffer o = offer(false);
         Candidate c = candidate(ReviewStatus.OFFER, null);
-        service.approveOffer("s1", "c1", "chief@x.com");
+        offerService.approveOffer("s1", "c1", "chief@x.com");
         assertNotNull(o.getApprovedAt());
         assertEquals(ReviewStatus.OFFER_APPROVED, c.getReviewStatus());
     }
@@ -178,17 +180,17 @@ class PipelineServiceTest {
     void rejectionNoteIsOptionalAndBlocksApprovalUntilRevised() {
         CandidateOffer o = offer(false);
         candidate(ReviewStatus.OFFER, null);
-        service.rejectOffer("s1", "c1", new RejectOfferRequest("   "), "chief@x.com");
+        offerService.rejectOffer("s1", "c1", new RejectOfferRequest("   "), "chief@x.com");
         assertNotNull(o.getRejectedAt());
         assertNull(o.getRejectionNote());
-        assertThrows(ApiException.class, () -> service.approveOffer("s1", "c1", "chief@x.com"));
+        assertThrows(ApiException.class, () -> offerService.approveOffer("s1", "c1", "chief@x.com"));
     }
 
     @Test
     void rejectionKeepsTheNote() {
         CandidateOffer o = offer(false);
         candidate(ReviewStatus.OFFER, null);
-        service.rejectOffer("s1", "c1", new RejectOfferRequest(" Salary above band "), "chief@x.com");
+        offerService.rejectOffer("s1", "c1", new RejectOfferRequest(" Salary above band "), "chief@x.com");
         assertEquals("Salary above band", o.getRejectionNote());
     }
 
@@ -198,9 +200,9 @@ class PipelineServiceTest {
     void offerSentThenAcceptedThenJoiningDate() {
         CandidateOffer o = offer(false);
         Candidate c = candidate(ReviewStatus.OFFER_APPROVED, null);
-        service.markOfferSent("s1", "c1", "recruiter@x.com");
+        offerService.markOfferSent("s1", "c1", "recruiter@x.com");
         assertEquals(ReviewStatus.OFFER_SENT, c.getReviewStatus());
-        service.answerOffer("s1", "c1", new OfferAnswerRequest(true), "recruiter@x.com");
+        offerService.answerOffer("s1", "c1", new OfferAnswerRequest(true), "recruiter@x.com");
         assertEquals(ReviewStatus.ACCEPTED, c.getReviewStatus());
         assertEquals("ACCEPTED", o.getCandidateResponse());
     }
@@ -209,7 +211,7 @@ class PipelineServiceTest {
     void cannotRecordAnAnswerBeforeTheOfferIsSent() {
         offer(false);
         candidate(ReviewStatus.OFFER_APPROVED, null);
-        assertThrows(ApiException.class, () -> service.answerOffer("s1", "c1", new OfferAnswerRequest(true), "recruiter@x.com"));
+        assertThrows(ApiException.class, () -> offerService.answerOffer("s1", "c1", new OfferAnswerRequest(true), "recruiter@x.com"));
     }
 
     // --- access ---
@@ -227,7 +229,7 @@ class PipelineServiceTest {
     void candidateFromAnotherSessionIs404() {
         assertThrows(ApiException.class, () -> service.getTimeline("s1", "c-elsewhere", "recruiter@x.com"));
         assertThrows(ApiException.class, () -> service.getInterviews("s1", "c-elsewhere", "recruiter@x.com"));
-        assertThrows(ApiException.class, () -> service.getOffer("s1", "c-elsewhere", "chief@x.com"));
+        assertThrows(ApiException.class, () -> offerService.getOffer("s1", "c-elsewhere", "chief@x.com"));
     }
 
     @Test

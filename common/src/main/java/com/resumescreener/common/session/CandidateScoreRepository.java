@@ -12,6 +12,8 @@ public interface CandidateScoreRepository extends JpaRepository<CandidateScore, 
     // fields outside a transaction need it fetched with the score
     @EntityGraph(attributePaths = "candidate")
     List<CandidateScore> findByCandidateId(String candidateId);
+
+    List<CandidateScore> findByCandidateIdIn(java.util.Collection<String> candidateIds);
     @EntityGraph(attributePaths = "candidate")
     List<CandidateScore> findByCandidateSessionIdOrderByRankAsc(String sessionId);
     @EntityGraph(attributePaths = "candidate")

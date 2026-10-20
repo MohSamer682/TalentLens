@@ -12,12 +12,12 @@ const uploadController = read('api-service/src/main/java/com/resumescreener/api/
 assert.match(uploadController, /ResponseEntity<ApiResponse<UploadJdResponse>>/);
 assert.match(uploadController, /ApiResponse\.success\("JD uploaded successfully"/);
 assert.match(uploadController, /ResponseEntity<ApiResponse<UploadResumesResponse>>/);
-assert.match(uploadController, /ApiResponse\.success\("Resumes uploaded successfully"/);
+assert.match(uploadController, /ApiResponse\.success\("Resumes uploaded"/);
 assert.doesNotMatch(uploadController, /ResponseEntity<String>/, 'JD upload must not return a raw string');
 assert.doesNotMatch(uploadController, /ResponseEntity<Object>/, 'Resume upload must not return a raw object');
 
 const uploadService = read('api-service/src/main/java/com/resumescreener/api/upload/MinioUploadService.java');
-assert.match(uploadService, /public List<String> uploadResumes\(/, 'uploadResumes must return candidate IDs');
+assert.match(uploadService, /public UploadResumesResponse uploadResumes\(/, 'uploadResumes must return the upload summary');
 
 // --- Every controller speaks the envelope; none returns an empty body ---
 

@@ -21,7 +21,6 @@ public class BatchJob {
     @JoinColumn(name = "session_id", nullable = false)
     private ScreeningSession session;
 
-    private String springBatchJobId;
     private Integer total;
     private Integer processed;
     private Integer failed;

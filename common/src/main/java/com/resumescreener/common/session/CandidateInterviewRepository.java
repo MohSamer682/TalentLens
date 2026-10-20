@@ -19,6 +19,7 @@ public interface CandidateInterviewRepository extends JpaRepository<CandidateInt
     List<CandidateInterview> findByCandidateIdAndStatus(String candidateId, InterviewStatus status);
     List<CandidateInterview> findByCandidateIdAndStatusOrderByScheduledStartAsc(String candidateId, InterviewStatus status);
 
+    List<CandidateInterview> findByCandidateIdInAndStatusOrderByScheduledStartAsc(java.util.Collection<String> candidateIds, InterviewStatus status);
     long countByStatus(InterviewStatus status);
 
     long countByFeedbackSubmittedAtBetween(Instant from, Instant to);
