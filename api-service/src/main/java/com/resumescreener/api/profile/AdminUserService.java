@@ -22,7 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 @Service
 @RequiredArgsConstructor
@@ -80,6 +86,7 @@ public class AdminUserService {
         ProfileView view = profileService.update(user, request.fullName(), request.fields(), request.version(), actor.getId());
         auditService.record("USER_UPDATE", "user", id, "success",
                 oldRole == request.role() ? null : "role " + oldRole + " -> " + request.role());
+        if (oldRole != request.role()) recordRoleMove(user, oldRole, request.role());
         return view;
     }
 
@@ -94,6 +101,7 @@ public class AdminUserService {
         user.setRole(role);
         userRepository.save(user);
         auditService.record("ROLE_CHANGE", "user", id, "success", oldRole + " -> " + role);
+        if (oldRole != role) recordRoleMove(user, oldRole, role);
         return get(id);
     }
 
@@ -140,6 +148,13 @@ public class AdminUserService {
         auditService.record("USER_DELETE", "user", id, "success", user.getEmail());
     }
 
+    /** A single role change also shows in both roles' history. */
+    private void recordRoleMove(User user, Role from, Role to) {
+        String details = from + " -> " + to + ": " + user.getEmail();
+        auditService.record("ROLE_MEMBERS_MOVED", "role", to.name(), "success", details);
+        auditService.record("ROLE_MEMBERS_MOVED", "role", from.name(), "success", details);
+    }
+
     void guardNotSelf(User actor, User target) {
         if (actor.getId().equals(target.getId())) {
             throw ApiException.validation("You can't do that to your own account", "Rejected for the calling user " + actor.getId());
@@ -155,9 +170,40 @@ public class AdminUserService {
 
     /** Called before an active admin loses admin rights or access. */
     void guardLosingAdmin(User target) {
-        if (target.isActive() && userRepository.lockByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE).size() <= 1) {
-            throw ApiException.validation("At least one active admin must remain", "User " + target.getId() + " is the only active admin");
+        guardLosingAdmins(List.of(target));
+    }
+
+    /** The one last-admin rule: these users together may not take away every active admin. */
+    void guardLosingAdmins(Collection<User> targets) {
+        long leaving = targets.stream().filter(u -> u.getRole() == Role.ADMIN && u.isActive()).count();
+        if (leaving > 0 && userRepository.lockByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE).size() - leaving < 1) {
+            throw ApiException.validation("At least one active admin must remain", leaving + " of the active admins would lose the role");
         }
+    }
+
+    /**
+     * Moves these people into {@code role}, all or nothing, under the same rules as a single role change.
+     * Returns the users that changed, with the role each one had before.
+     */
+    @Transactional
+    public Map<User, Role> moveToRole(Role role, Collection<String> userIds, String actorEmail) {
+        User actor = byEmail(actorEmail);
+        Set<String> wanted = new TreeSet<>(userIds);
+        List<User> found = userRepository.findAllForUpdateByIdIn(wanted);
+        if (found.size() != wanted.size()) {
+            throw ApiException.notFound("Some of these people no longer exist. Reload and try again.", "Missing users among " + wanted);
+        }
+        Map<User, Role> moved = new LinkedHashMap<>();
+        for (User user : found) {
+            if (user.getRole() == role) continue;
+            guardNotSelf(actor, user);
+            guardRoleKind(user.getRole(), role);
+            moved.put(user, user.getRole());
+        }
+        if (role != Role.ADMIN) guardLosingAdmins(moved.keySet());
+        moved.keySet().forEach(u -> u.setRole(role));
+        userRepository.saveAll(moved.keySet());
+        return moved;
     }
 
     private void requireFreeEmail(String email, String exceptId) {

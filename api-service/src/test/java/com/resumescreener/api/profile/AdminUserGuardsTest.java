@@ -47,4 +47,22 @@ class AdminUserGuardsTest {
         assertThatThrownBy(() -> service.guardNotSelf(caller, caller))
                 .isInstanceOf(ApiException.class).hasMessageContaining("your own account");
     }
+
+    @Test
+    void bulkMoveCannotRemoveLastAdmin() {
+        User a = User.builder().id("a").email("a@t.io").role(Role.ADMIN).build();
+        User b = User.builder().id("b").email("b@t.io").role(Role.ADMIN).build();
+        User actor = User.builder().id("actor").email("actor@t.io").role(Role.RECRUITER).build();
+        when(users.findByEmailIgnoreCase("actor@t.io")).thenReturn(Optional.of(actor));
+        when(users.findAllForUpdateByIdIn(java.util.Set.of("a", "b"))).thenReturn(java.util.List.of(a, b));
+        when(users.lockByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)).thenReturn(java.util.List.of(a, b));
+
+        assertThatThrownBy(() -> service.moveToRole(Role.RECRUITER, java.util.List.of("a", "b"), "actor@t.io"))
+                .isInstanceOf(ApiException.class).hasMessage("At least one active admin must remain");
+        org.mockito.Mockito.verify(users, org.mockito.Mockito.never()).saveAll(org.mockito.ArgumentMatchers.any());
+        org.assertj.core.api.Assertions.assertThat(a.getRole()).isEqualTo(Role.ADMIN);
+
+        when(users.lockByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)).thenReturn(java.util.List.of(a, b, new User()));
+        org.assertj.core.api.Assertions.assertThat(service.moveToRole(Role.RECRUITER, java.util.List.of("a", "b"), "actor@t.io")).hasSize(2);
+    }
 }

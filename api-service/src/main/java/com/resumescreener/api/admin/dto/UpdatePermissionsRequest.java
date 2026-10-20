@@ -5,4 +5,4 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.Set;
 
-public record UpdatePermissionsRequest(@NotNull Set<Permission> permissions) {}
+public record UpdatePermissionsRequest(@NotNull Set<Permission> permissions, @NotNull Long version) {}

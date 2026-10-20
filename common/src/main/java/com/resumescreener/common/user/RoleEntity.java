@@ -40,6 +40,11 @@ public class RoleEntity {
     public void rename(String name, String description, String byUserId, Instant at) {
         this.name = name;
         this.description = description;
+        touch(byUserId, at);
+    }
+
+    /** Marks a change that lives in another table, such as the role's permissions, so the version still moves. */
+    public void touch(String byUserId, Instant at) {
         this.updatedBy = byUserId;
         this.updatedAt = at;
     }

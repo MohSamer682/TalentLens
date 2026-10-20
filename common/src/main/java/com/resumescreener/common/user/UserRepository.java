@@ -12,8 +12,17 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     /** Row-locks the matches, so two guards counting the same rows run one after the other. */
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
-    @org.springframework.data.jpa.repository.Query("select u from User u where u.role = :role and u.status = :status")
+    @org.springframework.data.jpa.repository.Query("select u from User u where u.role = :role and u.status = :status order by u.id")
     java.util.List<User> lockByRoleAndStatus(Role role, UserStatus status);
+
+    /** Row-locks these users in id order, so two bulk moves over the same people can't deadlock. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select u from User u where u.id in :ids order by u.id")
+    java.util.List<User> findAllForUpdateByIdIn(java.util.Collection<String> ids);
+
+    /** Active members per role, in one grouped query: each row is {role, count}. */
+    @org.springframework.data.jpa.repository.Query("select u.role, count(u) from User u where u.status = :status group by u.role")
+    java.util.List<Object[]> countByRoleGrouped(UserStatus status);
     java.util.List<User> findByRoleInAndStatus(java.util.Collection<Role> roles, UserStatus status);
 
     /** {@code pattern} is a lower-case LIKE pattern escaped with a backslash; pass "%" to match everyone. */
