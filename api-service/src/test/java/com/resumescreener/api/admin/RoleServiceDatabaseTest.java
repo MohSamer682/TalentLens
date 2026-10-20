@@ -58,7 +58,7 @@ class RoleServiceDatabaseTest {
                 .containsExactlyInAnyOrder(Permission.INTERVIEW_FEEDBACK, Permission.OFFER_APPROVE);
         assertThat(grants.findByRole(Role.CEO)).extracting(RolePermission::getPermission)
                 .containsExactly(Permission.INTERVIEW_FEEDBACK);
-        assertThat(service.catalog().roles()).hasSize(Role.values().length);
+        assertThat(service.catalog().roles()).hasSize(Role.values().length - 1);
         assertThat(grants.findByRole(Role.HR_CHIEF)).extracting(RolePermission::getPermission)
                 .containsExactlyInAnyOrder(Permission.SESSION_VIEW_ALL, Permission.CANDIDATE_REVIEW,
                         Permission.ANALYTICS_VIEW, Permission.OFFER_APPROVE);

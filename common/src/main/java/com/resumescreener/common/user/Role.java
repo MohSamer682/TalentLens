@@ -10,7 +10,9 @@ public enum Role {
     /** Top management: sit on management interviews and see them on My Interviews */
     DEPARTMENT_DIRECTOR,
     CEO,
-    CHAIRMAN;
+    CHAIRMAN,
+    /** A shortlisted applicant using the portal; never holds a permission */
+    CANDIDATE;
 
     public boolean isTopManagement() {
         return this == DEPARTMENT_DIRECTOR || this == CEO || this == CHAIRMAN;

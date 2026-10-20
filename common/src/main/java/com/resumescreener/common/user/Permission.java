@@ -38,6 +38,9 @@ public enum Permission {
         if (role == Role.ADMIN) {
             return EnumSet.allOf(Permission.class);
         }
+        if (role == Role.CANDIDATE) {
+            return EnumSet.noneOf(Permission.class);
+        }
         Set<Permission> result = EnumSet.noneOf(Permission.class);
         stored.stream().filter(p -> !p.adminOnly).forEach(result::add);
         return result;

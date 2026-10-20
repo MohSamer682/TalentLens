@@ -54,7 +54,8 @@ class RoleControllerTest {
         mvc.perform(get("/api/admin/roles"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.permissions.length()").value(Permission.values().length))
-                .andExpect(jsonPath("$.data.roles.length()").value(Role.values().length))
+                .andExpect(jsonPath("$.data.roles.length()").value(Role.values().length - 1))
+                .andExpect(jsonPath("$.data.roles[?(@.role == 'CANDIDATE')]").isEmpty())
                 .andExpect(jsonPath("$.data.roles[0].role").value("ADMIN"))
                 .andExpect(jsonPath("$.data.roles[0].editable").value(false))
                 .andExpect(jsonPath("$.data.roles[0].permissions.length()").value(Permission.values().length))
@@ -88,6 +89,14 @@ class RoleControllerTest {
                 .andExpect(jsonPath("$.message").value("Only admins can manage roles, users or the audit log"));
         verify(grants, never()).deleteByRole(any());
         verify(audit, never()).record(anyString(), anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void candidateRoleCannotBeGivenPermissions() throws Exception {
+        putPermissions("CANDIDATE", "[\"SESSION_RUN\"]")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Candidates can't hold permissions"));
+        verify(grants, never()).deleteByRole(any());
     }
 
     @Test
