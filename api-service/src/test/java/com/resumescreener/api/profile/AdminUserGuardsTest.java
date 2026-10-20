@@ -17,7 +17,7 @@ import static org.mockito.Mockito.when;
 class AdminUserGuardsTest {
 
     private final UserRepository users = mock(UserRepository.class);
-    private final AdminUserService service = new AdminUserService(users, null, null, null, null, null);
+    private final AdminUserService service = new AdminUserService(users, null, null, null, mock(com.resumescreener.api.audit.AuditService.class), null);
     private final User caller = User.builder().id("caller").email("c@t.io").role(Role.ADMIN).build();
     private final User target = User.builder().id("target").email("t@t.io").role(Role.ADMIN).build();
 

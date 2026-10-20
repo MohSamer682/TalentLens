@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** A candidate token may reach the portal, its own profile and auth, and nothing else, including endpoints added later. */
 class CandidateIsolationTest extends ApiIntegrationTest {
 
-    private static final List<String> CANDIDATE_ROUTES = List.of("/api/portal/", "/api/me/", "/api/auth/", "/api/client-errors", "/error");
+    private static final List<String> CANDIDATE_ROUTES = List.of("/api/portal/", "/api/me/", "/api/auth/", "/api/admins/auth/", "/api/client-errors", "/error");
 
     @Autowired @Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping mappings;
 

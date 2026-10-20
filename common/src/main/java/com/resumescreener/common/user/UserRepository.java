@@ -15,7 +15,7 @@ public interface UserRepository extends JpaRepository<User, String> {
     @org.springframework.data.jpa.repository.Query("select u from User u where u.role = :role and u.status = :status order by u.id")
     java.util.List<User> lockByRoleAndStatus(Role role, UserStatus status);
 
-    /** Row-locks these users in id order, so two bulk moves over the same people can't deadlock. */
+    /** Row-locks these users in id order, so two bulk moves over overlapping people wait for each other in the same order. */
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @org.springframework.data.jpa.repository.Query("select u from User u where u.id in :ids order by u.id")
     java.util.List<User> findAllForUpdateByIdIn(java.util.Collection<String> ids);

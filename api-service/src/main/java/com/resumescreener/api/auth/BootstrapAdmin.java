@@ -38,9 +38,14 @@ public class BootstrapAdmin implements ApplicationRunner {
         ensureAdmin();
     }
 
+    static final int MIN_PASSWORD = 12;
+
     /** Returns true when it created the admin. */
     public boolean ensureAdmin() {
         if (email.isBlank() || password.isBlank()) return false;
+        if (password.length() < MIN_PASSWORD || password.toLowerCase(java.util.Locale.ROOT).contains("change-me")) {
+            throw new IllegalStateException("BOOTSTRAP_ADMIN_PASSWORD must be at least " + MIN_PASSWORD + " characters and not the example value");
+        }
         if (users.countByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE) > 0) return false;
         if (users.existsByEmailIgnoreCase(email.trim())) {
             log.warn("No active admin exists, and the bootstrap admin email is already used by another account");
@@ -49,7 +54,13 @@ public class BootstrapAdmin implements ApplicationRunner {
         User admin = User.builder().email(email.trim()).fullName("Administrator").role(Role.ADMIN)
                 .passwordHash(encoder.encode(password)).build();
         admin.resetPassword(admin.getPasswordHash());
-        users.save(admin);
+        try {
+            users.saveAndFlush(admin);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Another instance starting at the same moment created it first
+            log.info("The bootstrap admin was created by another instance");
+            return false;
+        }
         log.info("Created the bootstrap admin account");
         return true;
     }

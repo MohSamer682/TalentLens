@@ -48,6 +48,34 @@ describe('StaffLogin', () => {
   });
 });
 
+describe('signed-in staff', () => {
+  it('a staff account with no rights is told so instead of seeing the form again', () => {
+    useAuthStore.setState({ token: 't', user: { id: 'u', email: 'x@t.io', fullName: 'X', role: 'RECRUITER', permissions: [], mustChangePassword: false } as never, door: 'staff' });
+    render(<MemoryRouter initialEntries={['/admins']}><StaffLogin /></MemoryRouter>);
+    expect(screen.getByText('Your account has no access yet')).toBeTruthy();
+    expect(screen.queryByLabelText('Work email')).toBeNull();
+  });
+});
+
+describe('after signing in', () => {
+  it('goes back to the page that sent them to sign in', async () => {
+    api.staffLogin.mockResolvedValue({ data: { token: 't', user: { id: 'u', email: 'a@t.io', fullName: 'A', role: 'ADMIN', permissions: ['ROLE_MANAGE', 'SESSION_RUN'], mustChangePassword: false } } } as never);
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/admins', state: { from: { pathname: '/admin/roles' } } }]}>
+        <Routes>
+          <Route path="/admins" element={<StaffLogin />} />
+          <Route path="/admin/roles" element={<p>Roles page</p>} />
+          <Route path="/dashboard" element={<p>Dashboard</p>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    fireEvent.change(screen.getByLabelText('Work email'), { target: { value: 'a@t.io' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Password123!' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(await screen.findByText('Roles page')).toBeTruthy();
+  });
+});
+
 describe('signed-out routes', () => {
   const at = (path: string, element: React.ReactNode) =>
     render(

@@ -88,6 +88,26 @@ class StaffSignInApiTest extends ApiIntegrationTest {
     }
 
     @Test
+    void candidateDoorIsThrottledToo() throws Exception {
+        User admin = user(Role.ADMIN);
+        for (int i = 0; i < LoginThrottle.MAX_FAILURES; i++) {
+            signIn(CANDIDATE, admin.getEmail(), "guess-" + i).andExpect(status().isUnauthorized());
+        }
+        signIn(CANDIDATE, admin.getEmail(), PASSWORD).andExpect(status().isTooManyRequests());
+        signIn(STAFF, admin.getEmail(), PASSWORD).andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void aFloodOfMadeUpEmailsDoesNotStopCounting() {
+        LoginThrottle throttle = new LoginThrottle(java.time.Clock.systemUTC(), 3);
+        for (int i = 0; i < 10; i++) throttle.failed("noise" + i + "@x.io");
+        for (int i = 0; i < LoginThrottle.MAX_FAILURES; i++) throttle.failed("admin@talentlens.io");
+        assertThat(throttle.tracked()).isLessThanOrEqualTo(3);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> throttle.check("Admin@TalentLens.io"))
+                .isInstanceOf(com.resumescreener.api.common.ApiException.class);
+    }
+
+    @Test
     void registerAlwaysCreatesCandidate() throws Exception {
         String email = UUID.randomUUID() + "@mail.io";
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)

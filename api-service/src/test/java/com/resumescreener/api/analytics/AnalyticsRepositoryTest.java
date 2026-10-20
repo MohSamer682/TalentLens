@@ -50,7 +50,13 @@ class AnalyticsRepositoryTest {
 
     @BeforeEach
     void clean() {
+        // roles.updated_by points at users, so the cascade empties the role catalogue too; put it back
+        var roles = jdbc.queryForList("SELECT code, name, description, kind FROM roles");
+        var grants = jdbc.queryForList("SELECT role, permission FROM role_permissions");
         jdbc.execute("TRUNCATE candidate_scores, candidates, scoring_weights, screening_sessions, users CASCADE");
+        roles.forEach(r -> jdbc.update("INSERT INTO roles (code, name, description, kind) VALUES (?, ?, ?, ?)",
+                r.get("code"), r.get("name"), r.get("description"), r.get("kind")));
+        grants.forEach(g -> jdbc.update("INSERT INTO role_permissions (role, permission) VALUES (?, ?)", g.get("role"), g.get("permission")));
     }
 
     @Test

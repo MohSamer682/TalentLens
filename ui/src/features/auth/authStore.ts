@@ -30,6 +30,11 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
+      // Sessions saved before doors existed have no door; work it out from the stored user
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<AuthState>;
+        return { ...current, ...saved, door: saved.door ?? (saved.user ? doorOf(saved.user) : current.door) };
+      },
     }
   )
 );

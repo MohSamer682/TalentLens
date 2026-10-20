@@ -63,4 +63,16 @@ class BootstrapAdminTest {
         assertThat(users.findByEmailIgnoreCase("second@talentlens.io")).isEmpty();
         assertThat(bootstrap("").ensureAdmin()).isFalse();
     }
+
+    @Test
+    void bootstrapAdminRefusesAWeakPassword() {
+        users.deleteAll();
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> new BootstrapAdmin(users, new BCryptPasswordEncoder(), "owner@talentlens.io", "short").ensureAdmin())
+                .isInstanceOf(IllegalStateException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> new BootstrapAdmin(users, new BCryptPasswordEncoder(), "owner@talentlens.io", "change-me-on-first-sign-in").ensureAdmin())
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(users.count()).isZero();
+    }
 }

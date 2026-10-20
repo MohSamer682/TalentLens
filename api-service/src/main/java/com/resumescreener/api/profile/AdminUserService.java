@@ -188,6 +188,8 @@ public class AdminUserService {
     @Transactional
     public Map<User, Role> moveToRole(Role role, Collection<String> userIds, String actorEmail) {
         User actor = byEmail(actorEmail);
+        // Admins first, as every single-user change does, so this and those paths take locks in the same order
+        if (role != Role.ADMIN) userRepository.lockByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE);
         Set<String> wanted = new TreeSet<>(userIds);
         List<User> found = userRepository.findAllForUpdateByIdIn(wanted);
         if (found.size() != wanted.size()) {
@@ -203,6 +205,7 @@ public class AdminUserService {
         if (role != Role.ADMIN) guardLosingAdmins(moved.keySet());
         moved.keySet().forEach(u -> u.setRole(role));
         userRepository.saveAll(moved.keySet());
+        moved.forEach((user, from) -> auditService.record("ROLE_CHANGE", "user", user.getId(), "success", from + " -> " + role));
         return moved;
     }
 

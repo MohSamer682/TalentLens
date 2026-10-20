@@ -106,9 +106,10 @@ export default function RoleDetail() {
     };
   }, [dirty]);
 
-  const changed = (updated: RoleInfo, message: string) => {
+  /** Keeps unsaved permission toggles unless the permissions themselves were just saved. */
+  const changed = (updated: RoleInfo, message: string, permissionsSaved = false) => {
     setRole(updated);
-    setDraft(updated.permissions);
+    if (permissionsSaved) setDraft(updated.permissions);
     setNotice(message);
     setRevision((r) => r + 1);
   };
@@ -119,7 +120,7 @@ export default function RoleDetail() {
     setError(null);
     try {
       const res = await adminApi.updatePermissions(role.role, draft, role.version);
-      changed(res.data, 'Permissions saved. People see the change on their next action.');
+      changed(res.data, 'Permissions saved. People see the change on their next action.', true);
     } catch (err) {
       setError(apiErrorMessage(err, 'Could not save the permissions'));
     } finally {
@@ -212,7 +213,7 @@ export default function RoleDetail() {
             </Panel>
             {can(me, 'USER_MANAGE') && (
               <Panel>
-                <PanelHeader title={`Who has it (${role.memberCount})`} />
+                <PanelHeader title={`Who has it (${role.memberCount} active)`} />
                 <div className="p-4 sm:px-5">
                   <RoleMembers role={role} meId={me?.id} onMoved={() => adminApi.role(role.role).then((res) => changed(res.data, 'People moved.'))} />
                 </div>

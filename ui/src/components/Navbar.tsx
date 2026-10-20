@@ -27,7 +27,7 @@ export function Navbar() {
 
   const handleLogout = () => {
     logout();
-    navigate('/admins');
+    navigate(user?.role === 'CANDIDATE' ? '/login' : '/admins');
   };
 
   const canSeeSessions = userCanSeeSessions(user);
