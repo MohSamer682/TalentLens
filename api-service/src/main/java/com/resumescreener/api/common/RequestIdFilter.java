@@ -37,6 +37,14 @@ public class RequestIdFilter extends OncePerRequestFilter {
         }
         MDC.put(MDC_REQUEST_ID, requestId);
         response.setHeader(REQUEST_ID_HEADER, requestId);
+        if (!request.getRequestURI().startsWith("/api/")) {
+            try {
+                chain.doFilter(request, response);
+            } finally {
+                MDC.clear();
+            }
+            return;
+        }
         // Responses here are small JSON (downloads are presigned URLs), so buffering them is cheap
         ContentCachingResponseWrapper wrapped = new ContentCachingResponseWrapper(response);
         long start = System.nanoTime();
@@ -51,23 +59,25 @@ public class RequestIdFilter extends OncePerRequestFilter {
 
     /** One line per API call; the body is added only for failures, truncated, so secrets and PII in 2xx payloads stay out of logs. */
     private void logExchange(HttpServletRequest request, ContentCachingResponseWrapper response, long ms) {
-        if (!request.getRequestURI().startsWith("/api/")) {
-            return;
-        }
         int status = response.getStatus();
-        String query = request.getQueryString() == null ? "" : "?" + request.getQueryString();
+        String query = request.getQueryString() == null ? "" : "?" + flat(request.getQueryString());
         String line = "{} {}{} -> {} {} {}ms";
-        Object[] args = {request.getMethod(), request.getRequestURI(), query, status, response.getContentType(), ms};
+        Object[] args = {request.getMethod(), flat(request.getRequestURI()), query, status, response.getContentType(), ms};
         if (status < 400) {
             log.info(line, args);
             return;
         }
-        String body = new String(response.getContentAsByteArray(), StandardCharsets.UTF_8);
+        String body = flat(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
         if (body.length() > BODY_LOG_LIMIT) {
             body = body.substring(0, BODY_LOG_LIMIT) + "...";
         }
         Object[] withBody = java.util.Arrays.copyOf(args, args.length + 1);
         withBody[args.length] = body;
         log.warn(line + " body={}", withBody);
+    }
+
+    /** Request text is attacker-controlled; line breaks would let it forge log lines. */
+    private static String flat(String value) {
+        return value.replaceAll("\\p{Cntrl}", " ");
     }
 }

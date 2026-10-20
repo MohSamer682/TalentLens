@@ -32,6 +32,9 @@ public class InternalAuthFilter extends OncePerRequestFilter {
                 String secret = request.getHeader("X-Internal-Secret");
                 if (secret == null || !secret.equals(sharedSecret)) {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write(
+                            "{\"success\":false,\"message\":\"Unauthorized\",\"error\":{\"code\":\"AUTHENTICATION_FAILED\",\"details\":\"Missing or wrong internal secret\"}}");
                     return;
                 }
             }
