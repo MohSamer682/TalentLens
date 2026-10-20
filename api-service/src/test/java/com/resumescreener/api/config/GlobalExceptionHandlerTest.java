@@ -42,6 +42,16 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void notAcceptableMapsTo406InsteadOfAServerError() {
+        ResponseEntity<ApiResponse<Void>> response = handler.handleNotAcceptable(
+                new org.springframework.web.HttpMediaTypeNotAcceptableException("No acceptable representation"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_ACCEPTABLE);
+        assertThat(response.getBody().getError().getCode()).isEqualTo(ApiErrorCode.VALIDATION_ERROR);
+        assertThat(response.getBody().getMessage()).isEqualTo("This endpoint only answers in JSON");
+    }
+
+    @Test
     void accessDeniedMapsTo403WithAccessDeniedCode() {
         ResponseEntity<ApiResponse<Void>> response =
                 handler.handleAccessDenied(new AccessDeniedException("Not authorized or session not found"));
