@@ -558,3 +558,40 @@ export interface InvitePreview {
   candidateName: string;
   accountExists: boolean;
 }
+
+export type PortalStage = 'APPLIED' | 'SHORTLISTED' | 'INTERVIEWING' | 'DECISION_PENDING' | 'OFFER' | 'ACCEPTED' | 'JOINING' | 'CLOSED';
+export type StepState = 'PLANNED' | 'SCHEDULED' | 'DONE' | 'CANCELLED';
+
+export interface StageStep {
+  kind: InterviewKind;
+  state: StepState;
+}
+
+export interface PortalInterview {
+  id: string;
+  kind: InterviewKind;
+  interviewerName: string;
+  interviewerHeadline: string | null;
+  scheduledStart: string;
+  durationMinutes: number;
+  placeType: InterviewPlaceType;
+  location: string | null;
+  status: InterviewStatus;
+}
+
+export interface ApplicationSummary {
+  id: string;
+  jobTitle: string;
+  positionCode: string | null;
+  stage: PortalStage;
+  nextInterviewAt: string | null;
+}
+
+export interface ApplicationView {
+  id: string;
+  job: JobDetails;
+  stage: PortalStage;
+  steps: StageStep[];
+  interviews: PortalInterview[];
+  recruiter: { name: string; headline: string | null };
+}
