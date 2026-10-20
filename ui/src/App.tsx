@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { refreshCurrentUser } from '@/api/client';
-import { PermissionRoute, ProtectedRoute, SessionsRoute } from '@/features/auth/ProtectedRoute';
+import { CandidateRoute, PermissionRoute, ProtectedRoute, SessionsRoute } from '@/features/auth/ProtectedRoute';
 import { useAuthStore } from '@/features/auth/authStore';
 import { homePath } from '@/lib/permissions';
 import Login from '@/features/auth/Login';
@@ -21,6 +21,8 @@ const AdminRoles = lazy(() => import('@/features/admin/AdminRoles'));
 const Analytics = lazy(() => import('@/features/analytics/AnalyticsPage'));
 const ProfilePage = lazy(() => import('@/features/profile/ProfilePage'));
 const PasswordPage = lazy(() => import('@/features/profile/PasswordPage'));
+const InvitePage = lazy(() => import('@/features/portal/InvitePage'));
+const PortalHome = lazy(() => import('@/features/portal/PortalHome'));
 
 function RootRedirect() {
   const user = useAuthStore((s) => s.user);
@@ -38,6 +40,15 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/invite/:token" element={<InvitePage />} />
+      <Route
+        path="/portal"
+        element={
+          <CandidateRoute>
+            <PortalHome />
+          </CandidateRoute>
+        }
+      />
       <Route
         path="/dashboard"
         element={

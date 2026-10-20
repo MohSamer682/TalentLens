@@ -34,6 +34,19 @@ describe('AdminUserForm', () => {
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
   });
 
+  it('never offers the candidate role to staff', () => {
+    render(<AdminUserForm user={null} isMe={false} {...props} />);
+    const options = Array.from((screen.getByLabelText('Role') as HTMLSelectElement).options).map((o) => o.value);
+    expect(options).not.toContain('CANDIDATE');
+  });
+
+  it('locks the role of a candidate account', () => {
+    render(<AdminUserForm user={{ ...karim, role: 'CANDIDATE' }} isMe={false} {...props} />);
+    const select = screen.getByLabelText('Role') as HTMLSelectElement;
+    expect(select.disabled).toBe(true);
+    expect(select.value).toBe('CANDIDATE');
+  });
+
   it('offers Unhide for a hidden account', () => {
     render(<AdminUserForm user={{ ...karim, status: 'HIDDEN' }} isMe={false} {...props} />);
     expect(screen.getByRole('button', { name: 'Unhide' })).toBeTruthy();
