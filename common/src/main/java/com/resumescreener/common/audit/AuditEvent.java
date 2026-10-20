@@ -19,6 +19,7 @@ public class AuditEvent {
     private Instant occurredAt;
 
     private String actorUserId;
+    private String actorEmail;
 
     @Column(nullable = false)
     private String action;

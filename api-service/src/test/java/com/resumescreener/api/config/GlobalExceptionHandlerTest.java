@@ -65,6 +65,16 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void optimisticLockFailureIs409WithoutEntityNames() {
+        ResponseEntity<ApiResponse<Void>> response = handler.handleOptimisticLock(
+                new org.springframework.orm.ObjectOptimisticLockingFailureException("com.resumescreener.common.user.User", "id-1"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody().getError().getCode()).isEqualTo(ApiErrorCode.CONFLICT);
+        assertThat(response.getBody().getMessage()).doesNotContain("com.resumescreener");
+    }
+
+    @Test
     void dataIntegrityViolationDoesNotLeakSql() {
         ResponseEntity<ApiResponse<Void>> response = handler.handleDataIntegrity(
                 new org.springframework.dao.DataIntegrityViolationException(

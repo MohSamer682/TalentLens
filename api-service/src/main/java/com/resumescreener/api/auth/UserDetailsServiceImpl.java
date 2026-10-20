@@ -31,7 +31,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
         authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
         permissionsOf(user).forEach(p -> authorities.add(new SimpleGrantedAuthority(p.name())));
-        return new org.springframework.security.core.userdetails.User(user.getEmail(), user.getPasswordHash(), authorities);
+        if (user.isMustChangePassword()) authorities.add(new SimpleGrantedAuthority(PasswordChangeGate.MARKER));
+        return org.springframework.security.core.userdetails.User.withUsername(user.getEmail())
+                .password(user.getPasswordHash()).authorities(authorities).disabled(!user.isActive()).build();
     }
 
     public java.util.Set<Permission> permissionsOf(User user) {

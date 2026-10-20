@@ -1,14 +1,19 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import type { Permission } from '@/types';
-import { can, canSeeSessions, homePath } from '@/lib/permissions';
+import { can, canSeeSessions, forcedPath, homePath } from '@/lib/permissions';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
   const location = useLocation();
 
+  const forced = useAuthStore((s) => forcedPath(s.user, location.pathname));
+
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  if (forced) {
+    return <Navigate to={forced} replace />;
   }
 
   return <>{children}</>;
@@ -18,7 +23,11 @@ export function PermissionRoute({ permission, children }: { permission: Permissi
   const allowed = useAuthStore((s) => can(s.user, permission));
   const home = useAuthStore((s) => homePath(s.user));
   const location = useLocation();
+  const forced = useAuthStore((s) => forcedPath(s.user, location.pathname));
 
+  if (forced) {
+    return <Navigate to={forced} replace />;
+  }
   if (!allowed) {
     return <Navigate to={home} state={{ from: location }} replace />;
   }
@@ -33,8 +42,13 @@ export function SessionsRoute({ children }: { children: React.ReactNode }) {
   const home = useAuthStore((s) => homePath(s.user));
   const location = useLocation();
 
+  const forced = useAuthStore((s) => forcedPath(s.user, location.pathname));
+
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  if (forced) {
+    return <Navigate to={forced} replace />;
   }
   if (!allowed) {
     return <Navigate to={home} replace />;

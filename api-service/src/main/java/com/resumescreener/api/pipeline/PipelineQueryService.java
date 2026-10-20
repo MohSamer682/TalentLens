@@ -207,7 +207,7 @@ public class PipelineQueryService {
                     case HR -> List.of(Role.HR_INTERVIEWER);
                     case MANAGEMENT -> List.of(Role.DEPARTMENT_DIRECTOR, Role.CEO, Role.CHAIRMAN);
                 };
-        return userRepository.findByRoleIn(roles).stream()
+        return userRepository.findByRoleInAndStatus(roles, com.resumescreener.common.user.UserStatus.ACTIVE).stream()
                 .map(u -> Map.of(
                         "id", u.getId(),
                         "name", u.getFullName(),

@@ -7,6 +7,7 @@ import {
   canSwitchScope,
   defaultScope,
   diffGrants,
+  forcedPath,
   homePath,
 } from './permissions';
 import type { Permission, User } from '@/types';
@@ -89,5 +90,17 @@ describe('defaultScope & canSwitchScope', () => {
     expect(defaultScope(user('ADMIN', ALL))).toBe('MINE');
     expect(canSwitchScope(user('ADMIN', ALL))).toBe(true);
     expect(defaultScope(user('RECRUITER', ['SESSION_RUN', 'CANDIDATE_REVIEW']))).toBe('MINE');
+  });
+});
+
+describe('forcedPath', () => {
+  it('sends a user with a temporary password to choose a new one', () => {
+    expect(forcedPath({ ...user('RECRUITER', ['SESSION_RUN']), mustChangePassword: true }, '/dashboard')).toBe('/profile/password');
+  });
+  it('lets them stay on the password page', () => {
+    expect(forcedPath({ ...user('RECRUITER', ['SESSION_RUN']), mustChangePassword: true }, '/profile/password')).toBeNull();
+  });
+  it('leaves everyone else alone', () => {
+    expect(forcedPath(user('RECRUITER', ['SESSION_RUN']), '/dashboard')).toBeNull();
   });
 });

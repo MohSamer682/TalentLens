@@ -3,6 +3,8 @@ export type ApiErrorCode =
   | 'AUTHENTICATION_FAILED'
   | 'ACCESS_DENIED'
   | 'NOT_FOUND'
+  | 'CONFLICT'
+  | 'PASSWORD_CHANGE_REQUIRED'
   | 'MINIO_UNAVAILABLE'
   | 'BATCH_WORKER_UNAVAILABLE'
   | 'LLM_CONFIGURATION_ERROR'
@@ -106,6 +108,46 @@ export interface User {
   createdAt: string;
   /** Only on the signed-in user (login, register, /auth/me) */
   permissions?: Permission[];
+  mustChangePassword?: boolean;
+}
+
+export type UserStatus = 'ACTIVE' | 'HIDDEN';
+
+export interface ProfileFields {
+  phone?: string;
+  headline?: string;
+  department?: string;
+  location?: string;
+  bio?: string;
+}
+
+/** A user with their profile, as the profile and admin user endpoints return it */
+export interface AdminUser extends ProfileFields {
+  id: string;
+  email: string;
+  fullName: string;
+  role: Role;
+  status: UserStatus;
+  mustChangePassword: boolean;
+  createdAt: string;
+  version: number;
+}
+
+export interface UserRow {
+  id: string;
+  email: string;
+  fullName: string;
+  role: Role;
+  status: UserStatus;
+  headline?: string;
+  createdAt: string;
+}
+
+export interface UserFormValues extends ProfileFields {
+  email: string;
+  fullName: string;
+  role: Role;
+  temporaryPassword?: string;
 }
 
 export interface RoleInfo {

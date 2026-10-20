@@ -8,6 +8,7 @@ import com.resumescreener.api.common.ApiResponse;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -126,6 +127,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException e) {
         return envelope(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported content type",
                 ApiErrorCode.VALIDATION_ERROR, safeDetails(e));
+    }
+
+    /** Two saves of the same version at once: the loser gets the same answer as a stale form. */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(OptimisticLockingFailureException e) {
+        log.info("Concurrent update lost: {}", e.toString());
+        return envelope(HttpStatus.CONFLICT, "Someone changed this profile while you were editing. Reload to see their changes.",
+                ApiErrorCode.CONFLICT, "The record was saved by another request");
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
