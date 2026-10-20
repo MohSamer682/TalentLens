@@ -1,9 +1,10 @@
 import { Calendar, Pencil, Trash2 } from 'lucide-react';
-import type { CandidateInterview, Role } from '@/types';
+import type { CandidateInterview, RescheduleRequest, Role } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { InterviewPlaceText } from '@/features/pipeline/InterviewPlace';
 import { KIND_LABEL } from '@/features/pipeline/pipeline';
 import { ROLE_LABEL, cn, formatRelativeDate } from '@/lib/utils';
+import { RescheduleRequestCard } from './RescheduleRequestCard';
 import { RECOMMENDATION_LABELS, formatStars, formatTimeRange } from './format';
 
 interface InterviewListProps {
@@ -11,9 +12,22 @@ interface InterviewListProps {
   canManage: boolean;
   onReschedule: (interview: CandidateInterview) => void;
   onCancel: (interviewId: string) => void;
+  requests?: RescheduleRequest[];
+  busy?: boolean;
+  onAcceptRequest?: (request: RescheduleRequest, scheduledStart: string) => void;
+  onDeclineRequest?: (request: RescheduleRequest, note: string) => void;
 }
 
-export function InterviewList({ interviews, canManage, onReschedule, onCancel }: InterviewListProps) {
+export function InterviewList({
+  interviews,
+  canManage,
+  onReschedule,
+  onCancel,
+  requests = [],
+  busy,
+  onAcceptRequest = () => {},
+  onDeclineRequest = () => {},
+}: InterviewListProps) {
   return (
   <div className="space-y-3">
     <h3 className="text-[15px] font-semibold text-ink">Interviews</h3>
@@ -25,6 +39,7 @@ export function InterviewList({ interviews, canManage, onReschedule, onCancel }:
           const isDone = item.status === 'COMPLETED';
           const isCancelled = item.status === 'CANCELLED';
           const isUpcoming = item.status === 'SCHEDULED';
+          const pending = isUpcoming ? requests.find((r) => r.interviewId === item.id && r.status === 'PENDING') : undefined;
 
           return (
             <div key={item.id} className="lift space-y-2.5 rounded-xl border border-line-strong bg-surface-raised p-4 transition-all">
@@ -68,6 +83,10 @@ export function InterviewList({ interviews, canManage, onReschedule, onCancel }:
                   <p className="mb-1 font-medium text-ink-muted">Submitted {formatRelativeDate(item.feedbackSubmittedAt || item.createdAt)}:</p>
                   <p className="whitespace-pre-wrap text-sm text-ink">{item.feedbackAssessment || 'No assessment written.'}</p>
                 </div>
+              )}
+
+              {pending && (
+                <RescheduleRequestCard request={pending} canManage={canManage} busy={busy} onAccept={onAcceptRequest} onDecline={onDeclineRequest} />
               )}
 
               {isUpcoming && (

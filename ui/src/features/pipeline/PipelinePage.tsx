@@ -10,6 +10,7 @@ import { Panel } from '@/components/ui/Card';
 import { Alert, Loader } from '@/components/ui/Feedback';
 import { Textarea } from '@/components/ui/Input';
 import { Segmented } from '@/components/ui/Segmented';
+import { Badge } from '@/components/ui/Badge';
 import { StageBadge } from '@/features/pipeline/StageBadge';
 import { MainLayout, PageHeader } from '@/layouts/MainLayout';
 import { STAGE_LABEL } from '@/features/pipeline/pipeline';
@@ -335,7 +336,10 @@ export default function Pipeline() {
                       {c.score != null ? formatScore(c.score) : '–'}
                     </td>
                     <td className="px-3 py-3">
-                      <StageBadge stage={c.stage} />
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <StageBadge stage={c.stage} />
+                        {c.rescheduleRequested && <Badge tone="warn">Reschedule requested</Badge>}
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-right font-mono">
                       <span className={cn(c.inStageDays >= 5 ? 'text-warn font-semibold' : 'text-ink-muted')}>
@@ -366,7 +370,10 @@ export default function Pipeline() {
                 </div>
                 <p className="text-xs text-ink-muted truncate">{c.sessionTitle}</p>
                 <div className="flex items-center justify-between pt-1">
-                  <StageBadge stage={c.stage} />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <StageBadge stage={c.stage} />
+                    {c.rescheduleRequested && <Badge tone="warn">Reschedule requested</Badge>}
+                  </div>
                   <span className={cn('text-xs font-mono', c.inStageDays >= 5 ? 'text-warn font-semibold' : 'text-ink-muted')}>
                     {c.inStageDays} days in stage
                   </span>

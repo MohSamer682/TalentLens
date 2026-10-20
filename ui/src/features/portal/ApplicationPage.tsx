@@ -15,10 +15,10 @@ export default function ApplicationPage() {
   const { id = '' } = useParams();
   const [view, setView] = useState<ApplicationView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
 
   useEffect(() => {
     let active = true;
-    setView(null);
     setError(null);
     portalApi
       .application(id)
@@ -30,7 +30,9 @@ export default function ApplicationPage() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, revision]);
+
+  useEffect(() => setView(null), [id]);
 
   return (
     <PortalLayout>
@@ -59,7 +61,7 @@ export default function ApplicationPage() {
                 <StageSteps steps={view.steps} />
               </Panel>
               {view.interviews.map((interview) => (
-                <InterviewCard key={interview.id} interview={interview} />
+                <InterviewCard key={interview.id} interview={interview} onChanged={() => setRevision((r) => r + 1)} />
               ))}
             </section>
 

@@ -16,6 +16,9 @@ public interface CandidateInterviewRepository extends JpaRepository<CandidateInt
     @Query("SELECT i FROM CandidateInterview i JOIN FETCH i.interviewer WHERE i.interviewer.id = :interviewerId ORDER BY i.scheduledStart ASC")
     List<CandidateInterview> findByInterviewerIdOrderByScheduledStartAsc(@Param("interviewerId") String interviewerId);
 
+    @Query("SELECT i.candidateId FROM CandidateInterview i WHERE i.id = :id")
+    java.util.Optional<String> findCandidateIdById(@Param("id") String id);
+
     List<CandidateInterview> findByCandidateIdAndStatus(String candidateId, InterviewStatus status);
     List<CandidateInterview> findByCandidateIdAndStatusOrderByScheduledStartAsc(String candidateId, InterviewStatus status);
 

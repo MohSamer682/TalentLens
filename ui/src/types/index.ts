@@ -341,6 +341,8 @@ export interface PipelineCandidate {
   offerUploadedById?: string;
   /** Who must act on the offer next; null when no approval is pending */
   offerStep?: 'DIRECTOR' | 'HR_CHIEF' | 'REJECTED' | null;
+  /** The candidate asked to move an interview and nobody has answered yet */
+  rescheduleRequested?: boolean;
 }
 
 export interface MyInterviewItem {
@@ -577,6 +579,31 @@ export interface PortalInterview {
   placeType: InterviewPlaceType;
   location: string | null;
   status: InterviewStatus;
+  /** The latest reschedule request on this interview, if the candidate ever made one */
+  reschedule: PortalReschedule | null;
+}
+
+export type RescheduleStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'WITHDRAWN';
+
+export interface PortalReschedule {
+  id: string;
+  status: RescheduleStatus;
+  proposedStarts: string[];
+  resolutionNote: string | null;
+  createdAt: string;
+}
+
+export interface RescheduleRequest {
+  id: string;
+  interviewId: string;
+  status: RescheduleStatus;
+  reason: string;
+  proposedStarts: string[];
+  resolutionNote: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  version: number;
+  requestedByName: string;
 }
 
 export interface ApplicationSummary {
