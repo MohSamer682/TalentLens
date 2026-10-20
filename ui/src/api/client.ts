@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/authStore';
 import type {
+  ApplicationSummary,
+  ApplicationView,
   InvitePreview,
   IssuedInvite,
   PortalAccess,
@@ -344,6 +346,8 @@ export const portalApi = {
   preview: (token: string) => api.post<InvitePreview>('/portal/invites/preview', { token }),
   accept: (token: string, password: string) => api.post<AuthResponse>('/portal/invites/accept', { token, password }),
   claim: (token: string) => api.post<null>('/portal/invites/claim', { token }),
+  applications: (page = 0) => api.get<Page<ApplicationSummary>>('/portal/applications', { params: { page, size: 20 } }),
+  application: (id: string) => api.get<ApplicationView>(`/portal/applications/${encodeURIComponent(id)}`),
 };
 
 export const adminApi = {

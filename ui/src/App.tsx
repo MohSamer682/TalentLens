@@ -22,7 +22,8 @@ const Analytics = lazy(() => import('@/features/analytics/AnalyticsPage'));
 const ProfilePage = lazy(() => import('@/features/profile/ProfilePage'));
 const PasswordPage = lazy(() => import('@/features/profile/PasswordPage'));
 const InvitePage = lazy(() => import('@/features/portal/InvitePage'));
-const PortalHome = lazy(() => import('@/features/portal/PortalHome'));
+const ApplicationsPage = lazy(() => import('@/features/portal/ApplicationsPage'));
+const ApplicationPage = lazy(() => import('@/features/portal/ApplicationPage'));
 
 function RootRedirect() {
   const user = useAuthStore((s) => s.user);
@@ -45,7 +46,15 @@ export default function App() {
         path="/portal"
         element={
           <CandidateRoute>
-            <PortalHome />
+            <ApplicationsPage />
+          </CandidateRoute>
+        }
+      />
+      <Route
+        path="/portal/applications/:id"
+        element={
+          <CandidateRoute>
+            <ApplicationPage />
           </CandidateRoute>
         }
       />
