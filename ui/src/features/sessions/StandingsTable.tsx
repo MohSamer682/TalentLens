@@ -3,8 +3,8 @@ import { ChevronRight } from 'lucide-react';
 import type { CandidateResultDto, Weights } from '@/types';
 import { DIMENSIONS, cn, formatScore } from '@/lib/utils';
 import { stagger } from '@/lib/motion';
-import { STAGE_LABEL, madeTheCut } from '@/lib/pipeline';
-import { StageBadge } from '@/components/StageBadge';
+import { STAGE_LABEL, madeTheCut } from '@/features/pipeline/pipeline';
+import { StageBadge } from '@/features/pipeline/StageBadge';
 
 /**
  * The ranking, set like a league table. Candidates who made the cut (shortlisted or any later stage) get

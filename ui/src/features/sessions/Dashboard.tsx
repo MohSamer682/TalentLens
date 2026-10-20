@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Search } from 'lucide-react';
 import { apiErrorMessage, sessionsApi } from '@/api/client';
 import type { ScreeningSession } from '@/types';
-import { SessionRow } from '@/components/SessionRow';
+import { SessionRow } from '@/features/sessions/SessionRow';
 import { Button, buttonVariants } from '@/components/ui/Button';
 import { Alert, SkeletonRows } from '@/components/ui/Feedback';
 import { Segmented } from '@/components/ui/Segmented';
@@ -11,7 +11,7 @@ import { Panel } from '@/components/ui/Card';
 import { MainLayout, PageHeader } from '@/layouts/MainLayout';
 import { cn } from '@/lib/utils';
 import { canSwitchScope, defaultScope, useCan } from '@/lib/permissions';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '@/features/auth/authStore';
 
 type Filter = 'ALL' | ScreeningSession['status'];
 

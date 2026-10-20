@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { apiErrorMessage, authApi } from '@/api/client';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '@/features/auth/authStore';
 import { Field, Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Feedback';

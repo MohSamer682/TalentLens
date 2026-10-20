@@ -6,15 +6,15 @@ import { z } from 'zod';
 import { ArrowLeft, ArrowRight, Check, FileUp, X } from 'lucide-react';
 import { apiErrorMessage, sessionsApi } from '@/api/client';
 import type { ScreeningSession, Weights } from '@/types';
-import { WeightSliders } from '@/components/WeightSliders';
+import { WeightSliders } from '@/features/sessions/WeightSliders';
 import { Field, Input, Textarea } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Card';
 import { Alert, Loader } from '@/components/ui/Feedback';
 import { MainLayout } from '@/layouts/MainLayout';
 import { DEFAULT_WEIGHTS, cn } from '@/lib/utils';
-import { type FileOutcome, uploadInChunks } from '@/lib/uploadQueue';
-import { ResumeList } from '@/components/ResumeList';
+import { type FileOutcome, uploadInChunks } from '@/features/sessions/uploadQueue';
+import { ResumeList } from '@/features/sessions/ResumeList';
 
 const sessionSchema = z.object({
   title: z.string().trim().min(1, 'Give the session a title, usually the opening it is for'),

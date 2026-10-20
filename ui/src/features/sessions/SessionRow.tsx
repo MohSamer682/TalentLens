@@ -7,7 +7,7 @@ import { StatusBadge } from '@/components/ui/Badge';
 import { ConfirmButton } from '@/components/ui/Feedback';
 import { formatRelativeDate, formatDate } from '@/lib/utils';
 import { stagger } from '@/lib/motion';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '@/features/auth/authStore';
 import { canChangeSession } from '@/lib/permissions';
 
 /** One session in the dashboard list. Polls its own progress while scoring and asks the list to reload when it ends. */

@@ -1,19 +1,8 @@
 // Everything about one candidate after the shortlist: interview plan, interviews, offer and joining.
 import { useEffect, useState } from 'react';
-import {
-  Calendar,
-  CheckCircle2,
-  Download,
-  FileText,
-  Pencil,
-  Plus,
-  Trash2,
-  Upload,
-  UserCheck,
-  XCircle,
-} from 'lucide-react';
+import { Plus, UserCheck } from 'lucide-react';
 import { apiErrorMessage, pipelineApi } from '@/api/client';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '@/features/auth/authStore';
 import { hasPermission } from '@/lib/permissions';
 import type {
   CandidateInterview,
@@ -21,7 +10,6 @@ import type {
   CandidateStageEvent,
   InterviewKind,
   InterviewPlaceType,
-  InterviewRecommendation,
   ReviewStatus,
   Role,
 } from '@/types';
@@ -31,56 +19,23 @@ import { Panel } from '@/components/ui/Card';
 import { Alert, Loader } from '@/components/ui/Feedback';
 import { Input, Textarea } from '@/components/ui/Input';
 import { Segmented } from '@/components/ui/Segmented';
-import { InterviewPlaceText, PlaceFields, placeError } from '@/components/InterviewPlace';
-import { StageBadge } from '@/components/StageBadge';
-import { KIND_LABEL, KIND_ORDER, STAGE_LABEL, STAGE_ORDER, buildTrack, settledStage } from '@/lib/pipeline';
-import { ROLE_LABEL, cn, formatDate, formatRelativeDate } from '@/lib/utils';
+import { PlaceFields, placeError } from '@/features/pipeline/InterviewPlace';
+import { StageBadge } from '@/features/pipeline/StageBadge';
+import { KIND_LABEL, KIND_ORDER, STAGE_ORDER, buildTrack, settledStage } from '@/features/pipeline/pipeline';
+import { InterviewList } from './hiring/InterviewList';
+import { OfferFollowUp } from './hiring/OfferFollowUp';
+import { OfferSection } from './hiring/OfferSection';
+import { StageTrack } from './hiring/StageTrack';
+import { Timeline } from './hiring/Timeline';
+import { toLocalInput } from './hiring/format';
+import { ROLE_LABEL, cn } from '@/lib/utils';
 
-const RECOMMENDATION_LABELS: Record<InterviewRecommendation, { label: string; tone: string }> = {
-  STRONG_HIRE: { label: 'Strong hire', tone: 'bg-success/15 text-success' },
-  HIRE: { label: 'Hire', tone: 'bg-success/15 text-success' },
-  NO_HIRE: { label: 'No hire', tone: 'bg-warn/15 text-warn' },
-  STRONG_NO_HIRE: { label: 'Strong no hire', tone: 'bg-danger/15 text-danger' },
-};
+
 
 const selectClass =
   'w-full h-10 rounded-md border border-line bg-surface dark:bg-sunken px-3 text-sm text-ink hover:border-line-strong focus:border-accent-text focus:outline-none focus:ring-2 focus:ring-accent-text/25';
 
-function formatStars(rating: number | null): string {
-  if (!rating) return '';
-  const full = Math.min(5, Math.max(1, rating));
-  return '★'.repeat(full) + '☆'.repeat(5 - full) + ` ${full}/5`;
-}
 
-function formatTimeRange(startIso: string, durationMinutes: number): string {
-  try {
-    const start = new Date(startIso);
-    const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
-    const dateStr = start.toLocaleDateString('en-GB', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    });
-    const startTime = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const endTime = end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    return `${dateStr}, ${startTime} – ${endTime}`;
-  } catch {
-    return startIso;
-  }
-}
-
-/** datetime-local wants the viewer's local clock, not UTC. */
-function toLocalInput(iso: string): string {
-  const d = new Date(iso);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-
-function eventLabel(stage: string): string {
-  if (stage in STAGE_LABEL) return STAGE_LABEL[stage as ReviewStatus];
-  const words = stage.toLowerCase().replace(/_/g, ' ');
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
 
 type Interviewer = { id: string; name: string; email: string; role: Role };
 
@@ -444,38 +399,7 @@ export function HiringPipeline({
 
       {error && <Alert>{error}</Alert>}
 
-      {/* Status line: follows the interviews the recruiter planned */}
-      <nav aria-label="Pipeline stages" className="overflow-x-auto pb-1">
-        <ol className="flex min-w-max items-center gap-2">
-          {track.map((s, idx) => (
-            <li key={s.key} className="flex items-center">
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                  s.state === 'done' && 'bg-sunken font-semibold text-ink',
-                  s.state === 'current' && 'border border-accent-text bg-sunken font-semibold text-ink ring-1 ring-accent-text/20',
-                  s.state === 'todo' && 'border border-dashed border-line-strong text-ink-muted'
-                )}
-                {...(s.state === 'current' ? { 'aria-current': 'step' } : {})}
-              >
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    'size-1.5 shrink-0 rounded-full',
-                    s.key === 'SHORTLISTED' ? 'bg-mark' : s.state === 'current' ? 'bg-accent-bar' : s.state === 'done' ? 'bg-ink-muted' : 'bg-transparent'
-                  )}
-                />
-                {s.label}
-              </span>
-              {idx < track.length - 1 && (
-                <span aria-hidden="true" className="mx-1 text-xs text-ink-muted/50">
-                  ›
-                </span>
-              )}
-            </li>
-          ))}
-        </ol>
-      </nav>
+      <StageTrack track={track} />
 
       {/* Interview plan */}
       {interviewing && (
@@ -715,388 +639,64 @@ export function HiringPipeline({
         </form>
       )}
 
-      {/* Interviews List */}
-      <div className="space-y-3">
-        <h3 className="text-[15px] font-semibold text-ink">Interviews</h3>
-        {interviews.length === 0 ? (
-          <p className="text-sm italic text-ink-muted">No interviews scheduled yet.</p>
-        ) : (
-          <div className="space-y-3">
-            {interviews.map((item) => {
-              const isDone = item.status === 'COMPLETED';
-              const isCancelled = item.status === 'CANCELLED';
-              const isUpcoming = item.status === 'SCHEDULED';
+      <InterviewList
+        interviews={interviews}
+        canManage={canManage}
+        onReschedule={(item) => {
+          setReschedulingInterview(item);
+          setRescheduleStart(toLocalInput(item.scheduledStart));
+          setRescheduleDuration(item.durationMinutes);
+          setReschedulePlaceType(item.placeType ?? 'HQ');
+          setRescheduleLocation(item.location || '');
+        }}
+        onCancel={handleCancelInterview}
+      />
 
-              return (
-                <div key={item.id} className="lift space-y-2.5 rounded-xl border border-line-strong bg-surface-raised p-4 transition-all">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-sunken px-2.5 py-0.5 text-xs font-semibold text-ink-muted">
-                        {KIND_LABEL[item.kind] ?? item.kind}
-                      </span>
-                      <span className="text-sm font-semibold text-ink">{item.interviewerName}</span>
-                      {item.interviewerRole && item.kind === 'MANAGEMENT' && (
-                        <span className="text-xs text-ink-muted">{ROLE_LABEL[item.interviewerRole as Role] ?? item.interviewerRole}</span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {isDone && item.recommendation && (
-                        <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', RECOMMENDATION_LABELS[item.recommendation]?.tone)}>
-                          {RECOMMENDATION_LABELS[item.recommendation]?.label}
-                        </span>
-                      )}
-                      {isDone && item.rating && (
-                        <span className="font-mono text-xs font-semibold text-ink" aria-label={`${item.rating} out of 5 stars`}>
-                          {formatStars(item.rating)}
-                        </span>
-                      )}
-                      {isCancelled && <span className="rounded-full bg-danger/15 px-2.5 py-0.5 text-xs font-semibold text-danger">Cancelled</span>}
-                      {isUpcoming && <span className="rounded-full bg-info/15 px-2.5 py-0.5 text-xs font-semibold text-info">Scheduled</span>}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
-                    <span className="inline-flex items-center gap-1">
-                      <Calendar className="size-3.5" aria-hidden="true" />
-                      {formatTimeRange(item.scheduledStart, item.durationMinutes)}
-                    </span>
-                    <InterviewPlaceText placeType={item.placeType} location={item.location} />
-                  </div>
-
-                  {isDone && (
-                    <div className="mt-2 rounded-lg border border-line bg-surface p-3 text-xs">
-                      <p className="mb-1 font-medium text-ink-muted">Submitted {formatRelativeDate(item.feedbackSubmittedAt || item.createdAt)}:</p>
-                      <p className="whitespace-pre-wrap text-sm text-ink">{item.feedbackAssessment || 'No assessment written.'}</p>
-                    </div>
-                  )}
-
-                  {isUpcoming && (
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-xs text-ink-muted">Waiting for the interview</span>
-                      {canManage && (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => {
-                              setReschedulingInterview(item);
-                              setRescheduleStart(toLocalInput(item.scheduledStart));
-                              setRescheduleDuration(item.durationMinutes);
-                              setReschedulePlaceType(item.placeType ?? 'HQ');
-                              setRescheduleLocation(item.location || '');
-                            }}
-                          >
-                            <Pencil className="size-3.5" aria-hidden="true" />
-                            Reschedule
-                          </Button>
-                          <Button variant="secondary" size="sm" className="text-danger hover:border-danger" onClick={() => handleCancelInterview(item.id)}>
-                            <Trash2 className="size-3.5" aria-hidden="true" />
-                            Cancel
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Offer */}
       {(stageIdx >= STAGE_ORDER.OFFER || offer) && (
-        <div className="space-y-3">
-          <h3 className="text-[15px] font-semibold text-ink">Job offer</h3>
-
-          {offer ? (
-            <div className="lift space-y-3 rounded-xl border border-line-strong bg-surface-raised p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-lg border border-line bg-surface">
-                    <FileText className="size-5 text-accent-text" aria-hidden="true" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-ink">{offer.fileName}</h4>
-                    <p className="text-xs text-ink-muted">
-                      Uploaded by {offer.uploadedByName} · {formatRelativeDate(offer.uploadedAt)}
-                    </p>
-                  </div>
-                </div>
-
-                {offer.isApproved ? (
-                  <Badge tone="success">
-                    <CheckCircle2 className="size-3.5" aria-hidden="true" />
-                    Offer approved
-                  </Badge>
-                ) : rejected ? (
-                  <Badge tone="danger">Rejected</Badge>
-                ) : (
-                  <Badge tone="warn">{directorOpen ? 'Waiting for the department director' : 'Waiting for the HR chief'}</Badge>
-                )}
-              </div>
-
-              {/* Who has to sign, in order */}
-              <ol className="space-y-1.5 text-sm" aria-label="Approvals">
-                {offer.requiresDirectorApproval && (
-                  <li className="flex items-center gap-2">
-                    <span
-                      aria-hidden="true"
-                      className={cn('size-2 rounded-full', offer.directorApprovedAt ? 'bg-success' : 'border border-line-strong')}
-                    />
-                    <span className="text-ink">Department director</span>
-                    <span className="text-ink-muted">
-                      {offer.directorApprovedAt
-                        ? `${offer.directorApprovedByName} · ${formatRelativeDate(offer.directorApprovedAt)}`
-                        : 'waiting'}
-                    </span>
-                  </li>
-                )}
-                <li className="flex items-center gap-2">
-                  <span aria-hidden="true" className={cn('size-2 rounded-full', offer.isApproved ? 'bg-success' : 'border border-line-strong')} />
-                  <span className="text-ink">HR chief</span>
-                  <span className="text-ink-muted">
-                    {offer.isApproved
-                      ? `${offer.approvedByName} · ${formatRelativeDate(offer.approvedAt || '')}`
-                      : directorOpen
-                      ? 'after the director'
-                      : 'waiting'}
-                  </span>
-                </li>
-              </ol>
-
-              {rejected && (
-                <div className="rounded-lg border border-danger/40 bg-danger-soft p-3 text-sm" role="status">
-                  <p className="font-semibold text-danger">
-                    Rejected by {offer.rejectedByName} · {formatRelativeDate(offer.rejectedAt || '')}
-                  </p>
-                  <p className="mt-1 whitespace-pre-wrap text-ink">{offer.rejectionNote || 'No reason given.'}</p>
-                  {canManage && <p className="mt-1 text-ink-muted">Upload a revised offer to start the approvals again.</p>}
-                </div>
-              )}
-
-              <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
-                <Button variant="secondary" size="sm" onClick={handleDownloadOffer}>
-                  <Download className="size-3.5" aria-hidden="true" />
-                  Download
-                </Button>
-
-                {!offer.isApproved && canManage && currentStage === 'OFFER' && (
-                  <>
-                    <label className="inline-flex items-center gap-2 text-xs text-ink">
-                      <input
-                        type="checkbox"
-                        className="size-4 accent-[rgb(var(--accent-text))]"
-                        checked={requireDirector}
-                        onChange={(e) => setRequireDirector(e.target.checked)}
-                      />
-                      Department director approves first
-                    </label>
-                    <label className="cursor-pointer">
-                      <input type="file" accept="application/pdf" onChange={handleFileUpload} className="sr-only" disabled={uploadingOffer} />
-                      <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-3 text-[13px] font-semibold text-ink transition-colors hover:bg-sunken">
-                        <Upload className="size-3.5" aria-hidden="true" />
-                        {uploadingOffer ? 'Uploading…' : rejected ? 'Upload revised PDF' : 'Replace PDF'}
-                      </span>
-                    </label>
-                  </>
-                )}
-
-                {myStepOpen && (
-                  <>
-                    {confirmApprove ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-ink">Approve the offer for {candidateName}? This can't be undone.</span>
-                        <Button variant="primary" size="sm" onClick={handleApproveOffer} disabled={approvingOffer}>
-                          {approvingOffer ? 'Approving…' : 'Confirm approve'}
-                        </Button>
-                        <Button variant="secondary" size="sm" onClick={() => setConfirmApprove(false)}>
-                          Cancel
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <Button variant="primary" size="sm" onClick={() => setConfirmApprove(true)} disabled={approvingOffer}>
-                          <CheckCircle2 className="size-3.5" aria-hidden="true" />
-                          {directorOpen ? 'Approve as director' : 'Approve offer'}
-                        </Button>
-                        <Button variant="danger" size="sm" onClick={() => setRejecting((r) => !r)} aria-expanded={rejecting}>
-                          <XCircle className="size-3.5" aria-hidden="true" />
-                          Reject
-                        </Button>
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {rejecting && myStepOpen && (
-                <div className="space-y-2 border-t border-line pt-3">
-                  <label htmlFor="reject-note" className="block text-sm font-semibold text-ink">
-                    Why are you rejecting it? <span className="font-normal text-ink-muted">(optional)</span>
-                  </label>
-                  <Textarea
-                    id="reject-note"
-                    rows={2}
-                    maxLength={1000}
-                    value={rejectNote}
-                    onChange={(e) => setRejectNote(e.target.value)}
-                    placeholder="Tell the recruiter what to change. You can leave this empty."
-                    className="min-h-[64px]"
-                  />
-                  <div className="flex gap-2">
-                    <Button variant="dangerSolid" size="sm" onClick={handleRejectOffer} disabled={submittingReject}>
-                      {submittingReject ? 'Rejecting…' : 'Reject offer'}
-                    </Button>
-                    <Button variant="secondary" size="sm" onClick={() => setRejecting(false)} disabled={submittingReject}>
-                      Keep reviewing
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            canManage &&
-            currentStage === 'OFFER' && (
-              <div className="space-y-3 rounded-xl border border-dashed border-line-strong p-6 text-center">
-                <FileText className="mx-auto size-8 text-ink-muted" aria-hidden="true" />
-                <h4 className="text-sm font-semibold text-ink">No offer letter uploaded yet</h4>
-                <p className="mx-auto max-w-sm text-xs text-ink-muted">
-                  Upload a PDF offer letter (up to 10 MB). The HR chief approves it. Tick the box if the department director must sign first.
-                </p>
-                <label className="mx-auto inline-flex items-center gap-2 text-sm text-ink">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-[rgb(var(--accent-text))]"
-                    checked={requireDirector}
-                    onChange={(e) => setRequireDirector(e.target.checked)}
-                  />
-                  Department director approves first
-                </label>
-                <div>
-                  <label className="cursor-pointer">
-                    <input type="file" accept="application/pdf" onChange={handleFileUpload} className="sr-only" disabled={uploadingOffer} />
-                    <span className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-xs font-semibold text-accent-ink transition-opacity hover:opacity-90">
-                      <Upload className="size-4" aria-hidden="true" />
-                      {uploadingOffer ? 'Uploading…' : 'Upload offer PDF'}
-                    </span>
-                  </label>
-                </div>
-              </div>
-            )
-          )}
-        </div>
+        <OfferSection
+          offer={offer}
+          currentStage={currentStage}
+          candidateName={candidateName}
+          canManage={canManage}
+          directorOpen={directorOpen}
+          rejected={rejected}
+          myStepOpen={myStepOpen}
+          requireDirector={requireDirector}
+          onRequireDirectorChange={setRequireDirector}
+          uploadingOffer={uploadingOffer}
+          onUpload={handleFileUpload}
+          onDownload={handleDownloadOffer}
+          confirmApprove={confirmApprove}
+          onConfirmApproveChange={setConfirmApprove}
+          approvingOffer={approvingOffer}
+          onApprove={handleApproveOffer}
+          rejecting={rejecting}
+          onRejectingChange={setRejecting}
+          rejectNote={rejectNote}
+          onRejectNoteChange={setRejectNote}
+          submittingReject={submittingReject}
+          onReject={handleRejectOffer}
+        />
       )}
 
-      {/* After the approvals: sending the offer and joining */}
       {stageIdx >= STAGE_ORDER.OFFER_APPROVED && offer && (
-        <div className="space-y-3">
-          <h3 className="text-[15px] font-semibold text-ink">Offer and joining</h3>
-
-          <div className="lift space-y-4 rounded-xl border border-line-strong bg-surface-raised p-4">
-            {currentStage === 'OFFER_APPROVED' && (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-ink">The offer is approved. Send it to {candidateName}, then record the answer.</p>
-                {canManage && (
-                  <Button variant="primary" onClick={handleOfferSent} disabled={busy}>
-                    Mark offer as sent
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {currentStage === 'OFFER_SENT' && (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-ink">
-                  Offer sent {offer.sentAt ? formatRelativeDate(offer.sentAt).toLowerCase() : ''}. What did {candidateName} answer?
-                </p>
-                {canManage && (
-                  <div className="flex gap-2">
-                    <Button variant="primary" onClick={() => handleAnswer(true)} disabled={busy}>
-                      Accepted
-                    </Button>
-                    <Button variant="secondary" onClick={() => handleAnswer(false)} disabled={busy}>
-                      Declined
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {currentStage === 'DECLINED' && (
-              <p className="text-sm text-ink">
-                {candidateName} declined the offer{offer.respondedAt ? ` ${formatRelativeDate(offer.respondedAt).toLowerCase()}` : ''}.
-              </p>
-            )}
-
-            {(currentStage === 'ACCEPTED' || currentStage === 'JOINING_SET') &&
-              (canManage ? (
-                <form onSubmit={handleSaveJoining} className="space-y-3">
-                  <p className="text-sm text-ink">
-                    {candidateName} accepted{offer.respondedAt ? ` ${formatRelativeDate(offer.respondedAt).toLowerCase()}` : ''}. Set the joining date and any details.
-                  </p>
-                  <div className="space-y-1.5">
-                    <label htmlFor="joining-date" className="block text-sm font-semibold">
-                      Joining date
-                    </label>
-                    <Input id="joining-date" type="date" value={joiningDate} onChange={(e) => setJoiningDate(e.target.value)} required className="sm:max-w-[220px]" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label htmlFor="joining-notes" className="block text-sm font-semibold">
-                      Notes or details <span className="font-normal text-ink-muted">(optional)</span>
-                    </label>
-                    <Textarea
-                      id="joining-notes"
-                      rows={3}
-                      maxLength={2000}
-                      value={joiningNotes}
-                      onChange={(e) => setJoiningNotes(e.target.value)}
-                      placeholder="Where they sit, equipment, who greets them…"
-                    />
-                  </div>
-                  <Button type="submit" variant="primary" disabled={busy || !joiningDate}>
-                    {busy ? 'Saving…' : currentStage === 'JOINING_SET' ? 'Update joining details' : 'Save joining details'}
-                  </Button>
-                </form>
-              ) : (
-                currentStage === 'JOINING_SET' && (
-                  <p className="text-sm text-ink">
-                    Joining {offer.joiningDate ? formatDate(offer.joiningDate) : ''}.
-                    {offer.joiningNotes ? ` ${offer.joiningNotes}` : ''}
-                  </p>
-                )
-              ))}
-          </div>
-        </div>
+        <OfferFollowUp
+          offer={offer}
+          currentStage={currentStage}
+          candidateName={candidateName}
+          canManage={canManage}
+          busy={busy}
+          joiningDate={joiningDate}
+          joiningNotes={joiningNotes}
+          onJoiningDateChange={setJoiningDate}
+          onJoiningNotesChange={setJoiningNotes}
+          onOfferSent={handleOfferSent}
+          onAnswer={handleAnswer}
+          onSaveJoining={handleSaveJoining}
+        />
       )}
 
-      {/* Stage Timeline */}
-      <div className="space-y-3 border-t border-line pt-4">
-        <h3 className="text-[15px] font-semibold text-ink">Timeline</h3>
-        {timeline.length === 0 ? (
-          <p className="text-sm italic text-ink-muted">No stage events recorded yet.</p>
-        ) : (
-          <ol className="relative ml-2 space-y-4 border-l-2 border-line pl-4">
-            {timeline.map((evt) => {
-              const isShortlisted = evt.stage === 'SHORTLISTED';
-              return (
-                <li key={evt.id} className="relative">
-                  <span aria-hidden="true" className={cn('absolute -left-[21px] top-1 size-2 rounded-full', isShortlisted ? 'bg-mark' : 'bg-ink-muted')} />
-                  <div className="text-xs">
-                    <span className={cn('font-semibold', isShortlisted ? 'text-mark-text' : 'text-ink')}>{eventLabel(evt.stage)}</span>
-                    <span className="text-ink-muted">
-                      {' '}
-                      · {evt.summary || 'Stage updated'}
-                      {evt.actorName ? `, by ${evt.actorName}` : ''} · {formatRelativeDate(evt.createdAt)}
-                    </span>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </div>
+      <Timeline timeline={timeline} />
     </Panel>
   );
 }

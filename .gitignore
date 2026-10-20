@@ -36,3 +36,8 @@ CLAUDE.md
 AGENTS.md
 GEMINI.md
 .cursorrules
+
+# Tool caches and exports
+.vite/
+.impeccable/
+skills-export/

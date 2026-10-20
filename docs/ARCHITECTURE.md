@@ -19,7 +19,7 @@ Three deployables plus one shared library, all talking through one Postgres data
 | `common` | feature packages: `user`, `session` (aggregate: session, weights, candidates, scores, jobs), `audit`, `llm` | Shared by both services. Owns the schema. Each package holds its entities, repositories, enums and contract DTOs. |
 | `api-service` | controller → service → repository | Packages by feature (`auth`, `session`, `upload`, `candidate`, `batch`, `admin`, `analytics`, `audit`, `llm`). Uniform `ApiResponse` envelope, typed error codes, request-id tracing, audit events. |
 | `batch-worker` | controller → `JobService` → `CandidateProcessingService` → `LlmClient` / `PdfTextExtractor` / `ExcelReportGenerator` | `@Async` pool (2–4 threads, queue 25). Resilience4j retry and rate limit on the LLM call. |
-| `ui` | pages → api client → zustand store | Vite, Tailwind, typed API client. |
+| `ui` | `features/<name>` (pages + their components + helpers) → `api/client` → zustand store in `features/auth` | Vite, Tailwind, typed API client. Features: `auth`, `sessions`, `candidates`, `pipeline`, `analytics`, `admin`. Shared: `components/ui`, `layouts`, `lib`, `types`. |
 
 ## What is solid
 

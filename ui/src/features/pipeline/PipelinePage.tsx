@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, Download, FileText, Loader2, XCircle } from 'lucide-react';
 import { apiErrorMessage, pipelineApi } from '@/api/client';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '@/features/auth/authStore';
 import { hasPermission } from '@/lib/permissions';
 import type { PipelineCandidate, ReviewStatus } from '@/types';
 import { Button } from '@/components/ui/Button';
@@ -10,9 +10,9 @@ import { Panel } from '@/components/ui/Card';
 import { Alert, Loader } from '@/components/ui/Feedback';
 import { Textarea } from '@/components/ui/Input';
 import { Segmented } from '@/components/ui/Segmented';
-import { StageBadge } from '@/components/StageBadge';
+import { StageBadge } from '@/features/pipeline/StageBadge';
 import { MainLayout, PageHeader } from '@/layouts/MainLayout';
-import { STAGE_LABEL } from '@/lib/pipeline';
+import { STAGE_LABEL } from '@/features/pipeline/pipeline';
 import { cn, formatScore } from '@/lib/utils';
 
 const FILTER_STAGES: ReviewStatus[] = [

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Lock } from 'lucide-react';
 import { adminApi, apiErrorMessage } from '@/api/client';
 import type { Permission, Role, RolesCatalog } from '@/types';
-import { AdminTabs } from '@/components/AdminTabs';
+import { AdminTabs } from '@/features/admin/AdminTabs';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Card';
 import { Alert, SkeletonRows } from '@/components/ui/Feedback';
