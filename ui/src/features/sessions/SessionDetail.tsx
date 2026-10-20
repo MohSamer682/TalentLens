@@ -12,6 +12,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { StandingsTable } from '@/features/sessions/StandingsTable';
 import { ResumeList } from '@/features/sessions/ResumeList';
 import { MainLayout, PageHeader } from '@/layouts/MainLayout';
+import { JobSummary } from '@/features/sessions/JobSummary';
 import { DIMENSIONS, formatDate } from '@/lib/utils';
 import { toggle, toggleAll } from '@/features/candidates/selection';
 import { Segmented } from '@/components/ui/Segmented';
@@ -255,6 +256,8 @@ export default function SessionDetail() {
           </>
         }
       />
+
+      {session.job && <JobSummary job={session.job} />}
 
       {actionError && <Alert className="mb-4">{actionError}</Alert>}
       {notice && (
