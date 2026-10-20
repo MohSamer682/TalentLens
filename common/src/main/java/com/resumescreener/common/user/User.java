@@ -35,10 +35,52 @@ public class User {
     @Column(nullable = false)
     private Instant createdAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private UserStatus status = UserStatus.ACTIVE;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean mustChangePassword = false;
+
+    private Instant updatedAt;
+
+    @Version
+    private Long version;
+
+    public boolean isActive() {
+        return status == UserStatus.ACTIVE;
+    }
+
+    public void hide() {
+        status = UserStatus.HIDDEN;
+    }
+
+    public void unhide() {
+        status = UserStatus.ACTIVE;
+    }
+
+    /** An admin-set password is temporary: the user must choose their own on next sign-in. */
+    public void resetPassword(String temporaryHash) {
+        passwordHash = temporaryHash;
+        mustChangePassword = true;
+    }
+
+    public void changePassword(String hash) {
+        passwordHash = hash;
+        mustChangePassword = false;
+    }
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {
             createdAt = Instant.now();
         }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        updatedAt = Instant.now();
     }
 }
