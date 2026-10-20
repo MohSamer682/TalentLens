@@ -9,7 +9,10 @@ import com.resumescreener.common.audit.*;
 import com.resumescreener.common.session.*;
 import com.resumescreener.common.user.*;
 import com.resumescreener.common.session.SessionStatus;
+import com.resumescreener.api.jobs.JobDetailsMapper;
+import jakarta.validation.groups.Default;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -30,9 +33,9 @@ public class SessionController {
     @PostMapping
     @PreAuthorize("hasAuthority('SESSION_RUN')")
     public ResponseEntity<ApiResponse<SessionResponse>> createSession(
-            @jakarta.validation.Valid @RequestBody CreateSessionRequest request, Authentication auth) {
+            @Validated({OnCreate.class, Default.class}) @RequestBody CreateSessionRequest request, Authentication auth) {
         ScreeningSession session = sessionService.createSession(request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.success("Session created", mapToResponse(session)));
+        return ResponseEntity.ok(ApiResponse.success("Session created", mapToResponse(session, true)));
     }
 
     @GetMapping
@@ -41,7 +44,7 @@ public class SessionController {
             Pageable pageable, @RequestParam(defaultValue = "false") boolean everyone, Authentication auth) {
         Page<SessionResponse> data = sessionService.getSessions(auth.getName(), everyone, pageable)
                 .map(s -> {
-                    SessionResponse r = mapToResponse(s);
+                    SessionResponse r = mapToResponse(s, false);
                     if (everyone) r.setOwnerName(s.getUser().getFullName());
                     return r;
                 });
@@ -52,7 +55,7 @@ public class SessionController {
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<SessionResponse>> getSession(
             @PathVariable String id, Authentication auth) {
-        SessionResponse data = mapToResponse(sessionService.getSession(id, auth.getName()));
+        SessionResponse data = mapToResponse(sessionService.getSession(id, auth.getName()), true);
         data.setLlm(llmStatusClient.getStatus());
         return ResponseEntity.ok(ApiResponse.success("Session loaded", data));
     }
@@ -60,8 +63,8 @@ public class SessionController {
     @PatchMapping("/{id}")
     @PreAuthorize("hasAuthority('SESSION_RUN')")
     public ResponseEntity<ApiResponse<SessionResponse>> updateSession(
-            @PathVariable String id, @RequestBody CreateSessionRequest request, Authentication auth) {
-        SessionResponse data = mapToResponse(sessionService.updateSession(id, request, auth.getName()));
+            @PathVariable String id, @Validated @RequestBody CreateSessionRequest request, Authentication auth) {
+        SessionResponse data = mapToResponse(sessionService.updateSession(id, request, auth.getName()), true);
         return ResponseEntity.ok(ApiResponse.success("Session updated", data));
     }
 
@@ -85,7 +88,7 @@ public class SessionController {
         return ResponseEntity.ok(ApiResponse.success("Screening cancelled", data));
     }
 
-    private SessionResponse mapToResponse(ScreeningSession session) {
+    private SessionResponse mapToResponse(ScreeningSession session, boolean withSkills) {
         var weights = session.getWeights();
         WeightsDto weightsDto = null;
         if (weights != null) {
@@ -102,6 +105,7 @@ public class SessionController {
                 weightsDto, count, session.getLastErrorMessage(), session.getReportFileKey());
         // getId on the lazy owner reads the foreign key, so this never touches the users table
         if (session.getUser() != null) response.setOwnerId(session.getUser().getId());
+        response.setJob(JobDetailsMapper.from(session, withSkills));
         response.setShortlistedCount((int) candidateRepository.countBySessionIdAndReviewStatusNot(
                 session.getId(), ReviewStatus.NONE));
         return response;

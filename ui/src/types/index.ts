@@ -128,8 +128,17 @@ export interface Weights {
   cultureFit: number;
 }
 
+export interface JobDetails {
+  title: string;
+  positionCode?: string;
+  description?: string;
+  /** Absent on session lists */
+  requiredSkills?: string[];
+}
+
 export interface ScreeningSession {
   id: string;
+  job?: JobDetails;
   title: string;
   description?: string;
   status: 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED';
@@ -397,6 +406,10 @@ export interface CreateSessionRequest {
   title: string;
   description?: string;
   weights: Weights;
+  jobTitle: string;
+  positionCode: string;
+  jobDescription?: string;
+  requiredSkills: string[];
 }
 
 export interface AnalyticsTotals {

@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ArrowLeft, ArrowRight, Check, FileUp, X } from 'lucide-react';
@@ -15,13 +15,18 @@ import { MainLayout } from '@/layouts/MainLayout';
 import { DEFAULT_WEIGHTS, cn } from '@/lib/utils';
 import { type FileOutcome, uploadInChunks } from '@/features/sessions/uploadQueue';
 import { ResumeList } from '@/features/sessions/ResumeList';
+import { jobSchema } from '@/features/sessions/jobDetails';
+import { TagInput } from '@/components/ui/TagInput';
 
-const sessionSchema = z.object({
-  title: z.string().trim().min(1, 'Give the session a title, usually the opening it is for'),
-  description: z.string().optional(),
-});
+const sessionSchema = z
+  .object({
+    title: z.string().trim().min(1, 'Give the session a title, usually the opening it is for'),
+    description: z.string().optional(),
+  })
+  .merge(jobSchema);
 
-type SessionForm = z.infer<typeof sessionSchema>;
+type SessionForm = z.input<typeof sessionSchema>;
+type SessionValues = z.output<typeof sessionSchema>;
 type Step = 1 | 2 | 3;
 
 const MAX_RESUMES = 1000;
@@ -65,10 +70,14 @@ export default function NewSession() {
 
   const {
     register,
+    control,
     handleSubmit,
     setValue,
     formState: { errors },
-  } = useForm<SessionForm>({ resolver: zodResolver(sessionSchema) });
+  } = useForm<SessionForm, unknown, SessionValues>({
+    resolver: zodResolver(sessionSchema),
+    defaultValues: { requiredSkills: [] },
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -84,6 +93,10 @@ export default function NewSession() {
         setSession(data);
         setValue('title', data.title);
         setValue('description', data.description || '');
+        setValue('jobTitle', data.job?.title ?? data.title);
+        setValue('positionCode', data.job?.positionCode ?? '');
+        setValue('jobDescription', data.job?.description ?? '');
+        setValue('requiredSkills', data.job?.requiredSkills ?? []);
         if (data.weights) setWeights(data.weights);
         if (!forcedStep && data.jdFileKey) setStep(2);
       })
@@ -107,14 +120,14 @@ export default function NewSession() {
   );
   const notAdded = (counts.rejected ?? 0) + (counts.failed ?? 0);
 
-  const handleSaveInfo = async (data: SessionForm) => {
+  const handleSaveInfo = async (data: SessionValues) => {
     setSaving(true);
     setError(null);
     try {
       if (sessionId) {
-        await sessionsApi.update(sessionId, { title: data.title, description: data.description });
+        await sessionsApi.update(sessionId, data);
       } else {
-        const res = await sessionsApi.create({ title: data.title, description: data.description, weights: DEFAULT_WEIGHTS });
+        const res = await sessionsApi.create({ ...data, weights: DEFAULT_WEIGHTS });
         setSessionId(res.data.id);
         setSession(res.data);
         navigate(`/sessions/new/${res.data.id}`, { replace: true });
@@ -247,6 +260,54 @@ export default function NewSession() {
             <Field id="description" label="Notes (optional)" hint="Only you and your team see this.">
               <Textarea id="description" placeholder="Hiring manager, headcount, anything worth remembering" {...register('description')} />
             </Field>
+            <div className="grid gap-5 sm:grid-cols-3">
+              <div className="sm:col-span-2">
+                <Field id="jobTitle" label="Job title" error={errors.jobTitle?.message}>
+                  <Input
+                    id="jobTitle"
+                    placeholder="e.g. Senior Backend Engineer"
+                    aria-invalid={!!errors.jobTitle}
+                    aria-describedby={errors.jobTitle ? 'jobTitle-error' : undefined}
+                    {...register('jobTitle')}
+                  />
+                </Field>
+              </div>
+              <Field id="positionCode" label="Position code" hint="Letters, numbers and dashes." error={errors.positionCode?.message}>
+                <Input
+                  id="positionCode"
+                  placeholder="ENG-BE-104"
+                  className="font-mono uppercase"
+                  aria-invalid={!!errors.positionCode}
+                  aria-describedby={errors.positionCode ? 'positionCode-error' : undefined}
+                  {...register('positionCode')}
+                />
+              </Field>
+            </div>
+            <Field
+              id="jobDescription"
+              label={
+                <>
+                  Job description <span className="font-normal text-ink-muted">(candidates will see this)</span>
+                </>
+              }
+              hint="The JD file you upload next is still what resumes are scored against."
+              error={errors.jobDescription?.message}
+            >
+              <Textarea id="jobDescription" rows={6} {...register('jobDescription')} />
+            </Field>
+            <Controller
+              control={control}
+              name="requiredSkills"
+              render={({ field }) => (
+                <TagInput
+                  id="requiredSkills"
+                  label="Required skills"
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.requiredSkills?.message}
+                />
+              )}
+            />
             <Footer>
               <Button variant="ghost" onClick={() => navigate('/dashboard')}>
                 Cancel

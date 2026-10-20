@@ -2,6 +2,7 @@ package com.resumescreener.api.session;
 
 import com.resumescreener.api.common.ApiException;
 import com.resumescreener.api.common.Authorities;
+import com.resumescreener.api.jobs.JobDetailsMapper;
 import com.resumescreener.common.audit.*;
 import com.resumescreener.common.session.*;
 import com.resumescreener.common.user.*;
@@ -55,6 +56,7 @@ public class SessionService {
                 .status(SessionStatus.PENDING)
                 .createdAt(java.time.Instant.now())
                 .build();
+        JobDetailsMapper.apply(request.jobDetails(), session);
 
         if (request.getWeights() != null) {
             ScoringWeights weights = ScoringWeights.builder()
@@ -79,6 +81,7 @@ public class SessionService {
         
         if (request.getTitle() != null) session.setTitle(request.getTitle());
         if (request.getDescription() != null) session.setDescription(request.getDescription());
+        JobDetailsMapper.apply(request.jobDetails(), session);
         
         if (request.getWeights() != null) {
             ScoringWeights weights = weightsRepository.findBySessionId(session.getId());

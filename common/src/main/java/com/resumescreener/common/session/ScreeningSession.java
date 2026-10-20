@@ -30,6 +30,23 @@ public class ScreeningSession {
     @Column(columnDefinition = "text")
     private String description;
 
+    @Column(nullable = false, length = 160)
+    private String jobTitle;
+
+    @Column(length = 40)
+    private String positionCode;
+
+    @Column(columnDefinition = "text")
+    private String jobDescription;
+
+    /** In the order the recruiter entered them. Replace the whole list to reorder, so rows are rewritten, not swapped. */
+    @ElementCollection
+    @CollectionTable(name = "session_required_skills", joinColumns = @JoinColumn(name = "session_id"))
+    @OrderColumn(name = "position")
+    @Column(name = "skill", nullable = false, length = 80)
+    @Builder.Default
+    private java.util.List<String> requiredSkills = new java.util.ArrayList<>();
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SessionStatus status;
@@ -59,6 +76,9 @@ public class ScreeningSession {
     public void prePersist() {
         if (createdAt == null) {
             createdAt = Instant.now();
+        }
+        if (jobTitle == null) {
+            jobTitle = title;
         }
     }
     }
