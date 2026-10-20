@@ -4,48 +4,49 @@
 
 ## Platform
 
-Web Application (React 18 + Vite + Tailwind CSS SPA, responsive for desktop and tablet evaluation).
+Web app: a React 18, Vite and Tailwind CSS single-page app, built for desktop and tablet, usable on phones.
 
 ## Users
 
-Collaborative hiring teams operating under dynamic Role-Based Access Control (RBAC):
-- **Admins:** System administration, LLM engine configuration, user management, and role-to-permission mapping.
-- **HR Chiefs:** High-level recruiting oversight, cross-recruiter session audits, analytics, and offer approvals.
-- **Recruiters:** End-to-end recruitment lifecycle owners (session creation, resume intake, shortlist curation, pipeline movement, offer creation).
-- **Technical & HR Interviewers:** Assigned candidate interviewers reviewing AI evaluations and submitting structured scorecards and recommendations.
-- **Department Directors & Executives (Chairman, CEO/CEC):** Departmental pipeline oversight and high-value offer approval chains.
+Hiring teams working under admin-managed roles, plus the candidates they shortlist:
+- **Admins:** users, roles and permissions, the audit log.
+- **HR chiefs:** oversight across recruiters, analytics, and the final offer approval. They open sessions read-only.
+- **Recruiters:** own their screening sessions from job description to joining: upload, shortlist, contact, interviews and offers.
+- **Technical and HR interviewers:** see their own interviews, read the candidate's scores, and submit feedback.
+- **Department directors, CEO and Chairman:** sit on management interviews. Directors also approve offers that need them.
+- **Candidates:** follow their application in the portal, see interview times and places, and ask to reschedule.
 
-## Product Purpose
+## Product purpose
 
-AI-assisted candidate screening, evaluation, and recruitment pipeline orchestration. Teams configure role-weighted criteria, process batches of candidate resumes with LLM analysis, review ranked standings, conduct structured interview panels, execute multi-tier offer approvals, and track confirmed onboarding.
+Resume screening and hiring in one place. Teams set weighted criteria for a job, score a batch of resumes with an LLM, review the ranked standings, run planned interview rounds with structured feedback, take offers through approval, and record the candidate's answer and joining date.
 
 ## Positioning
 
-Ranked, explainable screening and full-lifecycle hiring intelligence: every candidate evaluation decomposes into weighted criteria that hiring teams can understand, audit, and defend, backed by a unified pipeline from initial intake to joining.
+Ranked, explainable screening that carries on into the rest of hiring. Every score breaks down into weighted criteria a team can understand, question and defend, and the same record follows the candidate from upload to joining.
 
-## Operating Context
+## Operating context
 
-- **Screening Sessions:** Intake batches (job description + candidate resumes) transition asynchronously through uploading, text extraction, LLM scoring, and ranked states with real-time progress indicators.
-- **Hiring Pipeline:** Candidates advance through structured stages (`Sourced`, `Screening`, `Interviewing`, `Interviewed`, `Offer`, `Joining`) with historical stage tracking and audit events.
-- **Interview Logistics:** Multi-mode interview coordination supporting onsite rooms, online video links, and phone screens.
-- **Approval Workflow:** Offers undergo multi-stakeholder approval prior to official candidate delivery and joining confirmation.
+- **Screening sessions:** a job (title, position code, description, required skills) plus resumes, moving through upload, text extraction, scoring and ranked, with live progress.
+- **Hiring pipeline:** Shortlisted, Contacted, Interviewing, Interviewed, Offer, Offer approved, Offer sent, Accepted or Declined, Joining. Each move is recorded on the candidate's timeline.
+- **Interviews:** planned rounds (HR, technical, management) held at HQ, online, or elsewhere. Candidates can ask to move one.
+- **Approvals:** offers go to the department director when asked for, then the HR chief, before they are sent.
 
-## Capabilities and Constraints
+## Capabilities and constraints
 
-- React 18 + TypeScript + Vite + Tailwind CSS SPA with instant light/dark theme toggle.
-- Spring Boot 3.3 REST API with Spring Security and JWT authentication.
-- Dynamic permission enforcement (`SESSION_RUN`, `SESSION_VIEW_ALL`, `CANDIDATE_REVIEW`, `PIPELINE_MANAGE`, `OFFER_APPROVE`, `INTERVIEW_FEEDBACK`, `ANALYTICS_VIEW`, `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_VIEW`).
-- Async worker with rate limiting, retries, and failure isolation for any OpenAI-compatible LLM endpoint.
-- S3-compatible document storage (MinIO) with short-lived presigned URLs.
-- Self-hosted fonts with zero external CDN dependencies.
+- React 18, TypeScript, Vite and Tailwind CSS, with a light and dark theme toggle.
+- Spring Boot 3.3 REST API with Spring Security and JWT. Staff and candidates sign in on separate pages.
+- Ten permissions mapped to roles by admins: `SESSION_RUN`, `SESSION_VIEW_ALL`, `CANDIDATE_REVIEW`, `PIPELINE_MANAGE`, `OFFER_APPROVE`, `INTERVIEW_FEEDBACK`, `ANALYTICS_VIEW`, `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_VIEW`.
+- A scoring worker with rate limiting, retries and per-candidate failure isolation, for any OpenAI-compatible endpoint.
+- S3-compatible storage (MinIO) with short-lived presigned links.
+- Self-hosted fonts, no external CDN.
 
-## Product Principles
+## Product principles
 
-- **Every score is explainable:** Evaluators see criterion scores, justifications, strengths, and gaps.
-- **Fast, decisive scanning:** Standings tables and radar charts provide immediate clarity.
-- **Explicit state and permission gating:** Roles see only what they are authorized to manage, while stage progression and model health are continuously transparent.
-- **Comprehensive hiring lifecycle:** Continuity from resume intake to confirmed joining.
+- **Every score is explainable:** criterion scores, justification, strengths and gaps sit next to the number.
+- **Fast scanning:** the standings read like a results board.
+- **State and permissions are visible:** people see what they may act on, where each candidate stands, and whether scoring is healthy.
+- **One record from upload to joining:** nothing gets copied between tools.
 
-## Accessibility & Inclusion
+## Accessibility
 
-WCAG AA contrast standards, visible keyboard navigation focus, reduced-motion responsiveness, and semantic HTML structure.
+WCAG AA contrast, visible keyboard focus, reduced motion respected, and semantic HTML.

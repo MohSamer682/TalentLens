@@ -2,9 +2,9 @@
 
 **Status:** Accepted
 **Date:** 2026-10-16
-**Deciders:** Muhammed (owner); El Kabeer (architecture) and Sultan El Sokkary (review) on the hive floor
+**Deciders:** Muhammed (owner)
 
-> **Clarification:** the request said "using @ponytail". [Ponytail](https://github.com/dietrichgebert/ponytail) is an AI coding-agent skill that enforces minimal code practices — not a logging library. This ADR applies ponytail's philosophy: write the least code that solves the problem, lean on what Spring Boot and Docker already provide.
+The guiding rule was to write the least code that solves the problem and lean on what Spring Boot and Docker already provide.
 
 ## Context
 
