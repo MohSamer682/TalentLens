@@ -237,7 +237,9 @@ export default function AdminUsers() {
               }
               onResetPassword={(pw) =>
                 act(async () => {
-                  await adminApi.resetPassword(edited!.id, pw);
+                  const res = await adminApi.resetPassword(edited!.id, pw);
+                  setEditing(res.data);
+                  setFormKey((k) => k + 1);
                   return `Temporary password set. ${edited!.fullName} must change it at next sign-in.`;
                 }, 'Could not reset the password')
               }

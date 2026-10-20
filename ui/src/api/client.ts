@@ -136,8 +136,7 @@ api.interceptors.response.use(
           error.response?.status
         );
       reportClientError(apiErr, requestSummary(error));
-      // A 403 usually means an admin changed this role's permissions; pick up the new set.
-      if (apiErr.code === 'ACCESS_DENIED') void refreshCurrentUser();
+      if (refreshesUser(apiErr.code)) void refreshCurrentUser();
       return Promise.reject(apiErr);
     }
 
@@ -177,6 +176,9 @@ export const authApi = {
 };
 
 /** Replaces the stored user with the server's current role and permissions. */
+/** A 403 usually means an admin changed this role's permissions or set a temporary password; pick up the new state. */
+export const refreshesUser = (code: string) => code === 'ACCESS_DENIED' || code === 'PASSWORD_CHANGE_REQUIRED';
+
 export async function refreshCurrentUser() {
   if (!useAuthStore.getState().token) return;
   try {
@@ -334,7 +336,7 @@ export const adminApi = {
   updateUser: (id: string, data: UserFormValues & { version: number }) => api.put<AdminUser>(`/admin/users/${id}`, data),
   setStatus: (id: string, status: UserStatus) => api.patch<AdminUser>(`/admin/users/${id}/status`, { status }),
   resetPassword: (id: string, temporaryPassword: string) =>
-    api.post<null>(`/admin/users/${id}/password`, { temporaryPassword }),
+    api.post<AdminUser>(`/admin/users/${id}/password`, { temporaryPassword }),
   deleteUser: (id: string) => api.delete<null>(`/admin/users/${id}`),
   updateRole: (userId: string, role: Role) =>
     api.patch<User>(`/admin/users/${userId}/role`, { role }),
