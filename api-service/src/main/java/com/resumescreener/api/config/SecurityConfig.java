@@ -44,8 +44,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.GET, "/api/portal/invites/*").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/portal/invites/*/accept").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/portal/invites/preview", "/api/portal/invites/accept").permitAll()
                 .requestMatchers("/api/portal/**").hasRole("CANDIDATE")
                 .requestMatchers("/api/me/**").authenticated()
                 .requestMatchers("/api/auth/me").authenticated()

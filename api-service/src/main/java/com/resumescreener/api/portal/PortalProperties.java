@@ -9,7 +9,10 @@ import org.springframework.validation.annotation.Validated;
 import java.net.URI;
 import java.time.Duration;
 
-/** {@code publicBaseUrl} is where candidates open the UI; access links point there. */
+/**
+ * {@code publicBaseUrl} is where candidates open the UI; access links point there. The token sits in the
+ * fragment, which browsers never send to a server, so it stays out of proxy and access logs.
+ */
 @Validated
 @ConfigurationProperties("app.portal")
 public record PortalProperties(
@@ -19,6 +22,6 @@ public record PortalProperties(
 
     public String inviteUrl(String rawToken) {
         String base = publicBaseUrl.toString();
-        return (base.endsWith("/") ? base : base + "/") + "invite/" + rawToken;
+        return (base.endsWith("/") ? base : base + "/") + "invite#" + rawToken;
     }
 }

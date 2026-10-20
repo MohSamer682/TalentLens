@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -27,6 +28,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.net.UnknownHostException;
+import java.sql.SQLException;
 
 /**
  * Every failure leaves the API as {@code {success:false, message, error:{code, details}}}.
@@ -137,9 +139,21 @@ public class GlobalExceptionHandler {
                 ApiErrorCode.CONFLICT, "The record was saved by another request");
     }
 
+    /** A lock wait that timed out or lost a deadlock: nothing was saved, so the caller can simply retry. */
+    @ExceptionHandler(PessimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePessimisticLock(PessimisticLockingFailureException e) {
+        log.warn("Lock failure: {}", e.toString());
+        return envelope(HttpStatus.CONFLICT, "Someone else changed this at the same moment. Try again.",
+                ApiErrorCode.CONFLICT, "The request lost a lock to a concurrent one");
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException e) {
         log.warn("Data integrity violation", e);
+        if (isUniqueViolation(e)) {
+            return envelope(HttpStatus.CONFLICT, "This already exists. Reload to see the current state.",
+                    ApiErrorCode.CONFLICT, "A unique value is already taken");
+        }
         // Never echo the SQL statement back to the client
         return envelope(HttpStatus.BAD_REQUEST, "Invalid or missing data",
                 ApiErrorCode.VALIDATION_ERROR, "A required field was missing or violated a constraint");
@@ -176,6 +190,15 @@ public class GlobalExceptionHandler {
                 return true;
             }
             current = current.getCause();
+        }
+        return false;
+    }
+
+    private static boolean isUniqueViolation(Throwable throwable) {
+        for (Throwable current = throwable; current != null; current = current.getCause()) {
+            if (current instanceof SQLException sql && "23505".equals(sql.getSQLState())) {
+                return true;
+            }
         }
         return false;
     }

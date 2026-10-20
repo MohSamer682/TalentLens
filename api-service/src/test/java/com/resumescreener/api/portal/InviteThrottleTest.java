@@ -24,7 +24,7 @@ class InviteThrottleTest {
     private final InviteThrottle throttle = new InviteThrottle(3, clock);
 
     private int call(String ip) throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/portal/invites/t");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/portal/invites/preview");
         request.setRemoteAddr(ip);
         MockHttpServletResponse response = new MockHttpServletResponse();
         throttle.doFilter(request, response, new MockFilterChain());
@@ -35,7 +35,7 @@ class InviteThrottleTest {
     void theFourthCallInAMinuteFromOneAddressIs429() throws Exception {
         for (int i = 0; i < 3; i++) assertThat(call("10.0.0.1")).isEqualTo(200);
 
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/portal/invites/t");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/portal/invites/preview");
         request.setRemoteAddr("10.0.0.1");
         MockHttpServletResponse response = new MockHttpServletResponse();
         throttle.doFilter(request, response, new MockFilterChain());
@@ -55,6 +55,17 @@ class InviteThrottleTest {
     @Test
     void otherPathsAreNotCounted() throws Exception {
         assertThat(throttle.shouldNotFilter(new MockHttpServletRequest("GET", "/api/sessions"))).isTrue();
-        assertThat(throttle.shouldNotFilter(new MockHttpServletRequest("POST", "/api/portal/invites/t/accept"))).isFalse();
+        assertThat(throttle.shouldNotFilter(new MockHttpServletRequest("POST", "/api/portal/invites/accept"))).isFalse();
+    }
+
+    @Test
+    void trackedAddressesStayUnderTheCap() throws Exception {
+        InviteThrottle small = new InviteThrottle(3, clock, 2);
+        for (int i = 0; i < 10; i++) {
+            MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/portal/invites/preview");
+            request.setRemoteAddr("10.0.1." + i);
+            small.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+        }
+        assertThat(small.tracked()).isLessThanOrEqualTo(2);
     }
 }

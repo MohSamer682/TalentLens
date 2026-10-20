@@ -11,7 +11,14 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.ResultActions;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -58,12 +65,23 @@ class PortalAccessApiTest extends ApiIntegrationTest {
 
     private String rawToken(String candidateId) throws Exception {
         String url = JsonPath.read(issue(candidateId, hr).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.data.url");
-        return url.substring(url.lastIndexOf('/') + 1);
+        assertThat(url).contains("/invite#");
+        return url.substring(url.indexOf('#') + 1);
+    }
+
+    private ResultActions preview(String token) throws Exception {
+        return mvc.perform(post("/api/portal/invites/preview").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"" + token + "\"}"));
     }
 
     private ResultActions accept(String token, String password) throws Exception {
-        return mvc.perform(post("/api/portal/invites/" + token + "/accept").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"password\":\"" + password + "\"}"));
+        return mvc.perform(post("/api/portal/invites/accept").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"" + token + "\",\"password\":\"" + password + "\"}"));
+    }
+
+    private ResultActions claim(String token, User account) throws Exception {
+        return mvc.perform(post("/api/portal/invites/claim").header("Authorization", bearer(account))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"token\":\"" + token + "\"}"));
     }
 
     private long audits(String action, String candidateId) {
@@ -92,7 +110,7 @@ class PortalAccessApiTest extends ApiIntegrationTest {
     @Test
     void previewShowsTheJobWithoutAccountDetails() throws Exception {
         String token = rawToken(shortlisted());
-        mvc.perform(get("/api/portal/invites/" + token))
+        preview(token)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.jobTitle").value("Senior Backend Engineer"))
                 .andExpect(jsonPath("$.data.candidateName").value("Nour Hassan"))
@@ -105,8 +123,8 @@ class PortalAccessApiTest extends ApiIntegrationTest {
         String first = rawToken(candidateId);
         String second = rawToken(candidateId);
 
-        mvc.perform(get("/api/portal/invites/" + first)).andExpect(status().isGone()).andExpect(jsonPath("$.message").value(GONE));
-        mvc.perform(get("/api/portal/invites/" + second)).andExpect(status().isOk());
+        preview(first).andExpect(status().isGone()).andExpect(jsonPath("$.message").value(GONE));
+        preview(second).andExpect(status().isOk());
         assertThat(audits("PORTAL_INVITE_ISSUED", candidateId)).isEqualTo(2);
     }
 
@@ -149,7 +167,7 @@ class PortalAccessApiTest extends ApiIntegrationTest {
         String token = rawToken(candidateId);
         jdbc.update("UPDATE candidate_invites SET created_at = now() - interval '8 days', expires_at = now() - interval '1 day' WHERE candidate_id = ?", candidateId);
 
-        mvc.perform(get("/api/portal/invites/" + token)).andExpect(status().isGone()).andExpect(jsonPath("$.message").value(GONE));
+        preview(token).andExpect(status().isGone()).andExpect(jsonPath("$.message").value(GONE));
         accept(token, "NourPass2026").andExpect(status().isGone());
     }
 
@@ -159,20 +177,28 @@ class PortalAccessApiTest extends ApiIntegrationTest {
         String token = rawToken(candidateId);
         mvc.perform(delete(base(candidateId) + "/invites").header("Authorization", hr)).andExpect(status().isNoContent());
 
-        mvc.perform(get("/api/portal/invites/" + token)).andExpect(status().isGone());
+        preview(token).andExpect(status().isGone());
         assertThat(audits("PORTAL_INVITE_REVOKED", candidateId)).isEqualTo(1);
     }
 
     @Test
     void unknownTokenLooksTheSameAsADeadOne() throws Exception {
-        mvc.perform(get("/api/portal/invites/not-a-real-token")).andExpect(status().isGone()).andExpect(jsonPath("$.message").value(GONE));
+        preview("not-a-real-token").andExpect(status().isGone()).andExpect(jsonPath("$.message").value(GONE));
     }
 
     @Test
-    void acceptForEmailThatHasStaffAccountIsRefused() throws Exception {
-        User staff = user(Role.HR_INTERVIEWER);
-        String candidateId = candidate(staff.getEmail(), "SHORTLISTED");
+    void issueForEmailThatHasStaffAccountIs409() throws Exception {
+        issue(candidate(user(Role.HR_INTERVIEWER).getEmail(), "SHORTLISTED"), hr)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("This email belongs to a staff account, so it can't get portal access"));
+    }
+
+    @Test
+    void acceptForEmailThatBecameStaffIsRefused() throws Exception {
+        String candidateId = shortlisted();
         String token = rawToken(candidateId);
+        User staff = users.save(User.builder().email(email(candidateId)).fullName("Staff").passwordHash(encoder.encode(PASSWORD))
+                .role(Role.HR_INTERVIEWER).build());
 
         accept(token, "NourPass2026").andExpect(status().isGone()).andExpect(jsonPath("$.message").value(GONE));
         assertThat(jdbc.queryForObject("SELECT account_user_id FROM candidates WHERE id = ?", String.class, candidateId)).isNull();
@@ -180,11 +206,33 @@ class PortalAccessApiTest extends ApiIntegrationTest {
     }
 
     @Test
+    void linkStopsWorkingWhenTheCandidateIsNoLongerShortlisted() throws Exception {
+        String candidateId = shortlisted();
+        String token = rawToken(candidateId);
+        jdbc.update("UPDATE candidates SET review_status = 'NONE' WHERE id = ?", candidateId);
+
+        preview(token).andExpect(status().isGone());
+        accept(token, "NourPass2026").andExpect(status().isGone());
+    }
+
+    @Test
+    void someoneWithATemporaryPasswordCanStillOpenALink() throws Exception {
+        User pending = user(Role.CANDIDATE);
+        pending.resetPassword(pending.getPasswordHash());
+        users.save(pending);
+        String token = rawToken(shortlisted());
+
+        mvc.perform(post("/api/portal/invites/preview").header("Authorization", bearer(pending))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"token\":\"" + token + "\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void acceptWhenTheCandidateAlreadyHasAnAccountAsksThemToSignIn() throws Exception {
         User existing = user(Role.CANDIDATE);
         String token = rawToken(candidate(existing.getEmail(), "SHORTLISTED"));
 
-        mvc.perform(get("/api/portal/invites/" + token)).andExpect(jsonPath("$.data.accountExists").value(true));
+        preview(token).andExpect(jsonPath("$.data.accountExists").value(true));
         accept(token, "NourPass2026").andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("You already have an account. Sign in, then open this link again."));
     }
@@ -195,7 +243,7 @@ class PortalAccessApiTest extends ApiIntegrationTest {
         String candidateId = candidate(existing.getEmail(), "SHORTLISTED");
         String token = rawToken(candidateId);
 
-        mvc.perform(post("/api/portal/invites/" + token + "/claim").header("Authorization", bearer(existing)))
+        claim(token, existing)
                 .andExpect(status().isOk());
         assertThat(jdbc.queryForObject("SELECT account_user_id FROM candidates WHERE id = ?", String.class, candidateId)).isEqualTo(existing.getId());
     }
@@ -205,8 +253,9 @@ class PortalAccessApiTest extends ApiIntegrationTest {
         String candidateId = shortlisted();
         String token = rawToken(candidateId);
 
-        mvc.perform(post("/api/portal/invites/" + token + "/claim").header("Authorization", bearer(user(Role.CANDIDATE))))
-                .andExpect(status().isGone());
+        claim(token, user(Role.CANDIDATE))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("This link is for a different email. Sign out, then sign in with the email your recruiter has."));
         assertThat(jdbc.queryForObject("SELECT account_user_id FROM candidates WHERE id = ?", String.class, candidateId)).isNull();
     }
 
@@ -244,5 +293,60 @@ class PortalAccessApiTest extends ApiIntegrationTest {
         mvc.perform(get(base(candidateId)).header("Authorization", hr))
                 .andExpect(jsonPath("$.data.account.email").value(email(candidateId)))
                 .andExpect(jsonPath("$.data.invite").doesNotExist());
+    }
+
+    @Test
+    void twoAcceptsAtOnceCreateOneAccount() throws Exception {
+        String candidateId = shortlisted();
+        String token = rawToken(candidateId);
+
+        List<Integer> statuses = race(() -> accept(token, "NourPass2026"), () -> accept(token, "OtherPass2026"));
+
+        assertThat(statuses).containsExactlyInAnyOrder(200, 410);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM users WHERE lower(email) = lower(?)", Long.class, email(candidateId))).isEqualTo(1);
+    }
+
+    @Test
+    void newLinkWhileTheCandidateAcceptsSettlesCleanly() throws Exception {
+        for (int round = 0; round < 8; round++) {
+            String candidateId = shortlisted();
+            String token = rawToken(candidateId);
+
+            List<Integer> statuses = race(() -> accept(token, "NourPass2026"), () -> issue(candidateId, hr));
+
+            assertThat(statuses.get(0)).isIn(200, 410);
+            assertThat(statuses.get(1)).isIn(201, 409);
+            boolean linked = jdbc.queryForObject("SELECT account_user_id IS NOT NULL FROM candidates WHERE id = ?", Boolean.class, candidateId);
+            long open = jdbc.queryForObject("SELECT count(*) FROM candidate_invites WHERE candidate_id = ? AND used_at IS NULL AND revoked_at IS NULL",
+                    Long.class, candidateId);
+            assertThat(open).isEqualTo(linked ? 0L : 1L);
+        }
+    }
+
+    private interface Call {
+        ResultActions run() throws Exception;
+    }
+
+    /** Starts both calls together and returns their HTTP statuses in argument order. */
+    private static List<Integer> race(Call first, Call second) throws Exception {
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            List<Future<Integer>> results = new ArrayList<>();
+            for (Call call : List.of(first, second)) {
+                results.add(pool.submit(() -> {
+                    start.await();
+                    return call.run().andReturn().getResponse().getStatus();
+                }));
+            }
+            start.countDown();
+            List<Integer> statuses = new ArrayList<>();
+            for (Future<Integer> result : results) {
+                statuses.add(result.get(30, TimeUnit.SECONDS));
+            }
+            return statuses;
+        } finally {
+            pool.shutdownNow();
+        }
     }
 }

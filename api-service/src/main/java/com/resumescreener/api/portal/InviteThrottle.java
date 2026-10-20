@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Caps calls to the public access-link endpoints per client address, so tokens can't be guessed at speed.
+ * Behind the bundled proxy the address comes from X-Forwarded-For via {@code server.forward-headers-strategy}.
  * The counts live in this instance only; behind more than one API instance this belongs in the gateway.
  */
 public class InviteThrottle extends OncePerRequestFilter {
@@ -30,11 +31,21 @@ public class InviteThrottle extends OncePerRequestFilter {
 
     private final int perMinute;
     private final Clock clock;
+    private final int maxTracked;
     private final Map<String, Window> windows = new ConcurrentHashMap<>();
 
     public InviteThrottle(int perMinute, Clock clock) {
+        this(perMinute, clock, MAX_TRACKED);
+    }
+
+    InviteThrottle(int perMinute, Clock clock, int maxTracked) {
         this.perMinute = perMinute;
         this.clock = clock;
+        this.maxTracked = maxTracked;
+    }
+
+    int tracked() {
+        return windows.size();
     }
 
     @Override
@@ -46,8 +57,12 @@ public class InviteThrottle extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         Instant now = clock.instant();
-        if (windows.size() > MAX_TRACKED) {
+        if (windows.size() >= maxTracked) {
             windows.values().removeIf(w -> w.start().plus(WINDOW).isBefore(now));
+            if (windows.size() >= maxTracked) {
+                // Someone is rotating addresses; forgetting everyone is cheaper than growing without bound
+                windows.clear();
+            }
         }
         Window window = windows.compute(request.getRemoteAddr(), (ip, w) ->
                 w == null || !now.isBefore(w.start().plus(WINDOW)) ? new Window(now, 1) : new Window(w.start(), w.count() + 1));

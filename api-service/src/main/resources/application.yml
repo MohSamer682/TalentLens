@@ -1,5 +1,7 @@
 server:
   port: 8080
+  # The bundled nginx forwards the client address; Tomcat trusts it only from private-network proxies
+  forward-headers-strategy: native
   error:
     # The whitelabel page renders HTML; every error must leave this service as JSON
     whitelabel:

@@ -9,7 +9,14 @@ import java.util.Optional;
 
 public interface CandidateInviteRepository extends JpaRepository<CandidateInvite, String> {
 
-    /** Row-locked, so two redemptions of one link run one after the other and the second sees it used. */
+    /**
+     * A scalar, so nothing enters the persistence context before the candidate row is locked; loading the
+     * invite here would let a later locked read hand back this unlocked snapshot.
+     */
+    @Query("select i.candidateId from CandidateInvite i where i.tokenHash = :hash")
+    Optional<String> findCandidateIdByTokenHash(String hash);
+
+    /** Take the candidate's row lock first: every portal change locks candidate, then invite, so they can't deadlock. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from CandidateInvite i where i.tokenHash = :hash")
     Optional<CandidateInvite> lockByTokenHash(String hash);

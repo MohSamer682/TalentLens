@@ -44,11 +44,4 @@ class RequestIdFilterTest {
 
         assertThat(chain.getResponse()).isSameAs(response);
     }
-
-    @Test
-    void inviteTokensNeverReachTheLog() {
-        assertThat(RequestIdFilter.loggablePath("/api/portal/invites/abcDEF123_-xyz/accept")).isEqualTo("/api/portal/invites/{token}/accept");
-        assertThat(RequestIdFilter.loggablePath("/api/portal/invites/abcDEF123_-xyz")).isEqualTo("/api/portal/invites/{token}");
-        assertThat(RequestIdFilter.loggablePath("/api/sessions/s1")).isEqualTo("/api/sessions/s1");
-    }
 }

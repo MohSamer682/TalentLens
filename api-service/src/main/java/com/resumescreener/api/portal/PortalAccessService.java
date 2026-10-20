@@ -29,6 +29,7 @@ import java.util.Optional;
  * Gives a shortlisted candidate a portal sign-in, either through a one-time link or an account HR creates.
  * Every dead link (unknown, used, revoked, expired, or for a staff email) answers the same 410, so the link
  * never tells a stranger anything about accounts.
+ * Every change locks the candidate row before its invite and checks state only after the lock.
  */
 @Service
 @RequiredArgsConstructor
@@ -68,6 +69,10 @@ public class PortalAccessService {
         if (candidate.getAccountUserId() != null) {
             throw ApiException.conflict("This candidate can already sign in", "Candidate " + candidateId + " has an account");
         }
+        if (userRepository.findByEmailIgnoreCase(emailOf(candidate)).filter(u -> u.getRole() != Role.CANDIDATE).isPresent()) {
+            throw ApiException.conflict("This email belongs to a staff account, so it can't get portal access",
+                    "Candidate " + candidateId + " shares an email with a staff account");
+        }
         revokeOpen(candidateId);
         CandidateInvite.Issued issued = CandidateInvite.issue(candidate, hr, clock, properties.inviteTtl());
         inviteRepository.save(issued.invite());
@@ -78,7 +83,7 @@ public class PortalAccessService {
     @Transactional
     public void revokeInvite(String sessionId, String candidateId, String email) {
         owner(sessionId, email);
-        inSession(sessionId, candidateId);
+        lockInSession(sessionId, candidateId);
         if (revokeOpen(candidateId)) {
             auditService.record("PORTAL_INVITE_REVOKED", "CANDIDATE", candidateId, "success");
         }
@@ -106,7 +111,9 @@ public class PortalAccessService {
         CandidateInvite invite = inviteRepository.findByTokenHash(InviteToken.hash(rawToken))
                 .filter(i -> i.isUsable(clock.instant()))
                 .orElseThrow(PortalAccessService::gone);
-        Candidate candidate = candidateRepository.findById(invite.getCandidateId()).orElseThrow(PortalAccessService::gone);
+        Candidate candidate = candidateRepository.findById(invite.getCandidateId())
+                .filter(c -> c.getReviewStatus().isShortlistedOrBeyond())
+                .orElseThrow(PortalAccessService::gone);
         Optional<User> existing = userRepository.findByEmailIgnoreCase(emailOf(candidate));
         if (existing.isPresent() && existing.get().getRole() != Role.CANDIDATE) {
             throw gone();
@@ -117,8 +124,8 @@ public class PortalAccessService {
     /** First-time candidates: create the account with their own password and sign them in. */
     @Transactional
     public AuthResponse accept(String rawToken, String password) {
-        CandidateInvite invite = lockUsable(rawToken);
-        Candidate candidate = candidateRepository.findForUpdateById(invite.getCandidateId()).orElseThrow(PortalAccessService::gone);
+        Candidate candidate = lockCandidateOf(rawToken);
+        CandidateInvite invite = lockUsable(rawToken, candidate);
         Optional<User> existing = userRepository.findByEmailIgnoreCase(emailOf(candidate));
         if (existing.isPresent()) {
             if (existing.get().getRole() != Role.CANDIDATE) {
@@ -135,11 +142,15 @@ public class PortalAccessService {
     /** Returning candidates: link this application to the account they are signed in with. */
     @Transactional
     public void claim(String rawToken, String email) {
-        CandidateInvite invite = lockUsable(rawToken);
-        Candidate candidate = candidateRepository.findForUpdateById(invite.getCandidateId()).orElseThrow(PortalAccessService::gone);
-        User account = userRepository.findByEmailIgnoreCase(email)
-                .filter(u -> u.getRole() == Role.CANDIDATE && u.getEmail().equalsIgnoreCase(emailOf(candidate)))
+        Candidate candidate = lockCandidateOf(rawToken);
+        CandidateInvite invite = lockUsable(rawToken, candidate);
+        User account = userRepository.findByEmailIgnoreCase(email).filter(u -> u.getRole() == Role.CANDIDATE)
                 .orElseThrow(PortalAccessService::gone);
+        if (!account.getEmail().equalsIgnoreCase(emailOf(candidate))) {
+            // Only the link holder gets here, so naming the mismatch tells a stranger nothing
+            throw ApiException.conflict("This link is for a different email. Sign out, then sign in with the email your recruiter has.",
+                    "The signed-in account's email differs from the candidate's");
+        }
         redeem(invite, candidate, account);
     }
 
@@ -150,9 +161,19 @@ public class PortalAccessService {
         auditService.record("PORTAL_INVITE_REDEEMED", "CANDIDATE", candidate.getId(), "success");
     }
 
-    private CandidateInvite lockUsable(String rawToken) {
+    private Candidate lockCandidateOf(String rawToken) {
+        return inviteRepository.findCandidateIdByTokenHash(InviteToken.hash(rawToken))
+                .flatMap(candidateRepository::findForUpdateById)
+                .orElseThrow(PortalAccessService::gone);
+    }
+
+    /** Called with the candidate already locked, so this reads the invite as the last writer left it. */
+    private CandidateInvite lockUsable(String rawToken, Candidate candidate) {
+        if (!candidate.getReviewStatus().isShortlistedOrBeyond()) {
+            throw gone();
+        }
         return inviteRepository.lockByTokenHash(InviteToken.hash(rawToken))
-                .filter(i -> i.isUsable(clock.instant()))
+                .filter(i -> i.getCandidateId().equals(candidate.getId()) && i.isUsable(clock.instant()))
                 .orElseThrow(PortalAccessService::gone);
     }
 
@@ -175,10 +196,15 @@ public class PortalAccessService {
                 .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate " + candidateId + " in session " + sessionId));
     }
 
+    /** Locks before reading anything about the candidate, so the checks that follow see committed state. */
+    private Candidate lockInSession(String sessionId, String candidateId) {
+        return candidateRepository.findForUpdateById(candidateId)
+                .filter(c -> c.getSession().getId().equals(sessionId))
+                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate " + candidateId + " in session " + sessionId));
+    }
+
     private Candidate lockEligible(String sessionId, String candidateId) {
-        inSession(sessionId, candidateId);
-        Candidate candidate = candidateRepository.findForUpdateById(candidateId)
-                .orElseThrow(() -> ApiException.notFound("Candidate not found", "No candidate with id " + candidateId));
+        Candidate candidate = lockInSession(sessionId, candidateId);
         if (candidate.getReviewStatus() == ReviewStatus.NONE) {
             throw ApiException.validation("Shortlist the candidate before giving them portal access", "Review status is NONE");
         }
