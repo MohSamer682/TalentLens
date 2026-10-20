@@ -27,7 +27,7 @@ export function Navbar() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/admins');
   };
 
   const canSeeSessions = userCanSeeSessions(user);

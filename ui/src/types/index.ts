@@ -6,6 +6,7 @@ export type ApiErrorCode =
   | 'CONFLICT'
   | 'GONE'
   | 'RATE_LIMITED'
+  | 'WRONG_PORTAL'
   | 'PASSWORD_CHANGE_REQUIRED'
   | 'MINIO_UNAVAILABLE'
   | 'BATCH_WORKER_UNAVAILABLE'
@@ -155,9 +156,26 @@ export interface UserFormValues extends ProfileFields {
 
 export interface RoleInfo {
   role: Role;
+  name: string;
+  description: string | null;
+  kind: 'STAFF' | 'CANDIDATE';
   permissions: Permission[];
+  /** False for Admin (every permission) and Candidate (none) */
   editable: boolean;
-  userCount: number;
+  /** Active accounts only */
+  memberCount: number;
+  /** What the workflow relies on this role for; fixed in code */
+  uses: string[];
+  version: number;
+  updatedAt: string | null;
+}
+
+export interface RoleHistoryItem {
+  id: string;
+  action: 'ROLE_UPDATE' | 'ROLE_PERMISSIONS_CHANGE' | 'ROLE_MEMBERS_MOVED' | string;
+  actorEmail: string | null;
+  details: string | null;
+  occurredAt: string;
 }
 
 export interface RolesCatalog {

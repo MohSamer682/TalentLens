@@ -23,7 +23,7 @@ export default function PasswordPage() {
       title="Choose a new password"
       subtitle="Your administrator set a temporary password for you."
       footer={
-        <button type="button" className="font-semibold text-accent-text hover:underline" onClick={() => { logout(); navigate('/login'); }}>
+        <button type="button" className="font-semibold text-accent-text hover:underline" onClick={() => { const door = useAuthStore.getState().door; logout(); navigate(door === 'candidate' ? '/login' : '/admins'); }}>
           Sign out instead
         </button>
       }

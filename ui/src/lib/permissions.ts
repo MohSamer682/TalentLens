@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/features/auth/authStore';
+import { useAuthStore, type Door } from '@/features/auth/authStore';
 import type { Permission, ScreeningSession, User } from '@/types';
 
 /** Short names for the matrix and the unsaved-changes summary; descriptions come from the server. */
@@ -73,7 +73,12 @@ export function homePath(user: User | null | undefined): string {
   if (can(user, 'PIPELINE_MANAGE') || can(user, 'OFFER_APPROVE')) return '/pipeline';
   if (can(user, 'ANALYTICS_VIEW')) return '/analytics';
   if (can(user, 'USER_MANAGE') || can(user, 'ROLE_MANAGE')) return '/admin/users';
-  return '/login';
+  return signInPath(user ? 'staff' : 'candidate');
+}
+
+/** Staff sign in at /admins, candidates at /login. */
+export function signInPath(door: Door): string {
+  return door === 'candidate' ? '/login' : '/admins';
 }
 
 /** Only users with both rights get the Mine / All recruiters switch. */

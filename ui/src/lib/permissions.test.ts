@@ -58,7 +58,8 @@ describe('homePath', () => {
   });
   it('lets an HR chief see sessions', () =>
     expect(canSeeSessions(user('HR_CHIEF', ['SESSION_VIEW_ALL']))).toBe(true));
-  it('signs out a user with no rights', () => expect(homePath(user('RECRUITER', []))).toBe('/login'));
+  it('sends a staff user with no rights to the staff sign-in', () => expect(homePath(user('RECRUITER', []))).toBe('/admins'));
+  it('sends nobody to the candidate sign-in', () => expect(homePath(null)).toBe('/login'));
 });
 
 describe('canChangeSession', () => {

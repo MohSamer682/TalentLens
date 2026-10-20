@@ -42,7 +42,7 @@ export default function Register() {
     try {
       const res = await authApi.register({ email: data.email, password: data.password, fullName: data.fullName });
       login(res.data.token, res.data.user);
-      navigate('/dashboard');
+      navigate('/portal');
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Could not create the account'));
     } finally {
@@ -58,7 +58,7 @@ export default function Register() {
   return (
     <AuthLayout
       title="Create an account"
-      subtitle="New accounts start as recruiters. An admin can change your role."
+      subtitle="Follow your applications with TalentLens. When a recruiter shortlists you, they send a link that adds the job here."
       footer={
         <>
           Already have an account?{' '}
@@ -73,7 +73,7 @@ export default function Register() {
         <Field id="fullName" label="Full name" error={errors.fullName?.message}>
           <Input id="fullName" autoComplete="name" {...invalid('fullName')} {...register('fullName')} />
         </Field>
-        <Field id="email" label="Work email" error={errors.email?.message}>
+        <Field id="email" label="Email" error={errors.email?.message}>
           <Input id="email" type="email" autoComplete="email" placeholder="name@company.com" {...invalid('email')} {...register('email')} />
         </Field>
         <Field id="password" label="Password" hint="At least 8 characters." error={errors.password?.message}>

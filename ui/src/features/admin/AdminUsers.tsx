@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { adminApi, apiErrorMessage } from '@/api/client';
 import type { AdminUser, Role, UserFormValues, UserRow, UserStatus } from '@/types';
@@ -25,7 +26,9 @@ export default function AdminUsers() {
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [query, setQuery] = useState('');
+  const [params] = useSearchParams();
+  // The roles page links here with ?q=<email> to open one person
+  const [query, setQuery] = useState(() => params.get('q') ?? '');
   const [status, setStatus] = useState<StatusFilter>('ACTIVE');
   const [role, setRole] = useState<Role | ''>('');
   const [error, setError] = useState<string | null>(null);

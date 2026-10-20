@@ -36,6 +36,7 @@ import type {
   ReviewStatus,
   Role,
   RoleInfo,
+  RoleHistoryItem,
   RolesCatalog,
   ScoringScope,
   ScreeningSession,
@@ -128,9 +129,11 @@ api.interceptors.response.use(
   },
   (error) => {
     logExchange(error.config, error.response, error.message);
-    if (error.response?.status === 401) {
-      useAuthStore.getState().logout();
-      window.location.href = '/login';
+    // A failed sign-in is a 401 too; only an expired or revoked session sends the user back to their sign-in page
+    if (error.response?.status === 401 && useAuthStore.getState().token) {
+      const { door, logout } = useAuthStore.getState();
+      logout();
+      window.location.href = door === 'candidate' ? '/login' : '/admins';
     }
 
     const body = error.response?.data;
@@ -177,6 +180,7 @@ export function apiErrorDetails(error: unknown): string | undefined {
 
 export const authApi = {
   login: (data: LoginRequest) => api.post<AuthResponse>('/auth/login', data),
+  staffLogin: (data: LoginRequest) => api.post<AuthResponse>('/admins/auth/login', data),
   register: (data: RegisterRequest) => api.post<AuthResponse>('/auth/register', data),
   me: () => api.get<User>('/auth/me'),
 };
@@ -380,8 +384,15 @@ export const adminApi = {
   updateRole: (userId: string, role: Role) =>
     api.patch<User>(`/admin/users/${userId}/role`, { role }),
   roles: () => api.get<RolesCatalog>('/admin/roles'),
-  updatePermissions: (role: Role, permissions: Permission[]) =>
-    api.put<RoleInfo>(`/admin/roles/${role}/permissions`, { permissions }),
+  role: (role: Role) => api.get<RoleInfo>(`/admin/roles/${role}`),
+  renameRole: (role: Role, data: { name: string; description: string; version: number }) =>
+    api.patch<RoleInfo>(`/admin/roles/${role}`, data),
+  updatePermissions: (role: Role, permissions: Permission[], version: number) =>
+    api.put<RoleInfo>(`/admin/roles/${role}/permissions`, { permissions, version }),
+  roleMembers: (role: Role, params: { q?: string; page?: number; size?: number } = {}) =>
+    api.get<Page<UserRow>>(`/admin/roles/${role}/members`, { params: { size: 20, ...params } }),
+  moveMembers: (role: Role, userIds: string[]) => api.post<RoleInfo>(`/admin/roles/${role}/members`, { userIds }),
+  roleHistory: (role: Role, page = 0) => api.get<Page<RoleHistoryItem>>(`/admin/roles/${role}/history`, { params: { page, size: 20 } }),
 };
 
 /** "METHOD url -> status body" so the server log shows what the browser actually received. */

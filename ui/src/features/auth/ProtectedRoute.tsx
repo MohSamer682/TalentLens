@@ -1,16 +1,18 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import type { Permission } from '@/types';
-import { can, canSeeSessions, forcedPath, homePath, isCandidate } from '@/lib/permissions';
+import { can, canSeeSessions, forcedPath, homePath, isCandidate, signInPath } from '@/lib/permissions';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+  const door = useAuthStore((s) => s.door);
   const location = useLocation();
 
   const forced = useAuthStore((s) => forcedPath(s.user, location.pathname));
 
+  // Shared pages such as the profile send a signed-out visitor to the door they last used
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to={signInPath(door)} state={{ from: location }} replace />;
   }
   if (forced) {
     return <Navigate to={forced} replace />;
@@ -20,11 +22,15 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 export function PermissionRoute({ permission, children }: { permission: Permission; children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
   const allowed = useAuthStore((s) => can(s.user, permission));
   const home = useAuthStore((s) => homePath(s.user));
   const location = useLocation();
   const forced = useAuthStore((s) => forcedPath(s.user, location.pathname));
 
+  if (!isAuthenticated) {
+    return <Navigate to="/admins" state={{ from: location }} replace />;
+  }
   if (forced) {
     return <Navigate to={forced} replace />;
   }
@@ -45,7 +51,7 @@ export function SessionsRoute({ children }: { children: React.ReactNode }) {
   const forced = useAuthStore((s) => forcedPath(s.user, location.pathname));
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/admins" state={{ from: location }} replace />;
   }
   if (forced) {
     return <Navigate to={forced} replace />;
