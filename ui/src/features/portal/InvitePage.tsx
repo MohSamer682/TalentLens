@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ApiRequestError, apiErrorMessage, portalApi } from '@/api/client';
 import { useAuthStore } from '@/features/auth/authStore';
 import { AuthLayout } from '@/layouts/AuthLayout';
@@ -12,10 +12,13 @@ import { Field, Input } from '@/components/ui/Input';
 const GONE = 'This link is no longer valid. Ask your recruiter for a new one.';
 
 export default function InvitePage() {
-  const { token = '' } = useParams();
+  const { hash } = useLocation();
+  const token = hash.replace(/^#/, '');
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
+  const logout = useAuthStore((s) => s.logout);
   const me = useAuthStore((s) => s.user);
+  const backHere = { from: { pathname: '/invite', hash } };
   const [preview, setPreview] = useState<InvitePreview | null>(null);
   const [gone, setGone] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +78,7 @@ export default function InvitePage() {
 
   if (gone) {
     return (
-      <AuthLayout title="Link no longer valid" subtitle="Access links work once and expire after a week." footer={<Link to="/login" className="font-semibold text-accent-text hover:underline">Go to sign in</Link>}>
+      <AuthLayout title="Link no longer valid" subtitle="Access links work once and expire after a set time." footer={<Link to="/login" className="font-semibold text-accent-text hover:underline">Go to sign in</Link>}>
         <p className="text-sm">{GONE}</p>
       </AuthLayout>
     );
@@ -108,7 +111,7 @@ export default function InvitePage() {
             <p>You already have an account. Sign in, then open this link again.</p>
             <Link
               to="/login"
-              state={{ from: { pathname: `/invite/${token}` } }}
+              state={backHere}
               className="inline-flex h-10 w-full items-center justify-center rounded-md bg-accent px-4 font-semibold text-accent-ink"
             >
               Sign in
@@ -120,26 +123,39 @@ export default function InvitePage() {
   }
 
   return (
-    <AuthLayout title={`Welcome, ${firstName}`} subtitle={subtitle} footer={<>Already have an account? <Link to="/login" className="font-semibold text-accent-text hover:underline">Sign in</Link></>}>
+    <AuthLayout
+      title={`Welcome, ${firstName}`}
+      subtitle={subtitle}
+      footer={me ? null : <>Already have an account? <Link to="/login" state={backHere} className="font-semibold text-accent-text hover:underline">Sign in</Link></>}
+    >
       {error && <Alert className="mb-4">{error}</Alert>}
-      <form
-        className="space-y-4"
-        noValidate
-        onSubmit={(e) => {
-          e.preventDefault();
-          accept();
-        }}
-      >
-        <Field id="newPassword" label="New password" hint="At least 10 characters." error={touched && tooShort ? 'Use at least 10 characters' : undefined}>
-          <Input id="newPassword" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </Field>
-        <Field id="confirm" label="Repeat new password" error={touched && !tooShort && mismatch ? "The passwords don't match" : undefined}>
-          <Input id="confirm" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-        </Field>
-        <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? 'Saving…' : 'Set password and continue'}
-        </Button>
-      </form>
+      {me ? (
+        <div className="space-y-4 text-sm">
+          <p>You're signed in as {me.email}. Sign out first, so this new account doesn't replace that sign-in.</p>
+          <Button variant="secondary" className="w-full" onClick={logout}>
+            Sign out
+          </Button>
+        </div>
+      ) : (
+        <form
+          className="space-y-4"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            accept();
+          }}
+        >
+          <Field id="newPassword" label="New password" hint="At least 10 characters." error={touched && tooShort ? 'Use at least 10 characters' : undefined}>
+            <Input id="newPassword" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </Field>
+          <Field id="confirm" label="Repeat new password" error={touched && !tooShort && mismatch ? "The passwords don't match" : undefined}>
+            <Input id="confirm" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+          </Field>
+          <Button type="submit" className="w-full" disabled={busy}>
+            {busy ? 'Saving…' : 'Set password and continue'}
+          </Button>
+        </form>
+      )}
     </AuthLayout>
   );
 }

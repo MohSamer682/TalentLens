@@ -340,9 +340,10 @@ export const portalApi = {
     api.delete<null>(`/sessions/${sessionId}/candidates/${candidateId}/portal/invites`),
   createAccount: (sessionId: string, candidateId: string, temporaryPassword: string) =>
     api.post<PortalAccess>(`/sessions/${sessionId}/candidates/${candidateId}/portal/account`, { temporaryPassword }),
-  preview: (token: string) => api.get<InvitePreview>(`/portal/invites/${encodeURIComponent(token)}`),
-  accept: (token: string, password: string) => api.post<AuthResponse>(`/portal/invites/${encodeURIComponent(token)}/accept`, { password }),
-  claim: (token: string) => api.post<null>(`/portal/invites/${encodeURIComponent(token)}/claim`),
+  // The token goes in the body so it never shows up in a proxy or access log
+  preview: (token: string) => api.post<InvitePreview>('/portal/invites/preview', { token }),
+  accept: (token: string, password: string) => api.post<AuthResponse>('/portal/invites/accept', { token, password }),
+  claim: (token: string) => api.post<null>('/portal/invites/claim', { token }),
 };
 
 export const adminApi = {

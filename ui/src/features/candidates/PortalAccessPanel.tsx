@@ -29,6 +29,7 @@ export function PortalAccessPanel({
   const [copied, setCopied] = useState(false);
   const [creating, setCreating] = useState(false);
   const [tempPassword, setTempPassword] = useState('');
+  const [showTemp, setShowTemp] = useState(false);
 
   useEffect(() => {
     if (!eligible) return;
@@ -115,7 +116,7 @@ export function PortalAccessPanel({
             <Field
               id="portal-link"
               label="Access link"
-              hint="Valid for 7 days. Anyone with the link can set the password, so send it only to the candidate."
+              hint={`Valid until ${formatDate(issued.expiresAt)}. Anyone with the link can set the password, so send it only to the candidate.`}
             >
               <div className="space-y-2">
                 <Input id="portal-link" readOnly value={issued.url} onFocus={(e) => e.currentTarget.select()} className="font-mono text-[13px]" />
@@ -153,7 +154,12 @@ export function PortalAccessPanel({
             }}
           >
             <Field id="portal-temp" label="Temporary password" hint="At least 10 characters. They choose their own the first time they sign in.">
-              <Input id="portal-temp" type="text" autoComplete="off" value={tempPassword} onChange={(e) => setTempPassword(e.target.value)} />
+              <div className="flex gap-2">
+                <Input id="portal-temp" type={showTemp ? 'text' : 'password'} autoComplete="off" value={tempPassword} onChange={(e) => setTempPassword(e.target.value)} />
+                <Button variant="ghost" size="sm" type="button" className="h-10 shrink-0" aria-pressed={showTemp} onClick={() => setShowTemp((v) => !v)}>
+                  {showTemp ? 'Hide' : 'Show'}
+                </Button>
+              </div>
             </Field>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setCreating(false)}>
