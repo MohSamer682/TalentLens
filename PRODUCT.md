@@ -4,49 +4,48 @@
 
 ## Platform
 
-Web app: a React 18, Vite and Tailwind CSS single-page app, built for desktop and tablet, usable on phones.
+React 18, Vite and Tailwind CSS single-page app. Built for desktop and tablet, usable on phones.
 
 ## Users
 
-Hiring teams working under admin-managed roles, plus the candidates they shortlist:
-- **Admins:** users, roles and permissions, the audit log.
-- **HR chiefs:** oversight across recruiters, analytics, and the final offer approval. They open sessions read-only.
-- **Recruiters:** own their screening sessions from job description to joining: upload, shortlist, contact, interviews and offers.
-- **Technical and HR interviewers:** see their own interviews, read the candidate's scores, and submit feedback.
-- **Department directors, CEO and Chairman:** sit on management interviews. Directors also approve offers that need them.
-- **Candidates:** follow their application in the portal, see interview times and places, and ask to reschedule.
+- **Admins:** users, roles, permissions, audit log.
+- **HR chiefs:** oversight, analytics, final offer approval. Sessions are read-only for them.
+- **Recruiters:** run their sessions from job description to joining.
+- **Technical and HR interviewers:** see their own interviews and submit feedback.
+- **Department directors, CEO, Chairman:** management interviews. Directors also approve offers when asked.
+- **Candidates:** follow their application, see interview times and places, ask to reschedule.
 
-## Product purpose
+## Purpose
 
-Resume screening and hiring in one place. Teams set weighted criteria for a job, score a batch of resumes with an LLM, review the ranked standings, run planned interview rounds with structured feedback, take offers through approval, and record the candidate's answer and joining date.
+Screening and hiring in one place: weight the criteria, score a batch of resumes with an LLM, review the ranking, run interviews, approve offers and record joining.
 
 ## Positioning
 
-Ranked, explainable screening that carries on into the rest of hiring. Every score breaks down into weighted criteria a team can understand, question and defend, and the same record follows the candidate from upload to joining.
+Explainable ranking that carries through the rest of hiring. Every score breaks down into weighted criteria a team can question and defend. One record follows the candidate from upload to joining.
 
 ## Operating context
 
-- **Screening sessions:** a job (title, position code, description, required skills) plus resumes, moving through upload, text extraction, scoring and ranked, with live progress.
-- **Hiring pipeline:** Shortlisted, Contacted, Interviewing, Interviewed, Offer, Offer approved, Offer sent, Accepted or Declined, Joining. Each move is recorded on the candidate's timeline.
-- **Interviews:** planned rounds (HR, technical, management) held at HQ, online, or elsewhere. Candidates can ask to move one.
-- **Approvals:** offers go to the department director when asked for, then the HR chief, before they are sent.
+- **Sessions:** a job (title, position code, description, skills) plus resumes. Upload, extract, score, rank, with live progress.
+- **Pipeline:** Shortlisted, Contacted, Interviewing, Interviewed, Offer, Offer approved, Offer sent, Accepted or Declined, Joining. Every move goes on the timeline.
+- **Interviews:** HR, technical and management rounds at HQ, online or elsewhere. Candidates can ask to move one.
+- **Approvals:** department director when asked, then HR chief, before an offer is sent.
 
 ## Capabilities and constraints
 
-- React 18, TypeScript, Vite and Tailwind CSS, with a light and dark theme toggle.
-- Spring Boot 3.3 REST API with Spring Security and JWT. Staff and candidates sign in on separate pages.
+- Light and dark themes.
+- Spring Boot 3.3 REST API, Spring Security and JWT. Separate sign-in pages for staff and candidates.
 - Ten permissions mapped to roles by admins: `SESSION_RUN`, `SESSION_VIEW_ALL`, `CANDIDATE_REVIEW`, `PIPELINE_MANAGE`, `OFFER_APPROVE`, `INTERVIEW_FEEDBACK`, `ANALYTICS_VIEW`, `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_VIEW`.
-- A scoring worker with rate limiting, retries and per-candidate failure isolation, for any OpenAI-compatible endpoint.
-- S3-compatible storage (MinIO) with short-lived presigned links.
-- Self-hosted fonts, no external CDN.
+- Scoring worker with rate limiting, retries and per-candidate failure isolation. Any OpenAI-compatible endpoint.
+- MinIO storage behind short-lived presigned links.
+- Self-hosted fonts, no CDN.
 
-## Product principles
+## Principles
 
-- **Every score is explainable:** criterion scores, justification, strengths and gaps sit next to the number.
-- **Fast scanning:** the standings read like a results board.
-- **State and permissions are visible:** people see what they may act on, where each candidate stands, and whether scoring is healthy.
-- **One record from upload to joining:** nothing gets copied between tools.
+- **Explainable:** scores, justification, strengths and gaps sit together.
+- **Scannable:** standings read like a results board.
+- **Honest state:** people see what they can act on, where each candidate stands and whether scoring is healthy.
+- **One record:** nothing is copied between tools.
 
 ## Accessibility
 
-WCAG AA contrast, visible keyboard focus, reduced motion respected, and semantic HTML.
+WCAG AA contrast, visible focus, reduced motion respected, semantic HTML.

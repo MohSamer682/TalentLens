@@ -2,7 +2,7 @@
 
 ## Shape
 
-Three deployables and one shared library, all using one Postgres database and one MinIO bucket.
+Three services and a shared library on one Postgres database and one MinIO bucket.
 
 ```
  Browser ── React UI (nginx :3000)
@@ -16,73 +16,75 @@ Three deployables and one shared library, all using one Postgres database and on
 
 | Piece | Layering | Notes |
 |---|---|---|
-| `common` | Feature packages: `user`, `session` (session, weights, candidates, scores, jobs), `audit`, `llm`, `portal`, `reschedule` | Shared by both services. Owns the schema through Flyway (`db/migration`, V1 to V18). Each package holds its entities, repositories, enums and contract DTOs. |
-| `api-service` | controller → service → repository | One package per feature: `auth`, `profile`, `session`, `jobs`, `upload`, `batch`, `candidate`, `pipeline`, `portal`, `reschedule`, `analytics`, `admin`, `audit`, `llm`. Uniform `ApiResponse` envelope, typed error codes, request-id tracing, audit events. |
-| `batch-worker` | controller → `JobService` → `CandidateProcessingService` → `LlmClient` / `PdfTextExtractor` / `ExcelReportGenerator` | `@Async` pool (2 to 4 threads, queue 25). Resilience4j retry and rate limit on the LLM call. |
-| `ui` | `features/<name>` (pages, their components and helpers) → `api/client` → zustand store in `features/auth` | Vite, Tailwind, typed API client. Features: `auth`, `sessions`, `candidates`, `pipeline`, `portal`, `profile`, `analytics`, `admin`. Shared code in `components/ui`, `layouts`, `lib`, `types`. |
+| `common` | Feature packages: `user`, `session`, `audit`, `llm`, `portal`, `reschedule` | Shared by both services. Owns the schema in Flyway (`db/migration`). Each package holds its entities, repositories, enums and DTOs. |
+| `api-service` | controller → service → repository | One package per feature: `auth`, `profile`, `session`, `jobs`, `upload`, `batch`, `candidate`, `pipeline`, `portal`, `reschedule`, `analytics`, `admin`, `audit`, `llm`. `ApiResponse` envelope, typed error codes, request ids, audit events. |
+| `batch-worker` | controller → `JobService` → `CandidateProcessingService` → `LlmClient` / `PdfTextExtractor` / `ExcelReportGenerator` | `@Async` pool (2 to 4 threads, queue 25). Resilience4j retry and rate limit on LLM calls. |
+| `ui` | `features/<name>` → `api/client` → zustand store in `features/auth` | Features: `auth`, `sessions`, `candidates`, `pipeline`, `portal`, `profile`, `analytics`, `admin`. Shared code in `components/ui`, `layouts`, `lib`, `types`. |
 
-## Modules and rules
+## Module rules
 
-A feature is a package that owns its controller, service, DTOs and, in `common`, its entities and repositories. `FeatureBoundaryTest` in each module enforces three rules:
+A feature package owns its controller, service, DTOs and, in `common`, its entities and repositories. `FeatureBoundaryTest` enforces:
 
-1. Feature packages must not form a dependency cycle (`common.*`, `api.*`, `batch.*`).
-2. `common` has no layer-first packages (`entity`, `repository`, `enums`, `dto`).
-3. In `api-service`, features never import from `config`. `config` wires features together and may import them.
+1. No dependency cycles between feature packages.
+2. No layer-first packages in `common` (`entity`, `repository`, `enums`, `dto`).
+3. In `api-service`, features never import `config`. `config` wires features and may import them.
 
-When a rule failed, the fix was to move the code to its real owner, for example `AuditService` to `api.audit` and `RequestIdFilter` to `api.common`.
+When a rule fails, move the code to its real owner.
 
 ### Adding a feature
 
-1. Put entities, repositories, enums and DTOs that the worker also needs in `common/<feature>`. Skip this if only the API uses the data.
-2. Add `api-service/.../api/<feature>` with `<Feature>Controller`, `<Feature>Service` and `dto/`. If the worker acts on it, add `batch-worker/.../batch/<feature>`.
-3. Depend on another feature through its service, never its repository. If two features need each other, put the shared type in the lower one.
+1. Shared entities, repositories, enums and DTOs go in `common/<feature>`. API-only data stays in the API.
+2. Add `api/<feature>` with `<Feature>Controller`, `<Feature>Service` and `dto/`. Add `batch/<feature>` if the worker needs it.
+3. Call other features through their service, never their repository.
 4. Add the next Flyway migration in `common/src/main/resources/db/migration`.
-5. Run `mvn test`. A failing `FeatureBoundaryTest` names the cycle.
+5. Run `mvn test`. `FeatureBoundaryTest` names any cycle.
 
 ## Sign-in and access
 
-- Staff sign in through `POST /api/admins/auth/login`, candidates through `POST /api/auth/login`. The JWT carries an audience (`staff` or `candidate`), and each sign-in accepts only its own kind of account.
-- `LoginThrottle` is shared by both: after five failures for an account within 15 minutes, further attempts get 429 until the window passes.
-- The first admin comes from `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` on start-up, only while no active admin exists, and must choose a new password at first sign-in.
-- Candidate accounts never hold a permission and are refused on every staff route. Portal access-link tokens are stored as hashes and work once.
+- Staff: `POST /api/admins/auth/login`. Candidates: `POST /api/auth/login`. The JWT audience (`staff` or `candidate`) must match the door.
+- `LoginThrottle` covers both: five failures in 15 minutes returns 429 until the window passes.
+- The first admin comes from `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD`, only while no active admin exists, and must change the password at first sign-in.
+- Candidates hold no permissions and are refused on staff routes. Access-link tokens are hashed and single use.
 
 ### Permissions
 
-Access is decided by permissions, not role names. `common.user.Permission` lists ten: `SESSION_RUN`, `SESSION_VIEW_ALL`, `CANDIDATE_REVIEW`, `PIPELINE_MANAGE`, `OFFER_APPROVE`, `INTERVIEW_FEEDBACK`, `ANALYTICS_VIEW`, and the admin-only `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_VIEW`.
+Access follows permissions, not role names. `common.user.Permission` lists ten, three of them admin-only (`USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_VIEW`).
 
-- The `roles` table (V18) holds each role's code, display name, description and kind. Codes are fixed because the offer chain and interviewer picker depend on them; names and descriptions are editable.
-- `role_permissions` maps roles to permissions. Admins edit it per role, and each change goes to the audit log, which the role's history page reads.
-- `UserDetailsServiceImpl` grants `ROLE_<role>` plus the role's permissions on every request, so an edit applies on the next request without a new token.
-- `Permission.effective` gives `ADMIN` every permission, gives `CANDIDATE` none, and strips admin-only ones from everyone else, whatever the table holds.
-- Endpoints use `@PreAuthorize("hasAuthority('...')")`. `/api/admin/**` also requires `hasRole('ADMIN')` in `SecurityConfig`.
-- Viewing a session needs ownership or `SESSION_VIEW_ALL`. Changing it, or moving its candidates through the pipeline, needs ownership or the admin role.
+- `roles` (V18) holds code, name, description and kind. Codes are fixed because the offer chain and interviewer picker use them. Names and descriptions are editable.
+- `role_permissions` maps roles to permissions. Every change is audited and shows on the role's history page.
+- `UserDetailsServiceImpl` loads permissions per request, so edits apply without a new token.
+- `Permission.effective` gives `ADMIN` everything, `CANDIDATE` nothing, and strips admin-only permissions from everyone else.
+- Endpoints use `@PreAuthorize("hasAuthority('...')")`. `/api/admin/**` also needs `hasRole('ADMIN')`.
+- Viewing a session needs ownership or `SESSION_VIEW_ALL`. Changing it, or moving its candidates, needs ownership or admin.
 - The UI reads `user.permissions` only to hide what the server would refuse, and refreshes it on load and after any 403.
 
-## Schema decisions kept on purpose
+## Schema choices kept on purpose
 
-| Item | Why it stays |
+| Item | Why |
 |---|---|
-| `varchar` ids, not `uuid` | Ids are strings end to end (JPA, DTOs, URLs). Switching touches every entity and request path for a small saving; revisit if a table passes about 10M rows. |
-| `double` scores | `CHECK (0..100)` bounds them (V12), and ranking uses the stored composite, so float drift is cosmetic. |
-| No `@Version` on sessions | Status moves go through atomic `UPDATE … WHERE` (`markRunning`). A version would make the worker's many `save()` calls throw on contention. |
-| Pipeline board is not paged | One query per table and no N+1, but a large company would need paging on `/api/pipeline`. |
+| `varchar` ids, not `uuid` | Ids are strings end to end. Switching touches every entity and path for little gain. Revisit past ~10M rows. |
+| `double` scores | `CHECK (0..100)` bounds them (V12) and ranking uses the stored composite. |
+| No `@Version` on sessions | Status moves are atomic `UPDATE … WHERE`. A version would make the worker's saves fail under contention. |
+| Unpaged pipeline board | One query per table, no N+1. A large company would need paging on `/api/pipeline`. |
 
-Closed value sets (permissions, statuses) are checked in the schema, so a new enum value needs a migration. Roles are rows in `roles` since V18.
+Closed value sets (permissions, statuses) are checked in the schema, so a new enum value needs a migration.
 
 ## Known limits
 
-| Area | Limit | Way forward |
+| Area | Limit | Next step |
 |---|---|---|
-| Scoring jobs | Job state lives in an in-memory `@Async` pool. Cancel is honoured per candidate, start is an atomic update, and sessions left `RUNNING` fail when the worker starts, but only one worker instance can run. | Use `batch_jobs` as a claim table (`SELECT … FOR UPDATE SKIP LOCKED`) before reaching for a broker. |
-| Shared entities | Both services map the same entities from `common`. | Give the worker its own read model if it grows. |
-| Containers | The API and worker run as user 1000; Postgres, MinIO and Adminer ports are published for local use. | A `dev` Compose profile for those ports. |
-| Auth | No refresh tokens, logout or self-service password reset. | Future `auth` work. |
-| Notifications | No email or webhook when scoring finishes or a candidate asks to reschedule. | A `notification` feature once job state is durable. |
-| Role names | Renamed roles show their new name on the roles pages; other screens still use the built-in labels. | Read names from `/api/admin/roles` everywhere. |
+| Scoring jobs | Job state lives in an in-memory `@Async` pool, so only one worker can run. Stuck `RUNNING` sessions fail on worker start. | Claim jobs from `batch_jobs` with `FOR UPDATE SKIP LOCKED`. |
+| Shared entities | Both services map the same entities. | Give the worker its own read model if it grows. |
+| Containers | Postgres, MinIO and Adminer ports are published for local use. | A `dev` Compose profile. |
+| Auth | No refresh tokens, logout or password reset. | Future auth work. |
+| Notifications | No email or webhook on scoring done or reschedule requests. | A `notification` feature. |
+| Role names | Renamed roles show only on the roles pages. | Read names from `/api/admin/roles` everywhere. |
 
 ## Deploying migrations
 
-V12 and V13 rename a table and drop columns, so an older `api-service` or `batch-worker` can't run against the migrated database, and a rollback means restoring it. Deploy the migration and all three services together. V12 stops on purpose when existing data would break a new rule, so run these first and fix anything they return:
+V12 and V13 rename a table and drop columns. Older services can't run on the migrated database, and rollback means a restore. Deploy the migrations and all three services together.
+
+V12 stops if existing data breaks a new rule. Run these first and fix what they return:
 
 ```sql
 SELECT lower(email), count(*) FROM users GROUP BY 1 HAVING count(*) > 1;
@@ -90,6 +92,6 @@ SELECT candidate_id, count(*) FROM candidate_offers GROUP BY 1 HAVING count(*) >
 SELECT id FROM candidate_scores WHERE composite_score NOT BETWEEN 0 AND 100;
 ```
 
-V13 copies every resume text into `candidate_texts` in one transaction and locks `candidates` and `users` while it runs, so run it in a quiet window on a large database.
+V13 copies resume text into `candidate_texts` in one transaction and locks `candidates` and `users`. Run it in a quiet window on a large database.
 
-Tokens issued before the separate staff sign-in carry no audience, so everyone is signed out once when that release (V18) is deployed.
+V18 adds the token audience, so everyone signs in again once after that release.

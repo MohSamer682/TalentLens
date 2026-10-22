@@ -1,6 +1,6 @@
 # Screens by role
 
-Screenshots of the running app, one folder per role. Each folder shows what that role sees with the default permissions. No real personal data appears in them.
+Screenshots of the running app, one folder per role, with default permissions. No real personal data.
 
 ```text
 docs/design/screens/
@@ -50,11 +50,11 @@ docs/design/screens/
     └── Recruiting_Analytics.png
 ```
 
-The candidate portal, profile pages, staff sign-in at `/admins` and the per-role pages under Roles were added after these were taken and aren't shown yet.
+Not shown yet: candidate portal, profile pages, staff sign-in at `/admins` and the per-role pages under Roles.
 
 ## What each role can do by default
 
-Admins can change these on the roles page. The table shows a fresh install.
+Fresh install defaults. Admins change them on the roles page.
 
 | Role | Run sessions | Open any session | Shortlist | Move pipeline | Interview feedback | Approve offers | Analytics | Users and roles |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
@@ -66,11 +66,11 @@ Admins can change these on the roles page. The table shows a fresh install.
 | Department director | | | | | Yes | Yes | | |
 | CEO, Chairman | | | | | Yes | | | |
 
-"Own" means only in sessions the recruiter started. The HR chief opens sessions read-only.
+"Own" means sessions the recruiter started. The HR chief opens sessions read-only.
 
 ## Screens worth a closer look
 
-- **Roles and permissions** (`Admin/Admin_Roles_and_Permissions.png`): admins switch permissions per role without a code change.
-- **Hiring pipeline** (`Admin/Hiring_Pipeline.png`): Shortlisted, Contacted, Interviewing, Interviewed, Offer, Offer approved, Offer sent, Accepted or Declined, Joining. Filter by stage or by offers waiting for approval. Every stage change records who made it and when.
-- **Candidate detail** (`Recruiter/Candidate_Detail_View.png`): the five criterion scores, strengths and gaps, team notes, the interview plan with place (HQ, online or other), and the candidate's stage.
-- **Recruiting analytics** (`Admin/Recruiting_Analytics.png`): 30 days, 90 days or 12 months of throughput, funnel, stage timing, score calibration and recruiter and interviewer tables.
+- **Roles and permissions** (`Admin/Admin_Roles_and_Permissions.png`): permissions per role, no code change.
+- **Hiring pipeline** (`Admin/Hiring_Pipeline.png`): Shortlisted, Contacted, Interviewing, Interviewed, Offer, Offer approved, Offer sent, Accepted or Declined, Joining. Filter by stage or pending approvals. Each move records who and when.
+- **Candidate detail** (`Recruiter/Candidate_Detail_View.png`): criterion scores, strengths and gaps, team notes, interview plan with place, and stage.
+- **Recruiting analytics** (`Admin/Recruiting_Analytics.png`): throughput, funnel, stage timing, score calibration and team tables over 30 days, 90 days or 12 months.

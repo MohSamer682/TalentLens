@@ -4,50 +4,48 @@
 **Date:** 2026-10-16
 **Deciders:** Muhammed (owner)
 
-The guiding rule was to write the least code that solves the problem and lean on what Spring Boot and Docker already provide.
-
 ## Context
 
-The Resume Screener is three Spring Boot 3.3 / Java 21 services in one Maven build (`common`, `api-service`, `batch-worker`), a React/Vite UI, Postgres and MinIO, all run by `docker-compose.yml`.
+Three Spring Boot services (`common`, `api-service`, `batch-worker`), a React UI, Postgres and MinIO, run by `docker-compose.yml`. Logging before this change:
 
-What logging looked like before this change:
-
-- **11 log statements in the whole backend.** Controllers, auth, uploads, MinIO and the LLM client logged nothing.
-- **Stack traces were thrown away in the batch worker.** `JobService` logged `e.getMessage()` only, so failed candidates left one line with no cause.
-- **No way to follow one request across services.** `BatchTriggerService` called the worker with no request id, and `@Async` jobs lost MDC context.
-- **PII in logs.** `CandidateProcessingService` logged candidate emails.
-- **No audit trail.** Nothing recorded who logged in, downloaded a resume, or changed a role.
-- **No log configuration.** Default console text, lost on container recreate.
-- **UI errors invisible to the backend.**
+- 11 log statements in the whole backend. Controllers, auth, uploads, MinIO and the LLM client logged nothing.
+- `JobService` logged `e.getMessage()` only, so failed candidates had no cause.
+- No request id across services, and `@Async` jobs lost MDC.
+- `CandidateProcessingService` logged candidate emails.
+- No record of who signed in, downloaded a resume or changed a role.
+- Default console text, lost when a container was recreated.
+- UI errors never reached the backend.
 
 ## Decision
 
-### 1. Structured logs with context on every line
-- Added `logstash-logback-encoder` and a shared `logback-spring.xml`: JSON to stdout under the `docker`/`prod` profile, readable coloured text otherwise.
-- `RequestIdFilter` reads or creates `X-Request-Id`, puts it in MDC, returns it in the response. `JwtAuthFilter` adds `userId` to MDC after auth.
-- `BatchTriggerService` forwards `X-Request-Id` to the worker. `InternalAuthFilter` restores it. `MdcTaskDecorator` on the `@Async` executor copies MDC into the job thread. `JobService` adds `sessionId`, `CandidateProcessingService` adds `candidateId`.
-- Levels by rule: `ERROR` = needs a human; `WARN` = handled but worth seeing (retry, 4xx from LLM); `INFO` = business milestones.
-- Always log the exception object, never just `getMessage()`.
-- No PII: log ids, never emails, names, resume text, or tokens.
+Write the least code that solves it, on top of what Spring Boot and Docker already give us.
+
+### 1. Structured logs with context
+- `logstash-logback-encoder` and a shared `logback-spring.xml`: JSON to stdout under `docker`/`prod`, coloured text otherwise.
+- `RequestIdFilter` reads or creates `X-Request-Id`, puts it in MDC and returns it. `JwtAuthFilter` adds `userId`.
+- `BatchTriggerService` forwards `X-Request-Id` to the worker and `InternalAuthFilter` restores it. `MdcTaskDecorator` copies MDC into `@Async` threads. `JobService` adds `sessionId`, `CandidateProcessingService` adds `candidateId`.
+- Levels: `ERROR` needs a human, `WARN` is handled but worth seeing, `INFO` marks business milestones.
+- Log the exception object, never just the message.
+- No PII: ids only, never emails, names, resume text or tokens.
 
 ### 2. Audit trail as data
-- `audit_event` table in `common` (`id, occurred_at, actor_user_id, action, target_type, target_id, request_id, ip, outcome, details`).
-- `AuditService.record(...)` writes the row and emits an INFO log.
-- Recorded: login success/failure, register, batch trigger, resume download, export, role change.
-- Admin-only `GET /api/admin/audit` (paged, filter by user/action).
+- `audit_event` table: `id, occurred_at, actor_user_id, action, target_type, target_id, request_id, ip, outcome, details`.
+- `AuditService.record(...)` writes the row and an INFO log.
+- Recorded: sign-in success and failure, register, batch trigger, resume download, export, role change.
+- Admin-only `GET /api/admin/audit`, paged, filtered by user or action.
 
-### 3. Client error reporting
-- `POST /api/client-errors` (unauthenticated) logs UI errors server-side.
-- `client.ts` reports `ApiRequestError` via `navigator.sendBeacon`.
+### 3. Client errors
+- `POST /api/client-errors` (no auth) logs UI errors on the server.
+- `client.ts` reports `ApiRequestError` with `navigator.sendBeacon`.
 
 ### 4. Actuator
-- `health`, `info`, `metrics`, `loggers` exposed on both services so log levels can be raised at runtime.
+- `health`, `info`, `metrics` and `loggers` on both services, so log levels change at runtime.
 
 ### 5. Log shipping (deferred)
-- JSON to stdout is ready for any Docker log driver or sidecar. The choice of destination (Papertrail, Loki, CloudWatch, etc.) is left to deployment time — configure `logging.driver` in `docker-compose.yml` when ready.
+- JSON on stdout works with any Docker log driver. Pick the destination at deploy time through `logging.driver` in `docker-compose.yml`.
 
 ## Consequences
 
-- **Easier:** answering "why did this session fail?" by searching one request id; seeing LLM errors immediately; showing admins who viewed or exported what.
+- **Easier:** trace a failed session by one request id, see LLM errors at once, show admins who viewed or exported what.
 - **Harder:** every new feature must follow the level and no-PII rules.
-- **Revisit:** log shipping destination; Sentry if exception noise grows; data-retention policies for the audit table.
+- **Revisit:** log destination, Sentry if exception noise grows, retention for the audit table.

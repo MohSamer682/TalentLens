@@ -6,7 +6,7 @@
 
 ## Context
 
-The project's planning spec lists defaults for new work: RFC 9457 problem details, versioned `/api/v1` paths, Spring Modulith, TanStack Query, and a layered `api/application/domain/infrastructure` package split. The code base already has fourteen feature packages built a different way:
+The planning spec defaults to RFC 9457 problem details, `/api/v1` paths, Spring Modulith, TanStack Query and an `api/application/domain/infrastructure` split. The code base has fourteen feature packages built another way:
 
 - Every response, success or failure, is the `{success, message, data | error}` envelope, and the UI's `apiErrorMessage` reads it.
 - Paths are `/api/...` with no version.
@@ -14,15 +14,15 @@ The project's planning spec lists defaults for new work: RFC 9457 problem detail
 - The UI fetches with axios into component state and keeps only the signed-in user in zustand.
 - Packages are flat per feature: controller, service and `dto/`.
 
-The next features (job details on cycles, user profiles, the candidate portal and reschedule requests) add four packages next to the existing ones.
+The next features (job details, profiles, candidate portal, reschedule requests) add four more packages.
 
 ## Decision
 
-Build the new features on the existing stack and conventions. New packages (`jobs`, `profile`, `portal`, `reschedule`) follow the flat layout, return the envelope, live under `/api`, and are covered by the existing ArchUnit rules. Moving to the spec's defaults is a separate upgrade project, done across the whole code base at once.
+Build them on the existing conventions. `jobs`, `profile`, `portal` and `reschedule` use the flat layout, return the envelope, live under `/api` and fall under the ArchUnit rules. Moving to the spec's defaults is a separate upgrade across the whole code base.
 
 ## Consequences
 
-- New code reads the same as its neighbours, and reviewers check one set of conventions.
-- The UI keeps one error-handling path.
-- The spec's defaults are deferred, not rejected. When the upgrade happens it touches every package, including these four.
-- Without Spring Modulith there is no generated module documentation; the ArchUnit rules remain the boundary check.
+- New code matches its neighbours; reviewers check one set of conventions.
+- The UI keeps one error path.
+- The spec's defaults are deferred, not rejected. The upgrade will touch every package, these four included.
+- No Spring Modulith means no generated module docs; ArchUnit stays the boundary check.
