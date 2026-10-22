@@ -16,6 +16,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -145,6 +146,13 @@ public class GlobalExceptionHandler {
         log.warn("Lock failure: {}", e.toString());
         return envelope(HttpStatus.CONFLICT, "Someone else changed this at the same moment. Try again.",
                 ApiErrorCode.CONFLICT, "The request lost a lock to a concurrent one");
+    }
+
+    /** Actuator matches on the raw Accept header, so a browser asking for HTML lands here. */
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotAcceptable(HttpMediaTypeNotAcceptableException e) {
+        return envelope(HttpStatus.NOT_ACCEPTABLE, "This endpoint only answers in JSON",
+                ApiErrorCode.VALIDATION_ERROR, "Send Accept: application/json");
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
