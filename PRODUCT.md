@@ -4,48 +4,48 @@
 
 ## Platform
 
-Web Application (React 18 + Vite + Tailwind CSS SPA, responsive for desktop and tablet evaluation).
+React 18, Vite and Tailwind CSS single-page app. Built for desktop and tablet, usable on phones.
 
 ## Users
 
-Collaborative hiring teams operating under dynamic Role-Based Access Control (RBAC):
-- **Admins:** System administration, LLM engine configuration, user management, and role-to-permission mapping.
-- **HR Chiefs:** High-level recruiting oversight, cross-recruiter session audits, analytics, and offer approvals.
-- **Recruiters:** End-to-end recruitment lifecycle owners (session creation, resume intake, shortlist curation, pipeline movement, offer creation).
-- **Technical & HR Interviewers:** Assigned candidate interviewers reviewing AI evaluations and submitting structured scorecards and recommendations.
-- **Department Directors & Executives (Chairman, CEO/CEC):** Departmental pipeline oversight and high-value offer approval chains.
+- **Admins:** users, roles, permissions, audit log.
+- **HR chiefs:** oversight, analytics, final offer approval. Sessions are read-only for them.
+- **Recruiters:** run their sessions from job description to joining.
+- **Technical and HR interviewers:** see their own interviews and submit feedback.
+- **Department directors, CEO, Chairman:** management interviews. Directors also approve offers when asked.
+- **Candidates:** follow their application, see interview times and places, ask to reschedule.
 
-## Product Purpose
+## Purpose
 
-AI-assisted candidate screening, evaluation, and recruitment pipeline orchestration. Teams configure role-weighted criteria, process batches of candidate resumes with LLM analysis, review ranked standings, conduct structured interview panels, execute multi-tier offer approvals, and track confirmed onboarding.
+Screening and hiring in one place: weight the criteria, score a batch of resumes with an LLM, review the ranking, run interviews, approve offers and record joining.
 
 ## Positioning
 
-Ranked, explainable screening and full-lifecycle hiring intelligence: every candidate evaluation decomposes into weighted criteria that hiring teams can understand, audit, and defend, backed by a unified pipeline from initial intake to joining.
+Explainable ranking that carries through the rest of hiring. Every score breaks down into weighted criteria a team can question and defend. One record follows the candidate from upload to joining.
 
-## Operating Context
+## Operating context
 
-- **Screening Sessions:** Intake batches (job description + candidate resumes) transition asynchronously through uploading, text extraction, LLM scoring, and ranked states with real-time progress indicators.
-- **Hiring Pipeline:** Candidates advance through structured stages (`Sourced`, `Screening`, `Interviewing`, `Interviewed`, `Offer`, `Joining`) with historical stage tracking and audit events.
-- **Interview Logistics:** Multi-mode interview coordination supporting onsite rooms, online video links, and phone screens.
-- **Approval Workflow:** Offers undergo multi-stakeholder approval prior to official candidate delivery and joining confirmation.
+- **Sessions:** a job (title, position code, description, skills) plus resumes. Upload, extract, score, rank, with live progress.
+- **Pipeline:** Shortlisted, Contacted, Interviewing, Interviewed, Offer, Offer approved, Offer sent, Accepted or Declined, Joining. Every move goes on the timeline.
+- **Interviews:** HR, technical and management rounds at HQ, online or elsewhere. Candidates can ask to move one.
+- **Approvals:** department director when asked, then HR chief, before an offer is sent.
 
-## Capabilities and Constraints
+## Capabilities and constraints
 
-- React 18 + TypeScript + Vite + Tailwind CSS SPA with instant light/dark theme toggle.
-- Spring Boot 3.3 REST API with Spring Security and JWT authentication.
-- Dynamic permission enforcement (`SESSION_RUN`, `SESSION_VIEW_ALL`, `CANDIDATE_REVIEW`, `PIPELINE_MANAGE`, `OFFER_APPROVE`, `INTERVIEW_FEEDBACK`, `ANALYTICS_VIEW`, `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_VIEW`).
-- Async worker with rate limiting, retries, and failure isolation for any OpenAI-compatible LLM endpoint.
-- S3-compatible document storage (MinIO) with short-lived presigned URLs.
-- Self-hosted fonts with zero external CDN dependencies.
+- Light and dark themes.
+- Spring Boot 3.3 REST API, Spring Security and JWT. Separate sign-in pages for staff and candidates.
+- Ten permissions mapped to roles by admins: `SESSION_RUN`, `SESSION_VIEW_ALL`, `CANDIDATE_REVIEW`, `PIPELINE_MANAGE`, `OFFER_APPROVE`, `INTERVIEW_FEEDBACK`, `ANALYTICS_VIEW`, `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_VIEW`.
+- Scoring worker with rate limiting, retries and per-candidate failure isolation. Any OpenAI-compatible endpoint.
+- MinIO storage behind short-lived presigned links.
+- Self-hosted fonts, no CDN.
 
-## Product Principles
+## Principles
 
-- **Every score is explainable:** Evaluators see criterion scores, justifications, strengths, and gaps.
-- **Fast, decisive scanning:** Standings tables and radar charts provide immediate clarity.
-- **Explicit state and permission gating:** Roles see only what they are authorized to manage, while stage progression and model health are continuously transparent.
-- **Comprehensive hiring lifecycle:** Continuity from resume intake to confirmed joining.
+- **Explainable:** scores, justification, strengths and gaps sit together.
+- **Scannable:** standings read like a results board.
+- **Honest state:** people see what they can act on, where each candidate stands and whether scoring is healthy.
+- **One record:** nothing is copied between tools.
 
-## Accessibility & Inclusion
+## Accessibility
 
-WCAG AA contrast standards, visible keyboard navigation focus, reduced-motion responsiveness, and semantic HTML structure.
+WCAG AA contrast, visible focus, reduced motion respected, semantic HTML.
